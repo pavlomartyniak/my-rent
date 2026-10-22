@@ -1,0 +1,27 @@
+# Blueprint для Render: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: my-rent-api
+    runtime: node
+    rootDir: backend
+    # Frankfurt — найближче до Європи; оберіть той самий регіон, де кластер MongoDB Atlas
+    region: frankfurt
+    plan: free
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: node dist/main
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: MONGODB_DB
+        value: my-rent
+      # Рядок підключення вводиться вручну в панелі Render і не зберігається в репозиторії
+      - key: MONGODB_URI
+        sync: false
+      # Render згенерує випадковий секрет; його зміна завершить усі сесії
+      - key: JWT_SECRET
+        generateValue: true
+      # false: вимикає демо-перемикач Pro та імпорт демо-даних. Для тестування можна тимчасово поставити true
+      - key: DEMO_MODE
+        value: "false"

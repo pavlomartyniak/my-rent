@@ -1,0 +1,128 @@
+import { useRouter } from 'expo-router';
+import { Alert, View } from 'react-native';
+
+import { ThemedText } from '@/components/themed-text';
+import { Screen } from '@/components/ui/screen';
+import { Segmented } from '@/components/ui/segmented';
+import { SettingsGroup, SettingsRow } from '@/components/ui/settings-group';
+import { Spacing } from '@/constants/theme';
+import { shareCsv } from '@/lib/export';
+import { ensureNotificationPermission } from '@/lib/notifications';
+import { useAuth } from '@/store/auth';
+import { useFleet } from '@/store/fleet';
+import { useThemePreference, type ThemePreference } from '@/store/theme';
+import { PRO_CAR_LIMIT } from '@/types';
+
+const THEMES: { label: string; value: ThemePreference }[] = [
+  { label: 'Як у телефоні', value: 'system' },
+  { label: 'Світла', value: 'light' },
+  { label: 'Темна', value: 'dark' },
+];
+
+export default function SettingsScreen() {
+  const router = useRouter();
+  const { email, cars, transactions, isPro, carLimit, setPro, loadDemo, clearAll, resetHints, deleteAccount } = useFleet();
+  const { signOut } = useAuth();
+  const { preference, setPreference } = useThemePreference();
+
+  const confirm = (title: string, message: string, action: () => void) =>
+    Alert.alert(title, message, [
+      { text: 'Скасувати', style: 'cancel' },
+      { text: 'Так', style: 'destructive', onPress: action },
+    ]);
+
+  async function enableNotifications() {
+    const ok = await ensureNotificationPermission();
+    Alert.alert(
+      ok ? 'Сповіщення увімкнено' : 'Немає дозволу',
+      ok ? 'Нагадування про ТО й страховку надходитимуть на цей телефон.' : 'Дозвольте сповіщення для застосунку в налаштуваннях телефону.',
+    );
+  }
+
+  return (
+    <Screen tabs gap={Spacing.four}>
+      <ThemedText type="subtitle">Налаштування</ThemedText>
+
+      <SettingsGroup title="Акаунт">
+        <SettingsRow icon="person-circle-outline" title={email} subtitle="Дані зберігаються в акаунті на сервері" />
+        <SettingsRow
+          icon="log-out-outline"
+          title="Вийти з акаунту"
+          subtitle="Ваші дані залишаться на сервері"
+          onPress={() => confirm('Вийти з акаунту?', 'Щоб повернутись, увійдіть із тим самим email і паролем.', () => void signOut())}
+        />
+        <SettingsRow
+          icon="close-circle-outline"
+          title="Видалити акаунт"
+          subtitle="Акаунт і всі дані буде стерто безповоротно"
+          danger
+          onPress={() => confirm('Видалити акаунт?', 'Акаунт, авто, записи й нагадування буде стерто безповоротно.', () => void deleteAccount())}
+        />
+      </SettingsGroup>
+
+      <SettingsGroup title="Вигляд">
+        <View style={{ gap: Spacing.two, paddingVertical: Spacing.three }}>
+          <ThemedText type="default" style={{ fontWeight: 600 }}>
+            Тема оформлення
+          </ThemedText>
+          <Segmented
+            options={THEMES.map((t) => t.label)}
+            value={THEMES.find((t) => t.value === preference)?.label ?? THEMES[0].label}
+            onChange={(label) => setPreference(THEMES.find((t) => t.label === label)?.value ?? 'system')}
+          />
+        </View>
+      </SettingsGroup>
+
+      <SettingsGroup title="Тариф">
+        <SettingsRow
+          icon="diamond-outline"
+          title={isPro ? 'Тариф Pro' : 'Тариф Free'}
+          subtitle={isPro ? `Авто: ${cars.length} з ${carLimit}` : `Авто: ${cars.length} з ${carLimit}. У Pro — до ${PRO_CAR_LIMIT} авто`}
+          onPress={() => (isPro ? void setPro(false) : router.push('/paywall'))}
+        />
+      </SettingsGroup>
+
+      <SettingsGroup title="Дані та сповіщення">
+        <SettingsRow
+          icon="download-outline"
+          title="Експорт у CSV"
+          subtitle="Поділитися всіма доходами й витратами у вигляді таблиці"
+          onPress={() => (transactions.length ? shareCsv(cars, transactions) : Alert.alert('Немає записів для експорту'))}
+        />
+        <SettingsRow
+          icon="notifications-outline"
+          title="Сповіщення"
+          subtitle="Дозволити нагадування про ТО й страховку"
+          onPress={enableNotifications}
+        />
+      </SettingsGroup>
+
+      <SettingsGroup title="Допомога">
+        <SettingsRow
+          icon="bulb-outline"
+          title="Показати підказки знову"
+          subtitle="Повернути закриті підказки на екранах"
+          onPress={async () => {
+            if (await resetHints()) Alert.alert('Готово', 'Підказки знову з’являться на екранах.');
+          }}
+        />
+      </SettingsGroup>
+
+      <SettingsGroup title="Дані застосунку">
+        <SettingsRow
+          icon="flask-outline"
+          title="Завантажити демо-дані"
+          subtitle="Замінить ваші авто й записи прикладом"
+          onPress={() => confirm('Завантажити демо-дані?', 'Поточні авто та записи буде замінено прикладом.', loadDemo)}
+        />
+        <SettingsRow
+          icon="trash-outline"
+          title="Видалити всі дані"
+          subtitle="Авто, записи й нагадування буде стерто безповоротно"
+          danger
+          onPress={() => confirm('Видалити всі дані?', 'Авто, записи й нагадування буде стерто безповоротно.', clearAll)}
+        />
+      </SettingsGroup>
+    </Screen>
+  );
+}

@@ -9,20 +9,42 @@ import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: '#0B1B3A',
+    background: '#F3F7FF',
+    backgroundElement: '#FFFFFF',
+    backgroundSelected: '#E4ECFF',
+    textSecondary: '#5B6B8C',
+    border: '#DCE6FA',
+    borderStrong: '#B4C6EE',
+    accent: '#1F5BFF',
+    accentSoft: '#E6EEFF',
+    positive: '#12A150',
+    positiveSoft: '#E3F6EC',
+    negative: '#E5484D',
+    negativeSoft: '#FDECEC',
+    warning: '#E8890C',
+    warningSoft: '#FFF1DD',
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    text: '#EAF1FF',
+    background: '#0A1226',
+    backgroundElement: '#111C38',
+    backgroundSelected: '#1B2B52',
+    textSecondary: '#8DA2CC',
+    border: '#1D2D54',
+    borderStrong: '#3A4F85',
+    accent: '#5B8CFF',
+    accentSoft: '#172A55',
+    positive: '#3DD68C',
+    positiveSoft: '#11332B',
+    negative: '#FF7A7F',
+    negativeSoft: '#3A1A25',
+    warning: '#F5A524',
+    warningSoft: '#3A2D14',
   },
 } as const;
+
+export const Radius = { sm: 10, md: 16, lg: 22, pill: 999 } as const;
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
