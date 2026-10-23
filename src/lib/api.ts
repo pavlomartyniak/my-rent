@@ -1,5 +1,6 @@
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000';
-const TIMEOUT_MS = 15_000;
+// Безкоштовний хостинг «засинає» без запитів і прокидається до хвилини, тому ліміт великий
+const TIMEOUT_MS = 60_000;
 
 export class ApiError extends Error {
   constructor(
@@ -29,11 +30,20 @@ function errorMessage(body: unknown, fallback: string) {
   return typeof message === 'string' ? message : fallback;
 }
 
+/** Будить сервер заздалегідь: перший запит після простою на безкоштовному хостингу триває ~30–50 с */
+export function wakeUpServer() {
+  fetch(`${BASE_URL}/health`).catch(() => {});
+}
+
 export async function api<T = void>(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<T> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, TIMEOUT_MS);
 
   let res: Response;
+  let timedOut = false;
   try {
     res = await fetch(`${BASE_URL}${path}`, {
       method,
@@ -45,7 +55,12 @@ export async function api<T = void>(method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
-    throw new ApiError('Немає зв’язку із сервером. Перевірте інтернет і спробуйте ще раз.', 0);
+    throw new ApiError(
+      timedOut
+        ? 'Сервер відповідає надто довго. Спробуйте ще раз за хвилину.'
+        : 'Немає зв’язку із сервером. Перевірте інтернет і спробуйте ще раз.',
+      0,
+    );
   } finally {
     clearTimeout(timer);
   }

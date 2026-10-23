@@ -6,6 +6,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { AuthModule } from './auth/auth.module';
 import { CarsModule } from './cars/cars.module';
+import { CatalogModule } from './catalog/catalog.module';
 import { DataModule } from './data/data.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health.controller';
@@ -38,6 +39,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     AuthModule,
     CarsModule,
+    CatalogModule,
     TransactionsModule,
     RemindersModule,
     DataModule,

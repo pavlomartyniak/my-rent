@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -24,9 +24,20 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [slow, setSlow] = useState(false);
 
   const signingUp = mode === 'Реєстрація';
   const valid = /\S+@\S+\.\S+/.test(email) && password.length >= (signingUp ? 8 : 1);
+
+  // Якщо відповідь іде довше за кілька секунд — пояснюємо чому
+  useEffect(() => {
+    if (!busy) return;
+    const timer = setTimeout(() => setSlow(true), 4000);
+    return () => {
+      clearTimeout(timer);
+      setSlow(false);
+    };
+  }, [busy]);
 
   async function submit() {
     if (!valid || busy) return;
@@ -76,6 +87,12 @@ export default function LoginScreen() {
       {error ? (
         <ThemedText type="small" themeColor="negative" accessibilityRole="alert">
           {error}
+        </ThemedText>
+      ) : null}
+
+      {busy && slow ? (
+        <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
+          Сервер прокидається після простою, це може тривати до хвилини. Будь ласка, зачекайте.
         </ThemedText>
       ) : null}
 

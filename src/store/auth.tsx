@@ -1,7 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-import { api, ApiError, setApiToken, setUnauthorizedHandler } from '@/lib/api';
+import { api, ApiError, setApiToken, setUnauthorizedHandler, wakeUpServer } from '@/lib/api';
 
 const TOKEN_KEY = 'my-rent.token';
 
@@ -38,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [signOut]);
 
   useEffect(() => {
+    wakeUpServer();
     SecureStore.getItemAsync(TOKEN_KEY)
       .then((saved) => apply(saved))
       .catch(() => {})
