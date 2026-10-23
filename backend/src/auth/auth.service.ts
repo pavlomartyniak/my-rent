@@ -20,7 +20,13 @@ export class AuthService {
     if (await this.users.findByEmail(dto.email)) {
       throw new ConflictException('Користувач з таким email уже існує');
     }
-    const user = await this.users.create(dto.email.toLowerCase().trim(), await bcrypt.hash(dto.password, ROUNDS));
+    const user = await this.users.create({
+      email: dto.email.toLowerCase().trim(),
+      passwordHash: await bcrypt.hash(dto.password, ROUNDS),
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      phone: dto.phone ?? '',
+    });
     return this.session(user.id, this.users.toPublic(user));
   }
 

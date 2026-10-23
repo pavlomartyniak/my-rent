@@ -16,11 +16,11 @@ export class UsersService {
     return this.users.findById(id).exec();
   }
 
-  create(email: string, passwordHash: string) {
-    return this.users.create({ email, passwordHash });
+  create(data: { email: string; passwordHash: string; firstName: string; lastName: string; phone?: string }) {
+    return this.users.create(data);
   }
 
-  update(id: string, patch: Partial<Pick<User, 'isPro' | 'onboarded' | 'dismissedHints'>>) {
+  update(id: string, patch: Partial<Pick<User, 'isPro' | 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'phone'>>) {
     return this.users.findByIdAndUpdate(id, { $set: patch }, { new: true }).exec();
   }
 

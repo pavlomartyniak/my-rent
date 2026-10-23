@@ -7,6 +7,7 @@ import { Segmented } from '@/components/ui/segmented';
 import { SettingsGroup, SettingsRow } from '@/components/ui/settings-group';
 import { Spacing } from '@/constants/theme';
 import { shareCsv } from '@/lib/export';
+import { fullName } from '@/lib/profile';
 import { ensureNotificationPermission } from '@/lib/notifications';
 import { useAuth } from '@/store/auth';
 import { useFleet } from '@/store/fleet';
@@ -21,9 +22,9 @@ const THEMES: { label: string; value: ThemePreference }[] = [
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { email, cars, transactions, isPro, carLimit, setPro, loadDemo, clearAll, resetHints, deleteAccount } = useFleet();
+  const { email, firstName, lastName, phone, cars, transactions, isPro, carLimit, setPro, clearAll, resetHints, setTheme, deleteAccount } = useFleet();
   const { signOut } = useAuth();
-  const { preference, setPreference } = useThemePreference();
+  const { preference } = useThemePreference();
 
   const confirm = (title: string, message: string, action: () => void) =>
     Alert.alert(title, message, [
@@ -44,7 +45,12 @@ export default function SettingsScreen() {
       <ThemedText type="subtitle">Налаштування</ThemedText>
 
       <SettingsGroup title="Акаунт">
-        <SettingsRow icon="person-circle-outline" title={email} subtitle="Дані зберігаються в акаунті на сервері" />
+        <SettingsRow
+          icon="person-circle-outline"
+          title={fullName({ firstName, lastName }) || email}
+          subtitle={fullName({ firstName, lastName }) ? [email, phone].filter(Boolean).join(' · ') : 'Додайте ім’я та прізвище'}
+          onPress={() => router.push('/profile')}
+        />
         <SettingsRow
           icon="log-out-outline"
           title="Вийти з акаунту"
@@ -68,7 +74,7 @@ export default function SettingsScreen() {
           <Segmented
             options={THEMES.map((t) => t.label)}
             value={THEMES.find((t) => t.value === preference)?.label ?? THEMES[0].label}
-            onChange={(label) => setPreference(THEMES.find((t) => t.label === label)?.value ?? 'system')}
+            onChange={(label) => void setTheme(THEMES.find((t) => t.label === label)?.value ?? 'system')}
           />
         </View>
       </SettingsGroup>
@@ -109,12 +115,6 @@ export default function SettingsScreen() {
       </SettingsGroup>
 
       <SettingsGroup title="Дані застосунку">
-        <SettingsRow
-          icon="flask-outline"
-          title="Завантажити демо-дані"
-          subtitle="Замінить ваші авто й записи прикладом"
-          onPress={() => confirm('Завантажити демо-дані?', 'Поточні авто та записи буде замінено прикладом.', loadDemo)}
-        />
         <SettingsRow
           icon="trash-outline"
           title="Видалити всі дані"

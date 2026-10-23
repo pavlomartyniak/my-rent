@@ -21,7 +21,7 @@ npm run start:dev         # http://localhost:4000
 | `MONGODB_URI` | Рядок підключення до MongoDB Atlas |
 | `MONGODB_DB` | Назва бази (`my-rent`) |
 | `JWT_SECRET` | Секрет підпису токенів, мінімум 32 символи (`openssl rand -base64 48`) |
-| `DEMO_MODE` | `true` дозволяє перемикати Pro без оплати та завантажувати демо-дані. **У продакшені — `false`** |
+| `DEMO_MODE` | `true` дозволяє перемикати Pro без оплати (поки не підключено оплату). **У продакшені — `false`** |
 
 Мобільний застосунок бере адресу API з `EXPO_PUBLIC_API_URL` (файл `.env.local` у корені). На реальному
 телефоні це IP комп'ютера в Wi-Fi, наприклад `http://192.168.1.10:4000`.
@@ -47,7 +47,6 @@ npm run start:dev         # http://localhost:4000
 | POST | `/auth/register`, `/auth/login` | `{email, password}` → `{token, user}` |
 | GET / PATCH / DELETE | `/me` | профіль (`isPro`, `onboarded`, `dismissedHints`); DELETE видаляє акаунт і всі дані |
 | GET | `/data` | усе одним запитом: користувач, авто, записи, нагадування |
-| POST | `/data/import` | замінює дані демо-набором (лише `DEMO_MODE`) |
 | DELETE | `/data` | очищає авто, записи й нагадування |
 | GET / POST | `/cars` | список / створення (ліміт: Free — 1 авто, Pro — 20) |
 | GET / PATCH / DELETE | `/cars/:id` | DELETE каскадно видаляє записи й нагадування авто |

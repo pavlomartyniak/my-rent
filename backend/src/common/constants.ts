@@ -4,5 +4,7 @@ export const INCOME_CATEGORY = 'Оренда';
 export const TRANSACTION_TYPES = ['income', 'expense'] as const;
 export const REMINDER_KINDS = ['ТО', 'Страховка', 'Інше'] as const;
 
+export const THEMES = ['system', 'light', 'dark'] as const;
+
 export const FREE_CAR_LIMIT = 1;
 export const PRO_CAR_LIMIT = 20;

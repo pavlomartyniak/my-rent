@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { api, ApiError, setApiToken, setUnauthorizedHandler, wakeUpServer } from '@/lib/api';
+import type { Profile } from '@/lib/profile';
 
 const TOKEN_KEY = 'my-rent.token';
 
@@ -11,7 +12,7 @@ type AuthContextValue = {
   token: string | null;
   /** Повертає текст помилки або null, якщо успішно */
   login: (email: string, password: string) => Promise<string | null>;
-  register: (email: string, password: string) => Promise<string | null>;
+  register: (email: string, password: string, profile: Profile) => Promise<string | null>;
   signOut: () => Promise<void>;
 };
 
@@ -46,9 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [apply]);
 
   const authenticate = useCallback(
-    async (path: '/auth/login' | '/auth/register', email: string, password: string) => {
+    async (path: '/auth/login' | '/auth/register', body: Record<string, string>) => {
       try {
-        const res = await api<{ token: string }>('POST', path, { email: email.trim(), password });
+        const res = await api<{ token: string }>('POST', path, body);
         await SecureStore.setItemAsync(TOKEN_KEY, res.token).catch(() => {});
         apply(res.token);
         return null;
@@ -63,8 +64,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       status: loading ? 'loading' : token ? 'in' : 'out',
       token,
-      login: (email, password) => authenticate('/auth/login', email, password),
-      register: (email, password) => authenticate('/auth/register', email, password),
+      login: (email, password) => authenticate('/auth/login', { email: email.trim(), password }),
+      register: (email, password, profile) =>
+        authenticate('/auth/register', {
+          email: email.trim(),
+          password,
+          firstName: profile.firstName.trim(),
+          lastName: profile.lastName.trim(),
+          ...(profile.phone.trim() ? { phone: profile.phone.trim() } : {}),
+        }),
       signOut,
     }),
     [loading, token, authenticate, signOut],

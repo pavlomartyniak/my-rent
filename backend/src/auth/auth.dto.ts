@@ -1,6 +1,28 @@
-import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength, ValidateIf } from 'class-validator';
+
+import { PHONE_PATTERN, Trim } from '../common/profile';
 
 export class RegisterDto {
+  @Trim()
+  @IsString()
+  @IsNotEmpty({ message: 'Вкажіть ім’я' })
+  @MaxLength(50, { message: 'Ім’я занадто довге' })
+  firstName: string;
+
+  @Trim()
+  @IsString()
+  @IsNotEmpty({ message: 'Вкажіть прізвище' })
+  @MaxLength(50, { message: 'Прізвище занадто довге' })
+  lastName: string;
+
+  /** Необов'язковий; порожній рядок дозволений */
+  @Trim()
+  @IsOptional()
+  @ValidateIf((o: RegisterDto) => !!o.phone)
+  @IsString()
+  @Matches(PHONE_PATTERN, { message: 'Невірний формат телефону' })
+  phone?: string;
+
   @IsEmail({}, { message: 'Невірний формат email' })
   @MaxLength(254)
   email: string;

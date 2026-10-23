@@ -60,10 +60,12 @@ function Routes() {
           <Stack.Screen name="car/[id]" options={{ title: 'Авто', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="car/analytics" options={{ title: 'Аналітика', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="car/new" options={{ title: 'Нове авто', presentation: 'modal' }} />
+          <Stack.Screen name="car/pick" options={{ title: 'Вибір', presentation: 'modal' }} />
           <Stack.Screen name="car/edit" options={{ title: 'Редагувати авто', presentation: 'modal' }} />
           <Stack.Screen name="transaction/new" options={{ title: 'Новий запис', presentation: 'modal' }} />
           <Stack.Screen name="transaction/[id]" options={{ title: 'Запис', presentation: 'modal' }} />
           <Stack.Screen name="reminder/new" options={{ title: 'Нове нагадування', presentation: 'modal' }} />
+          <Stack.Screen name="profile" options={{ title: 'Профіль', presentation: 'modal' }} />
           <Stack.Screen name="paywall" options={{ title: 'Pro', presentation: 'modal' }} />
         </Stack.Protected>
       </Stack>

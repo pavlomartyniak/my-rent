@@ -2,13 +2,14 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { Alert } from 'react-native';
 
 import { api, ApiError } from '@/lib/api';
+import type { Profile } from '@/lib/profile';
 import { cancelNotifications, scheduleReminder } from '@/lib/notifications';
 import { FREE_CAR_LIMIT, PRO_CAR_LIMIT, type Car, type Reminder, type Transaction } from '@/types';
 
-import { MOCK_CARS, MOCK_REMINDERS, MOCK_TRANSACTIONS } from './mock';
 import { useAuth } from './auth';
+import { isThemePreference, useThemePreference, type ThemePreference } from './theme';
 
-type Data = {
+type Data = Profile & {
   email: string;
   cars: Car[];
   transactions: Transaction[];
@@ -17,26 +18,31 @@ type Data = {
   onboarded: boolean;
   /** Підказки, які користувач уже закрив */
   dismissedHints: string[];
+  theme: ThemePreference;
 };
 
 /** Відповідь GET /data і POST /data/import */
 type ServerData = {
-  user: { email: string; isPro: boolean; onboarded: boolean; dismissedHints: string[] };
+  user: Partial<Profile> & { email: string; isPro: boolean; onboarded: boolean; dismissedHints: string[]; theme?: ThemePreference };
   cars: Car[];
   transactions: Transaction[];
   reminders: Reminder[];
 };
 
-const EMPTY: Data = { email: '', cars: [], transactions: [], reminders: [], isPro: false, onboarded: false, dismissedHints: [] };
+const EMPTY: Data = { email: '', firstName: '', lastName: '', phone: '', cars: [], transactions: [], reminders: [], isPro: false, onboarded: false, dismissedHints: [], theme: 'system' };
 
 const fromServer = ({ user, cars, transactions, reminders }: ServerData): Data => ({
   email: user.email,
+  firstName: user.firstName ?? '',
+  lastName: user.lastName ?? '',
+  phone: user.phone ?? '',
   cars,
   transactions,
   reminders,
   isPro: user.isPro,
   onboarded: user.onboarded,
   dismissedHints: user.dismissedHints,
+  theme: isThemePreference(user.theme) ? user.theme : 'system',
 });
 
 type NewCar = Omit<Car, 'id'>;
@@ -63,7 +69,9 @@ type FleetContextValue = Data & {
   finishOnboarding: () => Promise<boolean>;
   dismissHint: (id: string) => void;
   resetHints: () => Promise<boolean>;
-  loadDemo: () => Promise<boolean>;
+  /** Змінює тему одразу й зберігає її в акаунті */
+  setTheme: (value: ThemePreference) => Promise<boolean>;
+  updateProfile: (changes: Partial<Profile>) => Promise<boolean>;
   clearAll: () => Promise<boolean>;
   deleteAccount: () => Promise<boolean>;
 };
@@ -77,6 +85,7 @@ const messageOf = (e: unknown) => (e instanceof ApiError ? e.message : 'Не в�
 /** Стор, що працює через REST API (NestJS + MongoDB). Дані завантажуються після входу. */
 export function FleetProvider({ children }: { children: ReactNode }) {
   const { token, signOut } = useAuth();
+  const { setPreference } = useThemePreference();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [attempt, setAttempt] = useState(0);
 
@@ -84,12 +93,17 @@ export function FleetProvider({ children }: { children: ReactNode }) {
     if (!token) return;
     let cancelled = false;
     api<ServerData>('GET', '/data')
-      .then((res) => !cancelled && setLoaded({ forToken: token, data: fromServer(res), error: null }))
+      .then((res) => {
+        if (cancelled) return;
+        setLoaded({ forToken: token, data: fromServer(res), error: null });
+        // Тема з акаунта має пріоритет над кешем на пристрої
+        if (isThemePreference(res.user.theme)) setPreference(res.user.theme);
+      })
       .catch((e) => !cancelled && setLoaded({ forToken: token, data: null, error: messageOf(e) }));
     return () => {
       cancelled = true;
     };
-  }, [token, attempt]);
+  }, [token, attempt, setPreference]);
 
   // Дані «чужого» токена (після виходу чи входу під іншим акаунтом) ігноруємо
   const current = loaded && loaded.forToken === token ? loaded : null;
@@ -212,13 +226,23 @@ export function FleetProvider({ children }: { children: ReactNode }) {
   );
 
   const updateMe = useCallback(
-    (changes: Partial<Pick<Data, 'isPro' | 'onboarded' | 'dismissedHints'>>) =>
+    (changes: Partial<Pick<Data, 'isPro' | 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'phone'>>) =>
       run(async () => {
         await api('PATCH', '/me', changes);
         patch((d) => ({ ...d, ...changes }));
       }),
     [run, patch],
   );
+
+  const setTheme = useCallback(
+    (theme: ThemePreference) => {
+      setPreference(theme); // застосовуємо миттєво, не чекаючи сервера
+      return updateMe({ theme });
+    },
+    [setPreference, updateMe],
+  );
+
+  const updateProfile = useCallback((changes: Partial<Profile>) => updateMe(changes), [updateMe]);
 
   const setPro = useCallback((isPro: boolean) => updateMe({ isPro }), [updateMe]);
   const finishOnboarding = useCallback(() => updateMe({ onboarded: true }), [updateMe]);
@@ -233,21 +257,6 @@ export function FleetProvider({ children }: { children: ReactNode }) {
       api('PATCH', '/me', { dismissedHints }).catch(() => {});
     },
     [patch, data.dismissedHints],
-  );
-
-  const loadDemo = useCallback(
-    () =>
-      run(async () => {
-        // id у демо-даних — лише посилання для зв'язків; сервер створює справжні
-        const res = await api<ServerData>('POST', '/data/import', {
-          cars: MOCK_CARS,
-          transactions: MOCK_TRANSACTIONS,
-          reminders: MOCK_REMINDERS,
-        });
-        data.reminders.forEach((r) => void cancelNotifications(r.notificationIds));
-        patch((d) => ({ ...fromServer(res), onboarded: d.onboarded || res.user.onboarded }));
-      }),
-    [run, patch, data.reminders],
   );
 
   const clearAll = useCallback(
@@ -294,11 +303,12 @@ export function FleetProvider({ children }: { children: ReactNode }) {
       finishOnboarding,
       dismissHint,
       resetHints,
-      loadDemo,
+      setTheme,
+      updateProfile,
       clearAll,
       deleteAccount,
     }),
-    [data, ready, current?.error, reload, carLimit, addCar, updateCar, deleteCar, addTransaction, updateTransaction, deleteTransaction, addReminder, toggleReminder, deleteReminder, setPro, finishOnboarding, dismissHint, resetHints, loadDemo, clearAll, deleteAccount],
+    [data, ready, current?.error, reload, carLimit, addCar, updateCar, deleteCar, addTransaction, updateTransaction, deleteTransaction, addReminder, toggleReminder, deleteReminder, setPro, finishOnboarding, dismissHint, resetHints, setTheme, updateProfile, clearAll, deleteAccount],
   );
 
   return <FleetContext.Provider value={value}>{children}</FleetContext.Provider>;

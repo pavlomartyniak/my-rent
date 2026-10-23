@@ -9,15 +9,17 @@ import { Card } from './card';
 import { Icon, type IconName } from './icon';
 
 /** Блок налаштувань із заголовком; рядки розділені лініями */
-export function SettingsGroup({ title, children }: { title: string; children: ReactNode }) {
+export function SettingsGroup({ title, children }: { title?: string; children: ReactNode }) {
   const theme = useTheme();
   const rows = Children.toArray(children);
 
   return (
     <View style={styles.group}>
-      <ThemedText type="smallBold" themeColor="textSecondary" style={styles.title}>
-        {title.toUpperCase()}
-      </ThemedText>
+      {title ? (
+        <ThemedText type="smallBold" themeColor="textSecondary" style={styles.title}>
+          {title.toUpperCase()}
+        </ThemedText>
+      ) : null}
       <Card style={styles.card}>
         {rows.map((row, i) => (
           <Fragment key={i}>

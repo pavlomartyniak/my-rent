@@ -10,6 +10,7 @@ import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { isValidPhone } from '@/lib/profile';
 import { useAuth } from '@/store/auth';
 
 const MODES = ['Вхід', 'Реєстрація'] as const;
@@ -20,6 +21,9 @@ export default function LoginScreen() {
   const { login, register } = useAuth();
 
   const [mode, setMode] = useState<(typeof MODES)[number]>('Вхід');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +31,8 @@ export default function LoginScreen() {
   const [slow, setSlow] = useState(false);
 
   const signingUp = mode === 'Реєстрація';
-  const valid = /\S+@\S+\.\S+/.test(email) && password.length >= (signingUp ? 8 : 1);
+  const validProfile = !!firstName.trim() && !!lastName.trim() && isValidPhone(phone);
+  const valid = /\S+@\S+\.\S+/.test(email) && password.length >= (signingUp ? 8 : 1) && (!signingUp || validProfile);
 
   // Якщо відповідь іде довше за кілька секунд — пояснюємо чому
   useEffect(() => {
@@ -43,7 +48,7 @@ export default function LoginScreen() {
     if (!valid || busy) return;
     setBusy(true);
     setError(null);
-    const message = await (signingUp ? register : login)(email, password);
+    const message = signingUp ? await register(email, password, { firstName, lastName, phone }) : await login(email, password);
     setBusy(false);
     if (message) setError(message);
   }
@@ -61,6 +66,24 @@ export default function LoginScreen() {
       </View>
 
       <Segmented options={MODES} value={mode} onChange={(m) => { setMode(m); setError(null); }} />
+
+      {signingUp ? (
+        <>
+          <Field label="Ім’я" value={firstName} onChangeText={setFirstName} autoCapitalize="words" autoComplete="given-name" textContentType="givenName" maxLength={50} placeholder="Павло" />
+          <Field label="Прізвище" value={lastName} onChangeText={setLastName} autoCapitalize="words" autoComplete="family-name" textContentType="familyName" maxLength={50} placeholder="Мартиняк" />
+          <Field
+            label="Телефон (необов’язково)"
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            textContentType="telephoneNumber"
+            maxLength={20}
+            placeholder="+380 67 123 45 67"
+            error={isValidPhone(phone) ? undefined : 'Невірний формат телефону'}
+          />
+        </>
+      ) : null}
 
       <Field
         label="Email"

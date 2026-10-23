@@ -17,8 +17,7 @@ const STEPS: { icon: IconName; title: string; text: string }[] = [
 
 export default function OnboardingScreen() {
   const theme = useTheme();
-  const { finishOnboarding, loadDemo } = useFleet();
-  const [busy, setBusy] = useState(false);
+  const { finishOnboarding } = useFleet();
   const [step, setStep] = useState(0);
   const last = step === STEPS.length - 1;
   const s = STEPS[step];
@@ -44,19 +43,7 @@ export default function OnboardingScreen() {
 
       <View style={styles.footer}>
         {last ? (
-          <>
-            <Button title="Почати з нуля" disabled={busy} onPress={() => void finishOnboarding()} />
-            <Button
-              title={busy ? 'Завантажуємо…' : 'Подивитись на демо-даних'}
-              variant="secondary"
-              disabled={busy}
-              onPress={async () => {
-                setBusy(true);
-                if (await loadDemo()) await finishOnboarding();
-                setBusy(false);
-              }}
-            />
-          </>
+          <Button title="Почати" onPress={() => void finishOnboarding()} />
         ) : (
           <>
             <Button title="Далі" onPress={() => setStep(step + 1)} />
