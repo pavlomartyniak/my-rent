@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { CarCard } from '@/components/car-card';
 import { Hint } from '@/components/hint';
+import { TerminationBanner } from '@/components/termination-banner';
 import { dueLabel } from '@/components/reminder-row';
 import { ReportStatus } from '@/components/report-status';
 import { SummaryCard } from '@/components/summary-card';
@@ -66,6 +67,8 @@ export default function HomeScreen() {
   return (
     <Screen tabs>
       <ThemedText type="subtitle">Мої авто</ThemedText>
+
+      <TerminationBanner onPress={() => router.navigate('/requests')} />
 
       {newRequests > 0 ? (
         <Pressable accessibilityRole="button" onPress={() => router.navigate('/requests')} style={({ pressed }) => pressed && { opacity: 0.85 }}>

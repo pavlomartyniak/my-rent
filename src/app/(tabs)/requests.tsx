@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { OwnerBoard } from '@/components/requests/owner-board';
 import { OwnerOffers } from '@/components/requests/owner-offers';
+import { TerminationRequests } from '@/components/requests/termination-requests';
 import { OwnerRentals } from '@/components/requests/owner-rentals';
 import { ThemedText } from '@/components/themed-text';
 import { Screen } from '@/components/ui/screen';
@@ -16,6 +17,7 @@ export default function RequestsScreen() {
   return (
     <Screen tabs>
       <ThemedText type="subtitle">Оренда</ThemedText>
+      <TerminationRequests as="owner" />
       <Segmented options={SECTIONS} value={section} onChange={setSection} />
 
       {section === 'Запити' ? <OwnerRentals /> : section === 'Заявки орендарів' ? <OwnerBoard /> : <OwnerOffers />}

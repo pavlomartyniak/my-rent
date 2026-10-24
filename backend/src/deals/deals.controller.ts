@@ -10,6 +10,13 @@ import { DealsService } from './deals.service';
 export class DealsController {
   constructor(private readonly deals: DealsService) {}
 
+  /** Пропозиції розірвати оренду від другої сторони, що чекають моєї відповіді (власнику й орендарю) */
+  @Header('Cache-Control', 'no-store')
+  @Get('termination-requests')
+  termination(@CurrentUser() user: AuthUser) {
+    return this.deals.awaitingMyAnswer(user);
+  }
+
   @Roles('renter')
   @Header('Cache-Control', 'no-store')
   @Get()

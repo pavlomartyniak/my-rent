@@ -2,17 +2,18 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useColorScheme } from 'react-native';
 
 import { Colors } from '@/constants/theme';
-import { usePendingOffers } from '@/hooks/use-pending-requests';
+import { usePendingOffers, useTerminationRequests } from '@/hooks/use-pending-requests';
 
 /** Вкладки орендаря: пошук авто, запити, моя оренда з обліком, звіт, налаштування */
 export default function RenterTabs() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
-  const offers = usePendingOffers();
+  // Пропозиції власників і пропозиції розірвати оренду, що чекають відповіді
+  const offers = usePendingOffers() + useTerminationRequests().length;
 
   return (
     <NativeTabs backgroundColor={colors.background} indicatorColor={colors.backgroundElement} // П'ять вкладок: дрібніший підпис, щоб назви не налазили одна на одну
-      labelStyle={{ default: { fontSize: 10 }, selected: { fontSize: 10, color: colors.text } }}>
+      labelStyle={{ default: { fontSize: 11 }, selected: { fontSize: 11, color: colors.text } }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Пошук</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="magnifyingglass" md="search" />
@@ -36,7 +37,7 @@ export default function RenterTabs() {
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="account">
-        <NativeTabs.Trigger.Label>Налаштування</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Профіль</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'gearshape', selected: 'gearshape.fill' }} md="settings" />
       </NativeTabs.Trigger>
     </NativeTabs>

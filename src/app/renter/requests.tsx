@@ -2,6 +2,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { RefreshControl } from 'react-native';
 
+import { TerminationRequests } from '@/components/requests/termination-requests';
 import { RenterRentals } from '@/components/requests/renter-rentals';
 import { RenterWanted } from '@/components/requests/renter-wanted';
 import { ThemedText } from '@/components/themed-text';
@@ -25,6 +26,7 @@ export default function MyRequestsScreen() {
   return (
     <Screen tabs refreshControl={<RefreshControl refreshing={false} onRefresh={invalidate} />}>
       <ThemedText type="subtitle">Мої запити</ThemedText>
+      <TerminationRequests as="renter" />
       <Segmented options={SECTIONS} value={section} onChange={(s) => setPick({ param: params.tab, section: s })} badges={{ 'Мої заявки': offers }} />
 
       {section === 'Запити на авто' ? <RenterRentals /> : <RenterWanted />}

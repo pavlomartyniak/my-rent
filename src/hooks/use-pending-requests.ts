@@ -1,5 +1,6 @@
 import { useReport } from '@/hooks/use-report';
 import type { RentalView } from '@/lib/rentals';
+import type { DealView } from '@/lib/deals';
 import type { WantedView } from '@/lib/wanted';
 
 /** Скільки запитів орендарів чекає відповіді власника; оновлюється раз на хвилину */
@@ -12,4 +13,10 @@ export function usePendingRequests() {
 export function usePendingOffers() {
   const { data } = useReport<WantedView[]>('/wanted/mine', { refetchOnFocus: true, pollMs: 60_000 });
   return (data ?? []).reduce((sum, w) => sum + (w.offers?.pending ?? 0), 0);
+}
+
+/** Оренди, де друга сторона запропонувала розірвати угоду й чекає моєї відповіді (і для власника, і для орендаря) */
+export function useTerminationRequests() {
+  const { data } = useReport<DealView[]>('/deals/termination-requests', { refetchOnFocus: true, pollMs: 60_000 });
+  return data ?? [];
 }

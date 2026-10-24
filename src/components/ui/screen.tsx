@@ -29,6 +29,8 @@ export function Screen({ tabs, gap = Spacing.three, contentContainerStyle, child
       contentInsetAdjustmentBehavior={tabs ? 'never' : 'automatic'}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
+      // iOS: при відкритій клавіатурі додає знизу відступ і прокручує екран до активного поля, щоб його не закривало
+      automaticallyAdjustKeyboardInsets
       contentContainerStyle={[styles.content, { paddingTop, paddingBottom }, contentContainerStyle]}
       {...rest}>
       <View style={[styles.inner, { gap }]}>{children}</View>

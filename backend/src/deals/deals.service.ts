@@ -34,6 +34,19 @@ export class DealsService {
     return this.view(deal, 'renter', await this.people([deal.ownerId]));
   }
 
+  /** Оренди, де друга сторона запропонувала розірвати угоду й чекає моєї відповіді */
+  async awaitingMyAnswer(user: AuthUser) {
+    const other = user.role === 'renter' ? 'owner' : 'renter';
+    const items = await this.deals
+      .find({ ...this.side(user), status: { $ne: 'terminated' }, endDate: { $gte: todayUtc() }, 'terminationRequest.by': other })
+      .sort({ 'terminationRequest.at': -1 })
+      .limit(50)
+      .exec();
+    const as = user.role === 'renter' ? 'renter' : 'owner';
+    const people = await this.people(items.map((d) => (as === 'renter' ? d.ownerId : d.renterId)));
+    return items.map((d) => this.view(d, as, people));
+  }
+
   /** Поточна оренда авто власника (діє чи ще не почалась); null — авто не здано через застосунок */
   async activeForCar(ownerId: string, carId: string) {
     const deal = await this.deals.findOne({ ownerId, carId, status: { $ne: 'terminated' }, endDate: { $gte: todayUtc() } }).sort({ createdAt: -1 }).exec();

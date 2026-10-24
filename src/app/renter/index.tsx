@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { Hint } from '@/components/hint';
+import { TerminationBanner } from '@/components/termination-banner';
 import { MarketCard } from '@/components/market-card';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,8 @@ export default function SearchScreen() {
   return (
     <Screen tabs refreshControl={<RefreshControl refreshing={loading && items.length > 0} onRefresh={refresh} />}>
       <ThemedText type="subtitle">Авто в оренду</ThemedText>
+
+      <TerminationBanner onPress={() => router.navigate('/renter/requests')} />
 
       {offers > 0 ? (
         <Pressable
