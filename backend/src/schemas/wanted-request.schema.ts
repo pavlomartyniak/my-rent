@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { type HydratedDocument, Schema as MongooseSchema, type Types } from 'mongoose';
 
-import { WANTED_STATUSES } from '../common/constants';
+import { FINISHED_RETENTION_SECONDS, WANTED_STATUSES } from '../common/constants';
 
 /** Заявка орендаря: яке авто, де й на які дати він шукає. Власники бачать її й пропонують свої авто. */
 @Schema({ timestamps: true })
@@ -48,3 +48,5 @@ export type WantedRequestDocument = HydratedDocument<WantedRequest>;
 export const WantedRequestSchema = SchemaFactory.createForClass(WantedRequest);
 WantedRequestSchema.index({ status: 1, cityKey: 1, createdAt: -1 });
 WantedRequestSchema.index({ renterId: 1, createdAt: -1 });
+// Скасовані заявки видаляються самі через 30 днів після скасування
+WantedRequestSchema.index({ updatedAt: 1 }, { expireAfterSeconds: FINISHED_RETENTION_SECONDS, partialFilterExpression: { status: 'cancelled' } });

@@ -145,7 +145,7 @@ export class WantedService {
 
   async offerCounts(ids: Types.ObjectId[]) {
     const rows = await this.offers.aggregate<{ _id: { wantedId: Types.ObjectId; status: string }; n: number }>([
-      { $match: { wantedId: { $in: ids } } },
+      { $match: { wantedId: { $in: ids }, hiddenFor: { $ne: 'renter' } } },
       { $group: { _id: { wantedId: '$wantedId', status: '$status' }, n: { $sum: 1 } } },
     ]);
     const result = new Map<string, Counts>();

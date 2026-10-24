@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 
 import { type AuthUser, CurrentUser, Roles } from '../common/current-user';
@@ -32,6 +32,13 @@ export class RentalsController {
   @Post(':id/cancel')
   cancel(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
     return this.rentals.cancel(user.id, id);
+  }
+
+  /** Видалити скасований чи відхилений запит зі свого списку (і власник, і орендар) */
+  @HttpCode(204)
+  @Delete(':id')
+  hide(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
+    return this.rentals.hide(user, id);
   }
 
   // ---- власник ----

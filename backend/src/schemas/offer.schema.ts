@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { type HydratedDocument, Schema as MongooseSchema, type Types } from 'mongoose';
 
-import { OFFER_STATUSES } from '../common/constants';
+import { FINISHED_RETENTION_SECONDS, OFFER_STATUSES } from '../common/constants';
 
 /** Пропозиція власника на заявку орендаря: конкретне вільне авто за вказаною ціною */
 @Schema({ timestamps: true })
@@ -33,6 +33,10 @@ export class Offer {
   @Prop()
   respondedAt?: Date;
 
+  /** Хто прибрав завершену пропозицію зі свого списку; коли прибрали обидва, запис видаляється */
+  @Prop({ type: [String], default: [] })
+  hiddenFor: string[];
+
   /** Дані авто на момент пропозиції: орендар бачить лише їх, а не картку авто власника */
   @Prop({
     type: { title: String, brand: String, model: String, year: Number, mileage: Number, photoUri: String, photos: [String] },
@@ -47,3 +51,5 @@ export class Offer {
 export type OfferDocument = HydratedDocument<Offer>;
 export const OfferSchema = SchemaFactory.createForClass(Offer);
 OfferSchema.index({ ownerId: 1, createdAt: -1 });
+// Відхилені й відкликані пропозиції видаляються самі через 30 днів після останньої зміни
+OfferSchema.index({ updatedAt: 1 }, { expireAfterSeconds: FINISHED_RETENTION_SECONDS, partialFilterExpression: { status: { $in: ['declined', 'withdrawn'] } } });

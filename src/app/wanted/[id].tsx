@@ -2,6 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
+import { RemoveFinished } from '@/components/remove-finished';
 import { OfferCard } from '@/components/offer-card';
 import { ReportStatus } from '@/components/report-status';
 import { ThemedText } from '@/components/themed-text';
@@ -133,6 +134,7 @@ export default function WantedDetailsScreen() {
                   <Button title="Відхилити" icon="close" variant="danger" style={{ flex: 1 }} disabled={busy === o.id} onPress={() => confirmDecline(o)} />
                 </View>
               ) : null}
+              {o.status === 'declined' ? <RemoveFinished path={`/offers/${o.id}`} what="пропозицію" onDone={retry} /> : null}
             </OfferCard>
           ))}
         </View>

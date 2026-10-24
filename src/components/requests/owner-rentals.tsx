@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
 import { Hint } from '@/components/hint';
+import { RemoveFinished } from '@/components/remove-finished';
 import { RentalCard } from '@/components/rental-card';
 import { ReportStatus } from '@/components/report-status';
 import { ThemedText } from '@/components/themed-text';
@@ -85,6 +86,7 @@ export function OwnerRentals() {
                     <Button title="Відхилити" icon="close" variant="danger" style={{ flex: 1 }} disabled={busy === r.id} onPress={() => confirmDecline(r)} />
                   </View>
                 ) : null}
+                {r.status === 'declined' || r.status === 'cancelled' ? <RemoveFinished path={`/rentals/${r.id}`} what="запит" onDone={retry} /> : null}
               </RentalCard>
             ))}
           </View>

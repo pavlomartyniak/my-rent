@@ -68,6 +68,13 @@ export class WantedController {
     return this.offers.decline(user.id, id, dto.note);
   }
 
+  /** Прибрати відхилену чи відкликану пропозицію зі свого списку (і власник, і орендар) */
+  @HttpCode(204)
+  @Delete('offers/:id')
+  hideOffer(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
+    return this.offers.hide(user, id);
+  }
+
   // ---- власник ----
 
   /** Дошка відкритих заявок орендарів */

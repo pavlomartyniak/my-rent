@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
 import { Hint } from '@/components/hint';
+import { RemoveFinished } from '@/components/remove-finished';
 import { RentalCard } from '@/components/rental-card';
 import { ReportStatus } from '@/components/report-status';
 import { Button } from '@/components/ui/button';
@@ -57,6 +58,7 @@ export function RenterRentals() {
           {data.map((r) => (
             <RentalCard key={r.id} rental={r} viewer="renter">
               {r.status === 'pending' ? <Button title="Скасувати запит" variant="danger" disabled={busy === r.id} onPress={() => confirmCancel(r)} /> : null}
+              {r.status === 'declined' || r.status === 'cancelled' ? <RemoveFinished path={`/rentals/${r.id}`} what="запит" onDone={retry} /> : null}
             </RentalCard>
           ))}
         </View>

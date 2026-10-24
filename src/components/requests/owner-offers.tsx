@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
 import { Hint } from '@/components/hint';
+import { RemoveFinished } from '@/components/remove-finished';
 import { OfferCard } from '@/components/offer-card';
 import { ReportStatus } from '@/components/report-status';
 import { Button } from '@/components/ui/button';
@@ -50,6 +51,7 @@ export function OwnerOffers() {
           {data.map((o) => (
             <OfferCard key={o.id} offer={o} viewer="owner">
               {o.status === 'pending' ? <Button title="Відкликати пропозицію" variant="danger" disabled={busy === o.id} onPress={() => confirmWithdraw(o)} /> : null}
+              {o.status === 'declined' || o.status === 'withdrawn' ? <RemoveFinished path={`/offers/${o.id}`} what="пропозицію" onDone={retry} /> : null}
             </OfferCard>
           ))}
         </View>

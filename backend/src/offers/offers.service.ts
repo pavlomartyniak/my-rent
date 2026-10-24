@@ -69,7 +69,7 @@ export class OffersService {
   async forWanted(renterId: string, wantedId: string) {
     const w = await this.wanted.findOne({ _id: wantedId, renterId }).exec();
     if (!w) throw new NotFoundException('Заявку не знайдено');
-    const items = await this.offers.find({ wantedId: w._id, status: { $ne: 'withdrawn' } }).sort({ createdAt: -1 }).exec();
+    const items = await this.offers.find({ wantedId: w._id, status: { $ne: 'withdrawn' }, hiddenFor: { $ne: 'renter' } }).sort({ createdAt: -1 }).exec();
     const people = await this.people(items.map((o) => o.ownerId));
     return {
       wanted: wantedView(w),
@@ -79,7 +79,7 @@ export class OffersService {
 
   /** Мої пропозиції (власник) */
   async mine(ownerId: string) {
-    const items = await this.offers.find({ ownerId }).sort({ createdAt: -1 }).limit(200).exec();
+    const items = await this.offers.find({ ownerId, hiddenFor: { $ne: 'owner' } }).sort({ createdAt: -1 }).limit(200).exec();
     const wanted = await this.wanted.find({ _id: { $in: items.map((o) => o.wantedId) } }).exec();
     const byId = new Map(wanted.map((w) => [String(w._id), w]));
     const people = await this.people(items.map((o) => o.renterId));
@@ -87,6 +87,19 @@ export class OffersService {
       const w = byId.get(String(o.wantedId));
       return w ? [this.view(o, 'owner', w, people)] : [];
     });
+  }
+
+  /** Прибрати відхилену чи відкликану пропозицію зі свого списку; коли прибрали обидві сторони, запис видаляється */
+  async hide(user: { id: string; role: 'owner' | 'renter' }, id: string) {
+    const side = user.role === 'owner' ? { ownerId: user.id } : { renterId: user.id };
+    const o = await this.offers
+      .findOneAndUpdate({ _id: id, ...side, status: { $in: ['declined', 'withdrawn'] } }, { $addToSet: { hiddenFor: user.role } }, { returnDocument: 'after', timestamps: false })
+      .exec();
+    if (!o) {
+      if (await this.offers.exists({ _id: id, ...side })) throw new ConflictException('Видалити можна лише відхилену чи відкликану пропозицію');
+      throw new NotFoundException('Пропозицію не знайдено');
+    }
+    if (o.hiddenFor.includes('owner') && o.hiddenFor.includes('renter')) await this.offers.deleteOne({ _id: o._id }).exec();
   }
 
   async withdraw(ownerId: string, id: string) {

@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { type HydratedDocument, Schema as MongooseSchema, type Types } from 'mongoose';
 
-import { RENTAL_STATUSES } from '../common/constants';
+import { FINISHED_RETENTION_SECONDS, RENTAL_STATUSES } from '../common/constants';
 
 /** Запит орендаря на оренду авто. Дані авто копіюються на момент запиту, щоб запит лишався зрозумілим, якщо оголошення змінять. */
 @Schema({ timestamps: true })
@@ -35,6 +35,10 @@ export class RentalRequest {
   @Prop()
   respondedAt?: Date;
 
+  /** Хто прибрав завершений запит зі свого списку; коли прибрали обидва, запис видаляється */
+  @Prop({ type: [String], default: [] })
+  hiddenFor: string[];
+
   @Prop({
     type: { title: String, city: String, pricePerDay: Number, photoUri: String },
     _id: false,
@@ -48,4 +52,6 @@ export class RentalRequest {
 export type RentalRequestDocument = HydratedDocument<RentalRequest>;
 export const RentalRequestSchema = SchemaFactory.createForClass(RentalRequest);
 RentalRequestSchema.index({ renterId: 1, createdAt: -1 });
+// Скасовані й відхилені запити видаляються самі через 30 днів після останньої зміни
+RentalRequestSchema.index({ updatedAt: 1 }, { expireAfterSeconds: FINISHED_RETENTION_SECONDS, partialFilterExpression: { status: { $in: ['cancelled', 'declined'] } } });
 RentalRequestSchema.index({ ownerId: 1, status: 1, createdAt: -1 });

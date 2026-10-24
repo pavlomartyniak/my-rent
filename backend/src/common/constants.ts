@@ -16,6 +16,10 @@ export const ROLES = ['owner', 'renter'] as const;
 export type Role = (typeof ROLES)[number];
 
 /** Заявка орендаря «шукаю авто»: відкрита, виконана (прийняли пропозицію) або скасована */
+/** Скільки днів завершені запити, пропозиції й заявки (скасовані, відхилені) лишаються в списках, перш ніж видалитись самі */
+export const FINISHED_RETENTION_DAYS = 30;
+export const FINISHED_RETENTION_SECONDS = FINISHED_RETENTION_DAYS * 24 * 60 * 60;
+
 export const WANTED_STATUSES = ['open', 'fulfilled', 'cancelled'] as const;
 export type WantedStatus = (typeof WANTED_STATUSES)[number];
 

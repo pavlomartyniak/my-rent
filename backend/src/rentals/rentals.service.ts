@@ -60,7 +60,7 @@ export class RentalsService {
 
   /** Мої запити (орендар) */
   async mine(renterId: string) {
-    const items = await this.rentals.find({ renterId }).sort({ createdAt: -1 }).limit(200).exec();
+    const items = await this.rentals.find({ renterId, hiddenFor: { $ne: 'renter' } }).sort({ createdAt: -1 }).limit(200).exec();
     const people = await this.people(items.map((r) => r.ownerId));
     return items.map((r) => this.view(r, 'renter', people));
   }
@@ -69,12 +69,28 @@ export class RentalsService {
   async incoming(ownerId: string, status?: string) {
     if (status && !RENTAL_STATUSES.includes(status as RentalStatus)) throw new BadRequestException('Невірний статус');
     const items = await this.rentals
-      .find({ ownerId, ...(status ? { status } : {}) })
+      .find({ ownerId, hiddenFor: { $ne: 'owner' }, ...(status ? { status } : {}) })
       .sort({ createdAt: -1 })
       .limit(200)
       .exec();
     const people = await this.people(items.map((r) => r.renterId));
     return items.map((r) => this.view(r, 'owner', people));
+  }
+
+  /**
+   * Прибрати скасований чи відхилений запит зі свого списку. Для другої сторони він лишається,
+   * а коли його прибрали обидві сторони, запис видаляється зовсім.
+   */
+  async hide(user: { id: string; role: 'owner' | 'renter' }, id: string) {
+    const side = user.role === 'owner' ? { ownerId: user.id } : { renterId: user.id };
+    const r = await this.rentals
+      .findOneAndUpdate({ _id: id, ...side, status: { $in: ['cancelled', 'declined'] } }, { $addToSet: { hiddenFor: user.role } }, { returnDocument: 'after', timestamps: false })
+      .exec();
+    if (!r) {
+      if (await this.rentals.exists({ _id: id, ...side })) throw new ConflictException('Видалити можна лише скасований чи відхилений запит');
+      throw new NotFoundException('Запит не знайдено');
+    }
+    if (r.hiddenFor.includes('owner') && r.hiddenFor.includes('renter')) await this.rentals.deleteOne({ _id: r._id }).exec();
   }
 
   async cancel(renterId: string, id: string) {
