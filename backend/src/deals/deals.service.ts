@@ -5,6 +5,7 @@ import type { Connection, Model } from 'mongoose';
 import type { AuthUser } from '../common/current-user';
 import { fullName, todayUtc } from '../rentals/rentals.math';
 import { Car } from '../schemas/car.schema';
+import { Transaction } from '../schemas/transaction.schema';
 import { RentalRequest } from '../schemas/rental-request.schema';
 import { Deal, type DealDocument } from '../schemas/deal.schema';
 import { User } from '../schemas/user.schema';
@@ -17,21 +18,50 @@ export class DealsService {
     @InjectModel(Deal.name) private readonly deals: Model<Deal>,
     @InjectModel(User.name) private readonly users: Model<User>,
     @InjectModel(Car.name) private readonly cars: Model<Car>,
+    @InjectModel(Transaction.name) private readonly transactions: Model<Transaction>,
     @InjectModel(RentalRequest.name) private readonly rentals: Model<RentalRequest>,
     @InjectConnection() private readonly connection: Connection,
   ) {}
 
   /** Усі оренди орендаря, новіші першими */
   async list(renterId: string) {
-    const items = await this.deals.find({ renterId }).sort({ createdAt: -1 }).limit(200).exec();
+    const items = await this.deals.find({ renterId, hiddenFor: { $ne: 'renter' } }).sort({ createdAt: -1 }).limit(200).exec();
     const people = await this.people(items.map((d) => d.ownerId));
     return items.map((d) => this.view(d, 'renter', people));
   }
 
   async get(renterId: string, id: string) {
-    const deal = await this.deals.findOne({ _id: id, renterId }).exec();
+    const deal = await this.deals.findOne({ _id: id, renterId, hiddenFor: { $ne: 'renter' } }).exec();
     if (!deal) throw new NotFoundException('Оренду не знайдено');
     return this.view(deal, 'renter', await this.people([deal.ownerId]));
+  }
+
+  /** Завершені чи розірвані оренди авто власника (архів) */
+  async archiveForCar(ownerId: string, carId: string) {
+    const items = await this.deals
+      .find({ ownerId, carId, hiddenFor: { $ne: 'owner' }, $or: [{ status: 'terminated' }, { endDate: { $lt: todayUtc() } }] })
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .exec();
+    const people = await this.people(items.map((d) => d.renterId));
+    return items.map((d) => this.view(d, 'owner', people));
+  }
+
+  /**
+   * Видалити архівну (завершену чи розірвану) оренду зі свого списку. Для орендаря разом з нею видаляються
+   * його записи й аналітика по ній. Для другої сторони оренда лишається, а коли прибрали обидві, запис видаляється.
+   */
+  async hide(user: AuthUser, id: string) {
+    const archived = { $or: [{ status: 'terminated' }, { endDate: { $lt: todayUtc() } }] };
+    const deal = await this.deals
+      .findOneAndUpdate({ _id: id, ...this.side(user), ...archived }, { $addToSet: { hiddenFor: user.role } }, { returnDocument: 'after', timestamps: false })
+      .exec();
+    if (!deal) {
+      if (await this.deals.exists({ _id: id, ...this.side(user) })) throw new ConflictException('Видалити можна лише завершену чи розірвану оренду');
+      throw new NotFoundException('Оренду не знайдено');
+    }
+    if (user.role === 'renter') await this.transactions.deleteMany({ userId: user.id, dealId: deal._id }).exec();
+    if (deal.hiddenFor.includes('owner') && deal.hiddenFor.includes('renter')) await this.deals.deleteOne({ _id: deal._id }).exec();
   }
 
   /** Оренди, де друга сторона запропонувала розірвати угоду й чекає моєї відповіді */
@@ -49,7 +79,7 @@ export class DealsService {
 
   /** Поточна оренда авто власника (діє чи ще не почалась); null — авто не здано через застосунок */
   async activeForCar(ownerId: string, carId: string) {
-    const deal = await this.deals.findOne({ ownerId, carId, status: { $ne: 'terminated' }, endDate: { $gte: todayUtc() } }).sort({ createdAt: -1 }).exec();
+    const deal = await this.deals.findOne({ ownerId, carId, hiddenFor: { $ne: 'owner' }, status: { $ne: 'terminated' }, endDate: { $gte: todayUtc() } }).sort({ createdAt: -1 }).exec();
     if (!deal) return null;
     return this.view(deal, 'owner', await this.people([deal.renterId]));
   }

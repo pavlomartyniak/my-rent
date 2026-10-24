@@ -8,6 +8,7 @@ import { SummaryCard } from '@/components/summary-card';
 import { ThemedText } from '@/components/themed-text';
 import { CarPhoto } from '@/components/car-photo';
 import { PhotoGallery } from '@/components/photo-gallery';
+import { ArchivedDeals } from '@/components/archived-deals';
 import { DeleteCar } from '@/components/delete-car';
 import { TerminateDeal } from '@/components/terminate-deal';
 import type { DealView } from '@/lib/deals';
@@ -152,6 +153,8 @@ export default function CarScreen() {
 
       <SectionHeader title="Історія" />
       <HistoryList carId={car.id} />
+
+      <ArchivedDeals carId={car.id} />
 
       <SectionHeader title="Про авто" />
       <Card>

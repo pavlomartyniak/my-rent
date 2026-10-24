@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Header, HttpCode, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, HttpCode, Param, Post } from '@nestjs/common';
 
 import { type AuthUser, CurrentUser, Roles } from '../common/current-user';
 import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
@@ -31,6 +31,21 @@ export class DealsController {
   async forCar(@CurrentUser() user: AuthUser, @Param('carId', ParseObjectIdPipe) carId: string) {
     // Порожня відповідь віддається як null у тілі, щоб клієнт відрізняв її від помилки
     return (await this.deals.activeForCar(user.id, carId)) ?? { none: true };
+  }
+
+  /** Власник: завершені й розірвані оренди цього авто (архів) */
+  @Roles('owner')
+  @Header('Cache-Control', 'no-store')
+  @Get('car/:carId/archive')
+  archive(@CurrentUser() user: AuthUser, @Param('carId', ParseObjectIdPipe) carId: string) {
+    return this.deals.archiveForCar(user.id, carId);
+  }
+
+  /** Видалити архівну оренду зі свого списку (власник і орендар) */
+  @HttpCode(204)
+  @Delete(':id')
+  remove(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
+    return this.deals.hide(user, id);
   }
 
   @Roles('renter')

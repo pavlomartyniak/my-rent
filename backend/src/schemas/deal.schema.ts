@@ -61,6 +61,10 @@ export class Deal {
   @Prop({ default: '' })
   terminationNote: string;
 
+  /** Хто прибрав архівну оренду зі свого списку; коли прибрали обидві сторони, запис видаляється */
+  @Prop({ type: [String], default: [] })
+  hiddenFor: string[];
+
   createdAt: Date;
 }
 

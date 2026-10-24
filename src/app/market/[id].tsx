@@ -69,10 +69,26 @@ export default function MarketCarScreen() {
         </Card>
       ) : null}
 
-      <Button title="Надіслати запит на оренду" icon="paper-plane-outline" onPress={() => router.push({ pathname: '/market/request', params: { carId: car.id } })} />
-      <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
-        Запит нічого не бронює: власник прийме його або відхилить. Контакти відкриються після підтвердження.
-      </ThemedText>
+      {car.myRequest ? (
+        <>
+          <Card>
+            <ThemedText type="default" style={styles.bold} themeColor="positive">
+              ✓ Запит уже надіслано
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Власник ще не відповів. Повторно надсилати запит не потрібно. Відповідь і контакти з’являться у вкладці «Запити». Якщо передумали, скасуйте запит там.
+            </ThemedText>
+          </Card>
+          <Button title="Мої запити" icon="file-tray-outline" variant="secondary" onPress={() => router.navigate('/renter/requests')} />
+        </>
+      ) : (
+        <>
+          <Button title="Надіслати запит на оренду" icon="paper-plane-outline" onPress={() => router.push({ pathname: '/market/request', params: { carId: car.id } })} />
+          <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
+            Запит нічого не бронює: власник прийме його або відхилить. Контакти відкриються після підтвердження.
+          </ThemedText>
+        </>
+      )}
     </Screen>
   );
 }

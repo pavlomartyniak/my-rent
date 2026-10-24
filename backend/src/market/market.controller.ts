@@ -2,6 +2,7 @@ import { Controller, Get, Header, Param, Query } from '@nestjs/common';
 import { Type } from 'class-transformer';
 import { IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
+import { type AuthUser, CurrentUser } from '../common/current-user';
 import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
 import { MarketService } from './market.service';
 
@@ -57,13 +58,13 @@ export class MarketController {
 
   @Header('Cache-Control', 'no-store')
   @Get('cars')
-  search(@Query() query: SearchQuery) {
-    return this.market.search(query);
+  search(@CurrentUser() user: AuthUser, @Query() query: SearchQuery) {
+    return this.market.search(query, user.role === 'renter' ? user.id : undefined);
   }
 
   @Header('Cache-Control', 'no-store')
   @Get('cars/:id')
-  get(@Param('id', ParseObjectIdPipe) id: string) {
-    return this.market.get(id);
+  get(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
+    return this.market.get(id, user.role === 'renter' ? user.id : undefined);
   }
 }

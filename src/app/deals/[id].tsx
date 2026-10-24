@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Linking, StyleSheet, View } from 'react-native';
+import { Alert, Linking, StyleSheet, View } from 'react-native';
 
 import { CarPhoto } from '@/components/car-photo';
 import { TerminateDeal } from '@/components/terminate-deal';
@@ -15,6 +15,8 @@ import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Radius, Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
+import { api, ApiError } from '@/lib/api';
+import { useFleet } from '@/store/fleet';
 import { formatDate } from '@/lib/date';
 import { dealStage, type DealReport, type DealView } from '@/lib/deals';
 import { formatMoney } from '@/lib/format';
@@ -23,6 +25,7 @@ import { formatMoney } from '@/lib/format';
 export default function DealScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { invalidate } = useFleet();
   const deal = useReport<DealView>(`/deals/${id}`);
   const report = useReport<DealReport>(`/reports/renter/deals/${id}`);
 
@@ -37,6 +40,24 @@ export default function DealScreen() {
   const d = deal.data;
   const o = report.data?.overview;
   const stage = dealStage(d);
+  const confirmDelete = () =>
+    Alert.alert('Видалити оренду?', 'Оренду, усі її записи про заробіток і витрати та аналітику по ній буде видалено. Цю дію не можна скасувати.', [
+      { text: 'Залишити', style: 'cancel' },
+      {
+        text: 'Видалити',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api('DELETE', `/deals/${d.id}`);
+            invalidate();
+            router.back();
+          } catch (e) {
+            Alert.alert('Не вдалося видалити', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
+          }
+        },
+      },
+    ]);
+
   const add = (type: 'income' | 'expense') => router.push({ pathname: '/transaction/new', params: { dealId: d.id, type } });
 
   return (
@@ -102,6 +123,8 @@ export default function DealScreen() {
 
       <SectionHeader title="Історія" />
       <HistoryList dealId={d.id} />
+
+      {stage === 'terminated' || stage === 'finished' ? <Button title="Видалити оренду" icon="trash-outline" variant="danger" onPress={confirmDelete} /> : null}
     </Screen>
   );
 }

@@ -135,7 +135,7 @@ export class ReportsService {
       this.byKey(renter, 'dealId', period),
       this.byKey(renter, 'dealId'),
       this.rentPaidByDeal(renter),
-      this.deals.find({ renterId: renter }).sort({ createdAt: -1 }).exec(),
+      this.deals.find({ renterId: renter, hiddenFor: { $ne: 'renter' } }).sort({ createdAt: -1 }).exec(),
     ]);
 
     const totalPaid = [...rentPaid.values()].reduce((s, n) => s + n, 0);
@@ -169,7 +169,7 @@ export class ReportsService {
   /** Детальний звіт по одній оренді орендаря */
   async renterDeal(userId: string, dealId: string, periodKey?: string) {
     const renter = new Types.ObjectId(userId);
-    const deal = await this.deals.findOne({ _id: dealId, renterId: renter }).exec();
+    const deal = await this.deals.findOne({ _id: dealId, renterId: renter, hiddenFor: { $ne: 'renter' } }).exec();
     if (!deal) throw new NotFoundException('Оренду не знайдено');
 
     const period = this.period(periodKey);

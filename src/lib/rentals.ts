@@ -14,6 +14,8 @@ export type MarketCar = {
   description: string;
   /** Ім'я власника з ініціалом прізвища */
   owner: string;
+  /** Мій запит на це авто, що чекає відповіді (повторний надіслати не можна) */
+  myRequest?: { id: string; status: string } | null;
 };
 
 export type MarketPage = { page: number; pages: number; total: number; items: MarketCar[] };

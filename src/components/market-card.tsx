@@ -30,6 +30,11 @@ export function MarketCard({ car }: { car: MarketCar }) {
             <ThemedText type="small" themeColor="textSecondary">
               {car.city} · {formatKm(car.mileage)}
             </ThemedText>
+            {car.myRequest ? (
+              <ThemedText type="smallBold" themeColor="positive">
+                ✓ Запит надіслано
+              </ThemedText>
+            ) : null}
           </View>
           <View style={styles.price}>
             <ThemedText type="default" style={styles.bold} themeColor="accent">
