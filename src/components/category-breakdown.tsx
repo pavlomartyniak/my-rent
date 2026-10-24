@@ -2,17 +2,15 @@ import { StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import type { CategoryTotal } from '@/lib/finance';
+import type { CategoryShare } from '@/lib/reports';
 import { formatMoney } from '@/lib/format';
 
 import { ThemedText } from './themed-text';
 
 /** На що йдуть витрати: категорії з сумою, часткою й смужкою */
-export function CategoryBreakdown({ items }: { items: CategoryTotal[] }) {
+export function CategoryBreakdown({ items }: { items: CategoryShare[] }) {
   const theme = useTheme();
-  const total = items.reduce((s, i) => s + i.amount, 0);
-
-  if (!total) {
+  if (!items.length) {
     return (
       <ThemedText type="small" themeColor="textSecondary">
         Витрат за цей період немає.
@@ -32,10 +30,10 @@ export function CategoryBreakdown({ items }: { items: CategoryTotal[] }) {
           </View>
           <View style={styles.row}>
             <View style={[styles.track, { backgroundColor: theme.backgroundSelected }]}>
-              <View style={[styles.fill, { width: `${(item.amount / total) * 100}%`, backgroundColor: theme.accent }]} />
+              <View style={[styles.fill, { width: `${item.share}%`, backgroundColor: theme.accent }]} />
             </View>
             <ThemedText type="small" themeColor="textSecondary" style={styles.percent}>
-              {Math.round((item.amount / total) * 100)}%
+              {Math.round(item.share)}%
             </ThemedText>
           </View>
         </View>

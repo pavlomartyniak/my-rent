@@ -35,3 +35,5 @@ export class Transaction {
 export type TransactionDocument = HydratedDocument<Transaction>;
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);
 TransactionSchema.index({ userId: 1, carId: 1, date: -1 });
+// Звіти за період: фільтр за користувачем і діапазоном дат
+TransactionSchema.index({ userId: 1, date: 1 });

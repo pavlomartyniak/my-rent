@@ -35,7 +35,13 @@ export function wakeUpServer() {
   fetch(`${BASE_URL}/health`).catch(() => {});
 }
 
-export async function api<T = void>(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<T> {
+export async function api<T = void>(
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+  path: string,
+  body?: unknown,
+  /** `text: true` — повернути відповідь як рядок (наприклад, CSV) замість JSON */
+  options?: { text?: boolean },
+): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => {
     timedOut = true;
@@ -66,6 +72,7 @@ export async function api<T = void>(method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
   }
 
   if (res.status === 204) return undefined as T;
+  if (options?.text && res.ok) return (await res.text()) as T;
 
   const data = await res.json().catch(() => null);
   if (!res.ok) {

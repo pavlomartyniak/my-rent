@@ -1,24 +1,10 @@
 import { Share } from 'react-native';
 
-import type { Car, Transaction } from '@/types';
+import { api } from './api';
 
-const esc = (v: string | number | undefined) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-
-export function transactionsToCsv(cars: Car[], txs: Transaction[]) {
-  const name = (id: string) => {
-    const c = cars.find((x) => x.id === id);
-    return c ? `${c.brand} ${c.model}` : '';
-  };
-  const rows = [...txs]
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .map((t) =>
-      [t.date, name(t.carId), t.type === 'income' ? 'Дохід' : 'Витрата', t.category, t.amount, t.driver, t.note]
-        .map(esc)
-        .join(','),
-    );
-  return ['Дата,Авто,Тип,Категорія,Сума,Водій,Примітка', ...rows].join('\n');
-}
-
-export async function shareCsv(cars: Car[], txs: Transaction[]) {
-  await Share.share({ title: 'my-rent.csv', message: transactionsToCsv(cars, txs) });
+/** Завантажує CSV із сервера й відкриває меню «Поділитися». `carId` і `period` звужують вибірку. */
+export async function exportCsv(filter: { carId?: string; period?: string } = {}) {
+  const query = new URLSearchParams(Object.entries(filter).filter((e): e is [string, string] => !!e[1])).toString();
+  const csv = await api<string>('GET', `/export/transactions.csv${query ? `?${query}` : ''}`, undefined, { text: true });
+  await Share.share({ title: 'my-rent.csv', message: csv });
 }

@@ -6,6 +6,7 @@ import { CarPhoto } from '@/components/car-photo';
 import { CategoryBreakdown } from '@/components/category-breakdown';
 import { PaybackCard } from '@/components/payback-card';
 import { PeriodSwitcher, usePeriod } from '@/components/period-switcher';
+import { ReportStatus } from '@/components/report-status';
 import { SummaryCard } from '@/components/summary-card';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
@@ -13,23 +14,21 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Radius, Spacing, type ThemeColor } from '@/constants/theme';
-import { formatDate, monthKey, monthLabel } from '@/lib/date';
-import { expenseByCategory, filterByPeriod, monthlySeries, totals } from '@/lib/finance';
-import { formatMoney } from '@/lib/format';
+import { useReport } from '@/hooks/use-report';
+import { formatDate, monthLabel } from '@/lib/date';
+import { formatMoney, formatMonths } from '@/lib/format';
+import type { CarReport } from '@/lib/reports';
 import { useFleet } from '@/store/fleet';
 
-/** «≈ 2 р. 3 міс» */
-function formatMonths(n: number) {
-  const years = Math.floor(n / 12);
-  const months = n % 12;
-  return [years ? `${years} р.` : '', months ? `${months} міс` : ''].filter(Boolean).join(' ') || '< 1 міс';
-}
+const monthName = (m: string) => `${monthLabel(m)} ${m.slice(0, 4)}`;
 
 export default function CarAnalyticsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { cars, transactions } = useFleet();
+  const { cars } = useFleet();
   const p = usePeriod();
   const car = cars.find((c) => c.id === id);
+  // Усі цифри рахує сервер
+  const { data: report, loading, error, retry } = useReport<CarReport>(car ? `/reports/cars/${car.id}?period=${p.key}` : null);
 
   if (!car) {
     return (
@@ -39,26 +38,6 @@ export default function CarAnalyticsScreen() {
     );
   }
 
-  const all = transactions.filter((t) => t.carId === car.id);
-  const scoped = filterByPeriod(all, p.key);
-  const sum = totals(scoped);
-
-  // Показники за весь час
-  const allTotals = totals(all);
-  const since = [car.rentStart, ...all.map((t) => t.date)].sort()[0];
-  const now = new Date();
-  const monthsOwned = Math.max(1, (now.getFullYear() - Number(since.slice(0, 4))) * 12 + now.getMonth() - (Number(since.slice(5, 7)) - 1) + 1);
-  const years = [...new Set(all.map((t) => t.date.slice(0, 4)))].sort().reverse().map((y) => ({ year: y, ...totals(filterByPeriod(all, y)) }));
-  const expenseShare = allTotals.income > 0 ? (allTotals.expense / allTotals.income) * 100 : 0;
-  const avgMonthly = allTotals.profit / monthsOwned;
-  const left = car.price - allTotals.profit;
-  const payback = left <= 0 ? 'Окупилось' : avgMonthly > 0 ? `≈ ${formatMonths(Math.ceil(left / avgMonthly))}` : '—';
-
-  const byMonth = monthlySeries(all, [...new Set(all.map((t) => monthKey(t.date)))]).sort((a, b) => b.profit - a.profit);
-  const best = byMonth[0];
-  const worst = byMonth.length > 1 ? byMonth[byMonth.length - 1] : undefined;
-  const monthName = (m: string) => `${monthLabel(m)} ${m.slice(0, 4)}`;
-
   return (
     <Screen>
       <Stack.Screen options={{ title: `${car.brand} ${car.model}` }} />
@@ -66,33 +45,49 @@ export default function CarAnalyticsScreen() {
       <CarPhoto uri={car.photoUri} style={styles.photo} iconSize={36} />
 
       <PeriodSwitcher state={p} />
-      <SummaryCard title={`Прибуток · ${p.label}`} profit={sum.profit} income={sum.income} expense={sum.expense} />
+
+      {!report ? (
+        <ReportStatus loading={loading} error={error} onRetry={retry} />
+      ) : (
+        <CarReportView report={report} price={car.price} periodLabel={p.label} periodKey={p.key} />
+      )}
+    </Screen>
+  );
+}
+
+function CarReportView({ report, price, periodLabel, periodKey }: { report: CarReport; price: number; periodLabel: string; periodKey: string }) {
+  const { overview, totals, best, worst } = report;
+  const eta = overview.paybackMonths === 0 ? 'Окупилось' : overview.paybackMonths ? `≈ ${formatMonths(overview.paybackMonths)}` : '—';
+
+  return (
+    <>
+      <SummaryCard title={`Прибуток · ${periodLabel}`} profit={totals.profit} income={totals.income} expense={totals.expense} />
 
       <Card>
-        <BarChart data={monthlySeries(all, p.months)} />
+        <BarChart key={periodKey} data={report.series} />
       </Card>
 
-      <SectionHeader title={`На що йдуть витрати · ${p.label}`} />
+      <SectionHeader title={`На що йдуть витрати · ${periodLabel}`} />
       <Card>
-        <CategoryBreakdown items={expenseByCategory(scoped)} />
+        <CategoryBreakdown items={report.categories} />
       </Card>
 
       <View style={styles.divider} />
 
       <SectionHeader title="За весь час володіння" />
       <SummaryCard
-        title={`Прибуток · з ${formatDate(since)} (${formatMonths(monthsOwned)})`}
-        profit={allTotals.profit}
-        income={allTotals.income}
-        expense={allTotals.expense}
-        note={`Витрати складають ${Math.round(expenseShare)}% від доходів · записів: ${all.length}`}
+        title={`Прибуток · з ${formatDate(overview.since)} (${formatMonths(overview.monthsOwned)})`}
+        profit={overview.profit}
+        income={overview.income}
+        expense={overview.expense}
+        note={overview.expenseShare === null ? undefined : `Витрати складають ${Math.round(overview.expenseShare)}% від доходів`}
       />
 
-      <PaybackCard profit={allTotals.profit} price={car.price} eta={payback} />
+      <PaybackCard profit={overview.profit} price={price} eta={eta} />
 
       <View style={styles.grid}>
-        <Stat label="Прибуток / міс" value={formatMoney(avgMonthly)} color={avgMonthly >= 0 ? 'positive' : 'negative'} />
-        <Stat label="Витрати / міс" value={formatMoney(allTotals.expense / monthsOwned)} />
+        <Stat label="Прибуток / міс" value={formatMoney(overview.avgMonthly)} color={overview.avgMonthly >= 0 ? 'positive' : 'negative'} />
+        <Stat label="Витрати / міс" value={formatMoney(overview.expense / overview.monthsOwned)} />
       </View>
       <View style={styles.grid}>
         <Stat label="Найкращий місяць" value={best ? monthName(best.month) : '—'} note={best ? formatMoney(best.profit) : undefined} color="positive" />
@@ -101,7 +96,7 @@ export default function CarAnalyticsScreen() {
 
       <SectionHeader title="По роках" />
       <Card style={styles.years}>
-        {years.map((y, i) => (
+        {report.years.map((y, i) => (
           <View key={y.year} style={[styles.yearRow, i > 0 && styles.yearBorder]}>
             <View style={styles.flex}>
               <ThemedText type="default" style={styles.bold}>
@@ -120,9 +115,9 @@ export default function CarAnalyticsScreen() {
 
       <SectionHeader title="Витрати за весь час" />
       <Card>
-        <CategoryBreakdown items={expenseByCategory(all)} />
+        <CategoryBreakdown items={report.allCategories} />
       </Card>
-    </Screen>
+    </>
   );
 }
 

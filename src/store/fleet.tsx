@@ -12,7 +12,6 @@ import { isThemePreference, useThemePreference, type ThemePreference } from './t
 type Data = Profile & {
   email: string;
   cars: Car[];
-  transactions: Transaction[];
   reminders: Reminder[];
   isPro: boolean;
   onboarded: boolean;
@@ -25,19 +24,17 @@ type Data = Profile & {
 type ServerData = {
   user: Partial<Profile> & { email: string; isPro: boolean; onboarded: boolean; dismissedHints: string[]; theme?: ThemePreference };
   cars: Car[];
-  transactions: Transaction[];
   reminders: Reminder[];
 };
 
-const EMPTY: Data = { email: '', firstName: '', lastName: '', phone: '', cars: [], transactions: [], reminders: [], isPro: false, onboarded: false, dismissedHints: [], theme: 'system' };
+const EMPTY: Data = { email: '', firstName: '', lastName: '', phone: '', cars: [], reminders: [], isPro: false, onboarded: false, dismissedHints: [], theme: 'system' };
 
-const fromServer = ({ user, cars, transactions, reminders }: ServerData): Data => ({
+const fromServer = ({ user, cars, reminders }: ServerData): Data => ({
   email: user.email,
   firstName: user.firstName ?? '',
   lastName: user.lastName ?? '',
   phone: user.phone ?? '',
   cars,
-  transactions,
   reminders,
   isPro: user.isPro,
   onboarded: user.onboarded,
@@ -51,6 +48,8 @@ type NewTransaction = Omit<Transaction, 'id'>;
 type FleetContextValue = Data & {
   /** Дані завантажені з сервера */
   ready: boolean;
+  /** Збільшується після змін авто й записів: за ним звіти завантажуються наново */
+  dataVersion: number;
   loadError: string | null;
   reload: () => void;
   carLimit: number;
@@ -88,6 +87,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
   const { setPreference } = useThemePreference();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [dataVersion, setDataVersion] = useState(0);
 
   useEffect(() => {
     if (!token) return;
@@ -114,6 +114,18 @@ export function FleetProvider({ children }: { children: ReactNode }) {
     setLoaded((l) => (l?.data ? { ...l, data: fn(l.data) } : l));
   }, []);
 
+  /** Сигналізує звітам та історії, що цифри змінились, і вони завантажаться наново */
+  const touch = useCallback(() => setDataVersion((v) => v + 1), []);
+
+  /** Як patch, але ще й оновлює звіти */
+  const patchData = useCallback(
+    (fn: (d: Data) => Data) => {
+      patch(fn);
+      touch();
+    },
+    [patch, touch],
+  );
+
   /** Виконує запит; при помилці показує повідомлення й повертає false */
   const run = useCallback(async (action: () => Promise<void>) => {
     try {
@@ -129,62 +141,61 @@ export function FleetProvider({ children }: { children: ReactNode }) {
     (car: NewCar) =>
       run(async () => {
         const created = await api<Car>('POST', '/cars', car);
-        patch((d) => ({ ...d, cars: [...d.cars, created] }));
+        patchData((d) => ({ ...d, cars: [...d.cars, created] }));
       }),
-    [run, patch],
+    [run, patchData],
   );
 
   const updateCar = useCallback(
     (id: string, changes: Partial<NewCar>) =>
       run(async () => {
         const updated = await api<Car>('PATCH', `/cars/${id}`, changes);
-        patch((d) => ({ ...d, cars: d.cars.map((c) => (c.id === id ? updated : c)) }));
+        patchData((d) => ({ ...d, cars: d.cars.map((c) => (c.id === id ? updated : c)) }));
       }),
-    [run, patch],
+    [run, patchData],
   );
 
   const deleteCar = useCallback(
     (id: string) =>
       run(async () => {
         await api('DELETE', `/cars/${id}`);
-        patch((d) => {
+        patchData((d) => {
           d.reminders.filter((r) => r.carId === id).forEach((r) => void cancelNotifications(r.notificationIds));
           return {
             ...d,
             cars: d.cars.filter((c) => c.id !== id),
-            transactions: d.transactions.filter((t) => t.carId !== id),
             reminders: d.reminders.filter((r) => r.carId !== id),
           };
         });
       }),
-    [run, patch],
+    [run, patchData],
   );
 
   const addTransaction = useCallback(
     (tx: NewTransaction) =>
       run(async () => {
-        const created = await api<Transaction>('POST', '/transactions', tx);
-        patch((d) => ({ ...d, transactions: [created, ...d.transactions] }));
+        await api<Transaction>('POST', '/transactions', tx);
+        touch();
       }),
-    [run, patch],
+    [run, touch],
   );
 
   const updateTransaction = useCallback(
     (id: string, changes: Partial<NewTransaction>) =>
       run(async () => {
-        const updated = await api<Transaction>('PATCH', `/transactions/${id}`, changes);
-        patch((d) => ({ ...d, transactions: d.transactions.map((t) => (t.id === id ? updated : t)) }));
+        await api<Transaction>('PATCH', `/transactions/${id}`, changes);
+        touch();
       }),
-    [run, patch],
+    [run, touch],
   );
 
   const deleteTransaction = useCallback(
     (id: string) =>
       run(async () => {
         await api('DELETE', `/transactions/${id}`);
-        patch((d) => ({ ...d, transactions: d.transactions.filter((t) => t.id !== id) }));
+        touch();
       }),
-    [run, patch],
+    [run, touch],
   );
 
   const addReminder = useCallback(
@@ -264,9 +275,9 @@ export function FleetProvider({ children }: { children: ReactNode }) {
       run(async () => {
         await api('DELETE', '/data');
         data.reminders.forEach((r) => void cancelNotifications(r.notificationIds));
-        patch((d) => ({ ...d, cars: [], transactions: [], reminders: [] }));
+        patchData((d) => ({ ...d, cars: [], reminders: [] }));
       }),
-    [run, patch, data.reminders],
+    [run, patchData, data.reminders],
   );
 
   const deleteAccount = useCallback(
@@ -286,6 +297,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
     () => ({
       ...data,
       ready,
+      dataVersion,
       loadError: current?.error ?? null,
       reload,
       carLimit,
@@ -308,7 +320,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
       clearAll,
       deleteAccount,
     }),
-    [data, ready, current?.error, reload, carLimit, addCar, updateCar, deleteCar, addTransaction, updateTransaction, deleteTransaction, addReminder, toggleReminder, deleteReminder, setPro, finishOnboarding, dismissHint, resetHints, setTheme, updateProfile, clearAll, deleteAccount],
+    [data, ready, dataVersion, current?.error, reload, carLimit, addCar, updateCar, deleteCar, addTransaction, updateTransaction, deleteTransaction, addReminder, toggleReminder, deleteReminder, setPro, finishOnboarding, dismissHint, resetHints, setTheme, updateProfile, clearAll, deleteAccount],
   );
 
   return <FleetContext.Provider value={value}>{children}</FleetContext.Provider>;

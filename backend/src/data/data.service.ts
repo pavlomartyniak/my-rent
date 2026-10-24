@@ -16,16 +16,16 @@ export class DataService {
     @InjectModel(Reminder.name) private readonly reminders: Model<Reminder>,
   ) {}
 
-  /** Усі дані користувача одним запитом — для старту застосунку */
+  /** Профіль, авто й нагадування одним запитом — для старту застосунку */
   async all(userId: string) {
-    const [user, cars, transactions, reminders] = await Promise.all([
+    // Записи не віддаємо: їх може бути тисячі, тож клієнти беруть їх частинами через /transactions/history
+    const [user, cars, reminders] = await Promise.all([
       this.users.findById(userId).exec(),
       this.cars.find({ userId }).sort({ _id: 1 }).exec(),
-      this.transactions.find({ userId }).sort({ date: -1, _id: -1 }).exec(),
       this.reminders.find({ userId }).sort({ date: 1, _id: 1 }).exec(),
     ]);
     if (!user) throw new NotFoundException('Користувача не знайдено');
-    return { user, cars, transactions, reminders };
+    return { user, cars, reminders };
   }
 
   /** Видаляє авто, записи й нагадування; акаунт залишається */

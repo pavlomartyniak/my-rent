@@ -6,7 +6,8 @@ import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { SettingsGroup, SettingsRow } from '@/components/ui/settings-group';
 import { Spacing } from '@/constants/theme';
-import { shareCsv } from '@/lib/export';
+import { ApiError } from '@/lib/api';
+import { exportCsv } from '@/lib/export';
 import { fullName } from '@/lib/profile';
 import { ensureNotificationPermission } from '@/lib/notifications';
 import { useAuth } from '@/store/auth';
@@ -22,7 +23,7 @@ const THEMES: { label: string; value: ThemePreference }[] = [
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { email, firstName, lastName, phone, cars, transactions, isPro, carLimit, setPro, clearAll, resetHints, setTheme, deleteAccount } = useFleet();
+  const { email, firstName, lastName, phone, cars, isPro, carLimit, setPro, clearAll, resetHints, setTheme, deleteAccount } = useFleet();
   const { signOut } = useAuth();
   const { preference } = useThemePreference();
 
@@ -93,7 +94,9 @@ export default function SettingsScreen() {
           icon="download-outline"
           title="Експорт у CSV"
           subtitle="Поділитися всіма доходами й витратами у вигляді таблиці"
-          onPress={() => (transactions.length ? shareCsv(cars, transactions) : Alert.alert('Немає записів для експорту'))}
+          onPress={() =>
+            exportCsv().catch((e) => Alert.alert('Не вдалося експортувати', e instanceof ApiError ? e.message : 'Спробуйте ще раз'))
+          }
         />
         <SettingsRow
           icon="notifications-outline"

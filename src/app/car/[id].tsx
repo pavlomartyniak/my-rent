@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Hint } from '@/components/hint';
 import { PaybackCard } from '@/components/payback-card';
+import { ReportStatus } from '@/components/report-status';
 import { SummaryCard } from '@/components/summary-card';
 import { ThemedText } from '@/components/themed-text';
 import { CarPhoto } from '@/components/car-photo';
@@ -15,15 +16,18 @@ import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Radius, Spacing } from '@/constants/theme';
 import { formatDate } from '@/lib/date';
-import { totals } from '@/lib/finance';
-import { formatKm, formatMoney } from '@/lib/format';
+import { useReport } from '@/hooks/use-report';
+import type { CarReport } from '@/lib/reports';
+import { formatKm, formatMoney, formatMonths } from '@/lib/format';
 import { useFleet } from '@/store/fleet';
 
 export default function CarScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { cars, transactions } = useFleet();
+  const { cars } = useFleet();
   const car = cars.find((c) => c.id === id);
+  // Показники за весь час рахує сервер
+  const { data: report, loading, error, retry } = useReport<CarReport>(car ? `/reports/cars/${car.id}` : null);
 
   if (!car) {
     return (
@@ -33,8 +37,6 @@ export default function CarScreen() {
     );
   }
 
-  const all = transactions.filter((t) => t.carId === car.id).sort((a, b) => b.date.localeCompare(a.date));
-  const sum = totals(all);
   const add = (type: 'income' | 'expense') => router.push({ pathname: '/transaction/new', params: { carId: car.id, type } });
 
   return (
@@ -55,14 +57,18 @@ export default function CarScreen() {
         <CarPhoto uri={car.photoUri} style={styles.photo} iconSize={44} placeholder="Додати фото" />
       </Pressable>
 
-      <SummaryCard
-        title="Прибуток за весь час"
-        profit={sum.profit}
-        income={sum.income}
-        expense={sum.expense}
-      />
-
-      <PaybackCard profit={sum.profit} price={car.price} />
+      {report ? (
+        <>
+          <SummaryCard title="Прибуток за весь час" profit={report.overview.profit} income={report.overview.income} expense={report.overview.expense} />
+          <PaybackCard
+            profit={report.overview.profit}
+            price={car.price}
+            eta={report.overview.paybackMonths ? `≈ ${formatMonths(report.overview.paybackMonths)}` : undefined}
+          />
+        </>
+      ) : (
+        <ReportStatus loading={loading} error={error} onRetry={retry} />
+      )}
 
       <View style={styles.buttons}>
         <Button title="Дохід" icon="add" variant="positive" style={styles.flex} onPress={() => add('income')} />
@@ -79,11 +85,7 @@ export default function CarScreen() {
       <Hint id="car">Окупність (ROI) — це прибуток, поділений на вартість авто. Тапніть на запис в історії, щоб змінити або видалити його.</Hint>
 
       <SectionHeader title="Історія" />
-      {all.length === 0 ? (
-        <EmptyState icon="receipt-outline" title="Записів ще немає" text="Додайте перший дохід або витрату." />
-      ) : (
-        <HistoryList txs={all} />
-      )}
+      <HistoryList carId={car.id} />
 
       <SectionHeader title="Про авто" />
       <Card>

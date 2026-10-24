@@ -8,7 +8,8 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts"
   },
   "dependencies": {
     "@nestjs/common": "^12.2.0",
@@ -33,6 +34,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3"
   },
   "engines": {

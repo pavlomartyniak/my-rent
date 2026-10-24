@@ -11,7 +11,7 @@ import { Card } from './ui/card';
 import { Icon } from './ui/icon';
 
 /** Рядок авто в списку: назва зліва, прибуток за місяць справа */
-export function CarCard({ car, profit }: { car: Car; profit: number }) {
+export function CarCard({ car, profit }: { car: Car; profit?: number }) {
   return (
     <Link href={{ pathname: '/car/[id]', params: { id: car.id } }} asChild>
       <Pressable accessibilityRole="button" style={({ pressed }) => pressed && styles.pressed}>
@@ -26,8 +26,8 @@ export function CarCard({ car, profit }: { car: Car; profit: number }) {
               {car.driver ? ` · ${car.driver}` : ''}
             </ThemedText>
           </View>
-          <ThemedText type="default" style={styles.name} themeColor={profit >= 0 ? 'positive' : 'negative'}>
-            {formatMoney(profit)}
+          <ThemedText type="default" style={styles.name} themeColor={profit === undefined ? 'textSecondary' : profit >= 0 ? 'positive' : 'negative'}>
+            {profit === undefined ? '—' : formatMoney(profit)}
           </ThemedText>
           <Icon name="chevron-forward" size={18} color="textSecondary" />
         </Card>

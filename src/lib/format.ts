@@ -28,3 +28,10 @@ export function plural(n: number, one: string, few: string, many: string) {
 export function groupDigits(digits: string) {
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0');
 }
+
+/** 14 → «1 р. 2 міс» */
+export function formatMonths(n: number) {
+  const years = Math.floor(n / 12);
+  const months = n % 12;
+  return [years ? `${years} р.` : '', months ? `${months} міс` : ''].filter(Boolean).join(' ') || '< 1 міс';
+}
