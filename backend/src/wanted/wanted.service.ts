@@ -133,6 +133,16 @@ export class WantedService {
     return wantedView(w, { offers: (await this.offerCounts([w._id])).get(String(w._id)) ?? { pending: 0, total: 0 } });
   }
 
+  /** Видалити скасовану заявку разом із пропозиціями на неї; виконані й відкриті видаляти не можна */
+  async remove(renterId: string, id: string) {
+    const w = await this.wanted.findOneAndDelete({ _id: id, renterId, status: 'cancelled' }).exec();
+    if (!w) {
+      if (await this.wanted.exists({ _id: id, renterId })) throw new ConflictException('Видалити можна лише скасовану заявку');
+      throw new NotFoundException('Заявку не знайдено');
+    }
+    await this.offers.deleteMany({ wantedId: w._id });
+  }
+
   async offerCounts(ids: Types.ObjectId[]) {
     const rows = await this.offers.aggregate<{ _id: { wantedId: Types.ObjectId; status: string }; n: number }>([
       { $match: { wantedId: { $in: ids } } },

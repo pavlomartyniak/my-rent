@@ -25,7 +25,7 @@ export function RenterWanted() {
         <EmptyState icon="document-text-outline" title="Заявок ще немає" text="Не знайшли потрібне авто серед оголошень? Створіть заявку, і власники самі запропонують варіанти." />
       ) : (
         <View style={{ gap: Spacing.two }}>
-          {data.map((w) => (
+          {[...data].sort((a, b) => (b.offers?.pending ?? 0) - (a.offers?.pending ?? 0)).map((w) => (
             <Pressable key={w.id} accessibilityRole="button" onPress={() => router.push({ pathname: '/wanted/[id]', params: { id: w.id } })}>
               <WantedCard wanted={w} viewer="renter" />
             </Pressable>

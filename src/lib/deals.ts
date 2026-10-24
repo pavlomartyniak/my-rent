@@ -13,7 +13,14 @@ export type DealView = {
   startDate: string;
   endDate: string;
   source: 'request' | 'offer';
-  owner: { name: string; phone?: string };
+  status: 'active' | 'terminated';
+  /** Пропозиція розірвати оренду, що чекає відповіді; mine — подав її я */
+  terminationRequest: { by: 'owner' | 'renter'; at: string; note: string; mine: boolean } | null;
+  terminatedBy?: 'owner' | 'renter';
+  terminatedAt?: string;
+  terminationNote: string;
+  /** Для орендаря — власник, для власника — орендар */
+  counterpart: { name: string; phone?: string };
 };
 
 export type DealOverview = Totals & {
@@ -54,9 +61,10 @@ export type DealReport = {
   overview: DealOverview;
 };
 
-export type DealStage = 'upcoming' | 'active' | 'finished';
+export type DealStage = 'upcoming' | 'active' | 'finished' | 'terminated';
 
-/** Оренда ще не почалась, триває чи завершилась */
-export function dealStage(d: Pick<DealView, 'startDate' | 'endDate'>, today = todayISO()): DealStage {
+/** Оренда ще не почалась, триває, завершилась чи розірвана достроково */
+export function dealStage(d: Pick<DealView, 'startDate' | 'endDate'> & { status?: string }, today = todayISO()): DealStage {
+  if (d.status === 'terminated') return 'terminated';
   return today < d.startDate ? 'upcoming' : today > d.endDate ? 'finished' : 'active';
 }

@@ -9,9 +9,11 @@ type Props<T extends string> = {
   options: readonly T[];
   value: T;
   onChange: (value: T) => void;
+  /** Лічильник біля варіанта; 0 чи відсутній — не показується */
+  badges?: Partial<Record<T, number>>;
 };
 
-export function Segmented<T extends string>({ options, value, onChange }: Props<T>) {
+export function Segmented<T extends string>({ options, value, onChange, badges }: Props<T>) {
   const theme = useTheme();
 
   return (
@@ -34,6 +36,13 @@ export function Segmented<T extends string>({ options, value, onChange }: Props<
             <ThemedText type="smallBold" style={{ color: selected ? '#ffffff' : theme.text }}>
               {option}
             </ThemedText>
+            {badges?.[option] ? (
+              <View style={[styles.badge, { backgroundColor: selected ? '#ffffff' : theme.accent }]}>
+                <ThemedText type="smallBold" style={[styles.badgeText, { color: selected ? theme.accent : '#ffffff' }]}>
+                  {badges[option]}
+                </ThemedText>
+              </View>
+            ) : null}
           </Pressable>
         );
       })}
@@ -50,5 +59,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: Spacing.two,
   },
+  badge: { minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { fontSize: 13, lineHeight: 16 },
 });

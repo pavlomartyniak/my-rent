@@ -19,6 +19,7 @@ const STATUSES: Record<string, { label: string; tone: Tone }> = {
   upcoming: { label: 'Незабаром', tone: 'warning' },
   active: { label: 'Триває', tone: 'positive' },
   finished: { label: 'Завершена', tone: 'neutral' },
+  terminated: { label: 'Розірвано', tone: 'negative' },
 };
 
 export function StatusBadge({ status }: { status: string }) {

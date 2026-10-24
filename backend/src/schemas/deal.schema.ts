@@ -44,6 +44,23 @@ export class Deal {
   @Prop({ type: MongooseSchema.Types.ObjectId, required: true })
   sourceId: Types.ObjectId;
 
+  /** active — оренда діє (чи ще не почалась), terminated — розірвана достроково */
+  @Prop({ required: true, enum: ['active', 'terminated'], default: 'active' })
+  status: string;
+
+  /** Пропозиція розірвати оренду: діє, доки друга сторона не погодиться чи не відхилить */
+  @Prop({ type: { by: { type: String, enum: ['owner', 'renter'] }, at: Date, note: String }, _id: false })
+  terminationRequest?: { by: string; at: Date; note: string };
+
+  @Prop({ enum: ['owner', 'renter'] })
+  terminatedBy?: string;
+
+  @Prop()
+  terminatedAt?: Date;
+
+  @Prop({ default: '' })
+  terminationNote: string;
+
   createdAt: Date;
 }
 

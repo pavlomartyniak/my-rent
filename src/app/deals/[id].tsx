@@ -2,6 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Linking, StyleSheet, View } from 'react-native';
 
 import { CarPhoto } from '@/components/car-photo';
+import { TerminateDeal } from '@/components/terminate-deal';
 import { HistoryList } from '@/components/history-list';
 import { ReportStatus } from '@/components/report-status';
 import { StatusBadge } from '@/components/status-badge';
@@ -35,6 +36,7 @@ export default function DealScreen() {
 
   const d = deal.data;
   const o = report.data?.overview;
+  const stage = dealStage(d);
   const add = (type: 'income' | 'expense') => router.push({ pathname: '/transaction/new', params: { dealId: d.id, type } });
 
   return (
@@ -57,8 +59,15 @@ export default function DealScreen() {
         </View>
         <Row label="Оренда" value={`${formatDate(d.startDate)} – ${formatDate(d.endDate)}`} />
         <Row label="Ціна за добу" value={formatMoney(d.pricePerDay)} />
-        <Row label="Власник" value={d.owner.name} />
-        {d.owner.phone ? <Button title={`Зателефонувати: ${d.owner.phone}`} icon="call-outline" variant="positive" onPress={() => void Linking.openURL(`tel:${d.owner.phone!.replace(/[^\d+]/g, '')}`)} /> : null}
+        <Row label="Власник" value={d.counterpart.name} />
+        {d.counterpart.phone ? <Button title={`Зателефонувати: ${d.counterpart.phone}`} icon="call-outline" variant="positive" onPress={() => void Linking.openURL(`tel:${d.counterpart.phone!.replace(/[^\d+]/g, '')}`)} /> : null}
+        {stage === 'terminated' ? (
+          <ThemedText type="small" themeColor="negative">
+            Оренду розірвано достроково за згодою сторін (ініціатор: {d.terminatedBy === 'owner' ? 'власник' : 'ви'})
+            {d.terminatedAt ? ` ${formatDate(d.terminatedAt.slice(0, 10))}` : ''}. Розрахунок з власником лишається за вами: сплачені суми видно нижче.
+          </ThemedText>
+        ) : null}
+        {stage === 'upcoming' || stage === 'active' ? <TerminateDeal deal={d} as="renter" /> : null}
       </Card>
 
       <View style={styles.actions}>

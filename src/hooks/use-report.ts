@@ -23,9 +23,11 @@ export function useReport<T>(
     useCache?: boolean;
     /** Завантажувати наново щоразу, коли екран знову стає активним (списки, що змінюються іншими користувачами) */
     refetchOnFocus?: boolean;
+    /** Завантажувати наново через кожні N мс (для лічильників нових запитів) */
+    pollMs?: number;
   } = {},
 ) {
-  const { keepPrevious = false, useCache = true, refetchOnFocus = false } = options;
+  const { keepPrevious = false, useCache = true, refetchOnFocus = false, pollMs } = options;
   const { token } = useAuth();
   const { dataVersion } = useFleet();
   const [state, setState] = useState<State<T>>({ key: null, version: -1 });
@@ -37,6 +39,12 @@ export function useReport<T>(
       if (refetchOnFocus) setFocusTick((t) => t + 1);
     }, [refetchOnFocus]),
   );
+
+  useEffect(() => {
+    if (!pollMs) return;
+    const timer = setInterval(() => setFocusTick((t) => t + 1), pollMs);
+    return () => clearInterval(timer);
+  }, [pollMs]);
 
   // Кеш прив'язаний до токена, щоб після виходу чужі цифри не показувались
   const key = path && token ? `${token}:${path}` : null;

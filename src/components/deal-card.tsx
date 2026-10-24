@@ -31,6 +31,12 @@ export function DealCard({ deal, overview }: { deal: DealView; overview?: DealOv
             <StatusBadge status={dealStage(deal)} />
           </View>
 
+          {deal.terminationRequest && !deal.terminationRequest.mine && deal.status !== 'terminated' ? (
+            <ThemedText type="smallBold" themeColor="warning">
+              {deal.counterpart.name} пропонує розірвати оренду: потрібна ваша відповідь
+            </ThemedText>
+          ) : null}
+
           <View style={styles.foot}>
             <View>
               <ThemedText type="small" themeColor="textSecondary">

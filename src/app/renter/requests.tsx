@@ -7,6 +7,7 @@ import { RenterWanted } from '@/components/requests/renter-wanted';
 import { ThemedText } from '@/components/themed-text';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
+import { usePendingOffers } from '@/hooks/use-pending-requests';
 import { useFleet } from '@/store/fleet';
 
 const SECTIONS = ['Запити на авто', 'Мої заявки'] as const;
@@ -15,6 +16,7 @@ type Section = (typeof SECTIONS)[number];
 /** Мої запити на оголошення й мої заявки «шукаю авто» з пропозиціями власників */
 export default function MyRequestsScreen() {
   const { invalidate } = useFleet();
+  const offers = usePendingOffers();
   const params = useLocalSearchParams<{ tab?: string }>();
   // `?tab=wanted` відкриває «Мої заявки» (після створення заявки); власний вибір діє, доки параметр той самий
   const [pick, setPick] = useState<{ param?: string; section: Section }>();
@@ -23,7 +25,7 @@ export default function MyRequestsScreen() {
   return (
     <Screen tabs refreshControl={<RefreshControl refreshing={false} onRefresh={invalidate} />}>
       <ThemedText type="subtitle">Мої запити</ThemedText>
-      <Segmented options={SECTIONS} value={section} onChange={(s) => setPick({ param: params.tab, section: s })} />
+      <Segmented options={SECTIONS} value={section} onChange={(s) => setPick({ param: params.tab, section: s })} badges={{ 'Мої заявки': offers }} />
 
       {section === 'Запити на авто' ? <RenterRentals /> : <RenterWanted />}
     </Screen>

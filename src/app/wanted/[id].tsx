@@ -1,4 +1,4 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
@@ -19,6 +19,7 @@ import { useFleet } from '@/store/fleet';
 /** Моя заявка й пропозиції власників: прийняти найкращу або відхилити */
 export default function WantedDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const { invalidate } = useFleet();
   const { data, loading, error, retry } = useReport<WantedOffers>(`/wanted/${id}/offers`, { refetchOnFocus: true });
   const [busy, setBusy] = useState<string | null>(null);
@@ -59,6 +60,26 @@ export default function WantedDetailsScreen() {
       { text: 'Скасувати заявку', style: 'destructive', onPress: () => void run('cancel', () => api('POST', `/wanted/${id}/cancel`), 'Не вдалося скасувати') },
     ]);
 
+  const confirmDelete = () =>
+    Alert.alert('Видалити заявку?', 'Її більше не буде в списку. Цю дію не можна скасувати.', [
+      { text: 'Залишити', style: 'cancel' },
+      {
+        text: 'Видалити',
+        style: 'destructive',
+        onPress: async () => {
+          setBusy('delete');
+          try {
+            await api('DELETE', `/wanted/${id}`);
+            invalidate();
+            router.back();
+          } catch (e) {
+            Alert.alert('Не вдалося видалити', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
+            setBusy(null);
+          }
+        },
+      },
+    ]);
+
   if (!data) {
     return (
       <Screen>
@@ -76,8 +97,29 @@ export default function WantedDetailsScreen() {
 
       <WantedCard wanted={wanted} viewer="renter">
         {open ? <Button title="Скасувати заявку" variant="danger" disabled={busy === 'cancel'} onPress={confirmCancel} /> : null}
+        {wanted.status === 'cancelled' ? (
+          <View style={{ gap: Spacing.two }}>
+            <Button
+              title="Створити знову"
+              icon="refresh"
+              onPress={() =>
+                router.push({
+                  pathname: '/wanted/new',
+                  params: { brand: wanted.brand, model: wanted.model, city: wanted.city, budget: wanted.maxPricePerDay ? String(wanted.maxPricePerDay) : '', notes: wanted.notes },
+                })
+              }
+            />
+            <Button title="Видалити заявку" icon="trash-outline" variant="danger" disabled={busy === 'delete'} onPress={confirmDelete} />
+          </View>
+        ) : null}
       </WantedCard>
 
+      {wanted.status === 'cancelled' ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          Заявку скасовано. Створіть її знову: поля заповняться самі, лишиться вказати нові дати. Або видаліть її зі списку.
+        </ThemedText>
+      ) : (
+        <>
       <SectionHeader title={`Пропозиції власників · ${offers.length}`} />
       {offers.length === 0 ? (
         <EmptyState icon="hourglass-outline" title="Пропозицій ще немає" text="Власники побачать вашу заявку й запропонують авто. Загляньте пізніше: список оновиться, коли повернетесь на цей екран." />
@@ -94,6 +136,8 @@ export default function WantedDetailsScreen() {
             </OfferCard>
           ))}
         </View>
+      )}
+        </>
       )}
       {wanted.status === 'fulfilled' ? (
         <ThemedText type="small" themeColor="textSecondary">

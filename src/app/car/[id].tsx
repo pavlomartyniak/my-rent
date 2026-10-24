@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { Hint } from '@/components/hint';
 import { PaybackCard } from '@/components/payback-card';
@@ -8,6 +8,8 @@ import { SummaryCard } from '@/components/summary-card';
 import { ThemedText } from '@/components/themed-text';
 import { CarPhoto } from '@/components/car-photo';
 import { PhotoGallery } from '@/components/photo-gallery';
+import { TerminateDeal } from '@/components/terminate-deal';
+import type { DealView } from '@/lib/deals';
 import { HistoryList } from '@/components/history-list';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -30,6 +32,9 @@ export default function CarScreen() {
   const car = cars.find((c) => c.id === id);
   // Показники за весь час рахує сервер
   const { data: report, loading, error, retry } = useReport<CarReport>(car ? `/reports/cars/${car.id}` : null);
+  // Поточна оренда цього авто через застосунок (орендар, дати); {none: true} — її нема
+  const { data: rental } = useReport<DealView | { none: true }>(car ? `/deals/car/${car.id}` : null, { refetchOnFocus: true });
+  const deal = rental && 'id' in rental ? rental : undefined;
 
   if (!car) {
     return (
@@ -85,6 +90,21 @@ export default function CarScreen() {
       ) : (
         <ReportStatus loading={loading} error={error} onRetry={retry} />
       )}
+
+      {deal ? (
+        <Card>
+          <ThemedText type="default" style={styles.bold}>
+            Зараз в оренді
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {deal.counterpart.name} · {formatDate(deal.startDate)} – {formatDate(deal.endDate)} · {formatMoney(deal.pricePerDay)} за добу
+          </ThemedText>
+          {deal.counterpart.phone ? (
+            <Button title={`Зателефонувати: ${deal.counterpart.phone}`} icon="call-outline" variant="positive" onPress={() => void Linking.openURL(`tel:${deal.counterpart.phone!.replace(/[^\d+]/g, '')}`)} />
+          ) : null}
+          <TerminateDeal deal={deal} as="owner" />
+        </Card>
+      ) : null}
 
       <View style={styles.buttons}>
         <Button title="Дохід" icon="add" variant="positive" style={styles.flex} onPress={() => add('income')} />

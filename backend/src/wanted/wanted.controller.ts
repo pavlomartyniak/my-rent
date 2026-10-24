@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Header, HttpCode, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, HttpCode, Param, Post, Query } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 
 import { type AuthUser, CurrentUser, Roles } from '../common/current-user';
@@ -37,6 +37,13 @@ export class WantedController {
   @Post('wanted/:id/cancel')
   cancel(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
     return this.wanted.cancel(user.id, id);
+  }
+
+  @Roles('renter')
+  @HttpCode(204)
+  @Delete('wanted/:id')
+  remove(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
+    return this.wanted.remove(user.id, id);
   }
 
   /** Пропозиції на мою заявку */

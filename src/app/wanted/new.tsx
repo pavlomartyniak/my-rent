@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
@@ -11,6 +11,7 @@ import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
 import { Spacing } from '@/constants/theme';
 import { api, ApiError } from '@/lib/api';
+import { fetchBrands } from '@/lib/catalog';
 import { openCatalogPicker } from '@/lib/catalog-picker';
 import { fromISODate, toISODate } from '@/lib/date';
 import { useFleet } from '@/store/fleet';
@@ -26,15 +27,17 @@ export default function NewWantedScreen() {
   const router = useRouter();
   const { invalidate } = useFleet();
   const today = toISODate(new Date());
+  // Параметри передає «Створити знову» зі скасованої заявки: поля одразу заповнені, дати — нові
+  const prefill = useLocalSearchParams<{ brand?: string; model?: string; city?: string; budget?: string; notes?: string }>();
 
-  const [brand, setBrand] = useState('');
+  const [brand, setBrand] = useState(prefill.brand ?? '');
   const [brandId, setBrandId] = useState<number | undefined>();
-  const [model, setModel] = useState('');
-  const [city, setCity] = useState('');
+  const [model, setModel] = useState(prefill.model ?? '');
+  const [city, setCity] = useState(prefill.city ?? '');
   const [start, setStart] = useState(addDays(today, 1));
   const [end, setEnd] = useState(addDays(today, 4));
-  const [budget, setBudget] = useState('');
-  const [notes, setNotes] = useState('');
+  const [budget, setBudget] = useState(prefill.budget ?? '');
+  const [notes, setNotes] = useState(prefill.notes ?? '');
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
 
@@ -52,9 +55,15 @@ export default function NewWantedScreen() {
     });
   }
 
-  function pickModel() {
-    if (brandId === undefined) return;
-    openCatalogPicker({ kind: 'model', brandId, brandName: brand, selected: model, onSelect: (m) => setModel(m.name) });
+  async function pickModel() {
+    // Після «Створити знову» марка вже вписана, а її id у каталозі ще невідомий
+    let id = brandId;
+    if (id === undefined) {
+      id = (await fetchBrands(brand).catch(() => [])).find((b) => b.name === brand)?.id;
+      setBrandId(id);
+    }
+    if (id === undefined) return;
+    openCatalogPicker({ kind: 'model', brandId: id, brandName: brand, selected: model, onSelect: (m) => setModel(m.name) });
   }
 
   function changeStart(value: string) {

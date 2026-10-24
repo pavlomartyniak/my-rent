@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { CarCard } from '@/components/car-card';
 import { Hint } from '@/components/hint';
@@ -15,8 +15,9 @@ import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Segmented } from '@/components/ui/segmented';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
+import { useTheme } from '@/hooks/use-theme';
 import { daysUntil, monthKey, monthTitle, todayISO } from '@/lib/date';
 import type { RentalView } from '@/lib/rentals';
 import type { SummaryReport } from '@/lib/reports';
@@ -26,6 +27,7 @@ const SORTS = ['За прибутком', 'Як додано'] as const;
 
 export default function HomeScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const { cars, reminders, canAddCar } = useFleet();
   const [sort, setSort] = useState<(typeof SORTS)[number]>('За прибутком');
 
@@ -65,6 +67,25 @@ export default function HomeScreen() {
     <Screen tabs>
       <ThemedText type="subtitle">Мої авто</ThemedText>
 
+      {newRequests > 0 ? (
+        <Pressable accessibilityRole="button" onPress={() => router.navigate('/requests')} style={({ pressed }) => pressed && { opacity: 0.85 }}>
+          <View style={[styles.alert, { backgroundColor: theme.accent }]}>
+            <View style={styles.alertCount}>
+              <ThemedText style={[styles.alertCountText, { color: theme.accent }]}>{newRequests}</ThemedText>
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText type="default" style={styles.alertTitle}>
+                {newRequests === 1 ? 'Новий запит на оренду' : 'Нові запити на оренду'}
+              </ThemedText>
+              <ThemedText type="small" style={styles.alertText}>
+                Орендар чекає вашої відповіді. Натисніть, щоб відповісти
+              </ThemedText>
+            </View>
+            <Icon name="chevron-forward" size={20} color="#FFFFFF" />
+          </View>
+        </Pressable>
+      ) : null}
+
       <Hint id="home">Тапніть на авто, щоб побачити його історію й додати дохід чи витрату. Кнопка вгорі додає запис для будь-якого авто.</Hint>
 
       {report ? (
@@ -74,23 +95,6 @@ export default function HomeScreen() {
       )}
 
       <Button title="Додати дохід або витрату" icon="add" onPress={() => router.push('/transaction/new')} />
-
-      {newRequests > 0 ? (
-        <Pressable accessibilityRole="button" onPress={() => router.navigate('/requests')}>
-          <Card style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.three }}>
-            <Icon name="mail-unread" size={24} color="accent" />
-            <View style={{ flex: 1 }}>
-              <ThemedText type="default" style={{ fontWeight: 600 }}>
-                Нові запити на оренду: {newRequests}
-              </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                Орендарі чекають вашої відповіді
-              </ThemedText>
-            </View>
-            <Icon name="chevron-forward" size={18} color="textSecondary" />
-          </Card>
-        </Pressable>
-      ) : null}
 
       {next && nextDays <= 7 ? (
         <Pressable accessibilityRole="button" onPress={() => router.navigate('/reminders')}>
@@ -120,3 +124,11 @@ export default function HomeScreen() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  alert: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.lg },
+  alertCount: { width: 44, height: 44, borderRadius: Radius.pill, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  alertCountText: { fontSize: 20, lineHeight: 24, fontWeight: 800 },
+  alertTitle: { color: '#FFFFFF', fontWeight: 700 },
+  alertText: { color: '#FFFFFF', opacity: 0.9 },
+});

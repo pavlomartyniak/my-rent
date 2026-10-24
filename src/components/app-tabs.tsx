@@ -2,10 +2,12 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useColorScheme } from 'react-native';
 
 import { Colors } from '@/constants/theme';
+import { usePendingRequests } from '@/hooks/use-pending-requests';
 
 export default function AppTabs() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
+  const pending = usePendingRequests();
 
   return (
     <NativeTabs
@@ -26,6 +28,8 @@ export default function AppTabs() {
       <NativeTabs.Trigger name="requests">
         <NativeTabs.Trigger.Label>Запити</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'tray', selected: 'tray.fill' }} md="inbox" />
+        {/* Без запитів бейдж не рендериться взагалі: порожній текст або hidden на частині платформ лишає кружечок */}
+        {pending > 0 ? <NativeTabs.Trigger.Badge>{pending > 99 ? '99+' : String(pending)}</NativeTabs.Trigger.Badge> : null}
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="reminders">

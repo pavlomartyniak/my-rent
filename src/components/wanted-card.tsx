@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { formatDate } from '@/lib/date';
 import { formatMoney, plural } from '@/lib/format';
 import { wantedTitle, type WantedView } from '@/lib/wanted';
@@ -21,9 +22,12 @@ type Props = {
 /** Заявка орендаря: яке авто, де, на які дати й за який бюджет */
 export function WantedCard({ wanted: w, viewer, children }: Props) {
   const offers = w.offers;
+  const theme = useTheme();
+  // Є пропозиції, на які орендар ще не відповів: картка виділяється, щоб їх не пропустити
+  const fresh = viewer === 'renter' && w.status === 'open' && (offers?.pending ?? 0) > 0;
 
   return (
-    <Card>
+    <Card style={fresh ? { borderColor: theme.accent, borderWidth: 2 } : undefined}>
       <View style={styles.head}>
         <View style={styles.flex}>
           <ThemedText type="default" style={styles.bold}>
@@ -48,7 +52,15 @@ export function WantedCard({ wanted: w, viewer, children }: Props) {
         </ThemedText>
       ) : null}
 
-      {viewer === 'renter' && offers ? (
+      {fresh ? (
+        <View style={[styles.fresh, { backgroundColor: theme.accent }]}>
+          <Icon name="notifications" size={18} color="#FFFFFF" />
+          <ThemedText type="smallBold" style={styles.freshText}>
+            {offers!.pending} {plural(offers!.pending, 'нова пропозиція', 'нові пропозиції', 'нових пропозицій')} від власників
+          </ThemedText>
+          <Icon name="chevron-forward" size={18} color="#FFFFFF" />
+        </View>
+      ) : viewer === 'renter' && offers ? (
         <View style={styles.offers}>
           <Icon name="albums-outline" size={16} color={offers.pending > 0 ? 'accent' : 'textSecondary'} />
           <ThemedText type="smallBold" themeColor={offers.pending > 0 ? 'accent' : 'textSecondary'}>
@@ -84,4 +96,6 @@ const styles = StyleSheet.create({
   value: { flexShrink: 1, fontWeight: 600, textAlign: 'right' },
   notes: { fontStyle: 'italic' },
   offers: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
+  fresh: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md },
+  freshText: { flex: 1, color: '#FFFFFF' },
 });
