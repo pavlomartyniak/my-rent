@@ -64,19 +64,24 @@ function Routes() {
           <Stack.Screen name="car/listing" options={{ title: 'Оголошення', presentation: 'modal' }} />
           <Stack.Screen name="car/pick" options={{ title: 'Вибір', presentation: 'modal' }} />
           <Stack.Screen name="car/edit" options={{ title: 'Редагувати авто', presentation: 'modal' }} />
-          <Stack.Screen name="transaction/new" options={{ title: 'Новий запис', presentation: 'modal' }} />
-          <Stack.Screen name="transaction/[id]" options={{ title: 'Запис', presentation: 'modal' }} />
           <Stack.Screen name="reminder/new" options={{ title: 'Нове нагадування', presentation: 'modal' }} />
           <Stack.Screen name="paywall" options={{ title: 'Pro', presentation: 'modal' }} />
+          <Stack.Screen name="wanted/offer" options={{ title: 'Пропозиція орендарю', presentation: 'modal' }} />
         </Stack.Protected>
         {/* Орендар: пошук авто й запити */}
         <Stack.Protected guard={authed && onboarded && role === 'renter'}>
           <Stack.Screen name="renter" options={{ headerShown: false }} />
           <Stack.Screen name="market/[id]" options={{ title: 'Авто', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="market/request" options={{ title: 'Запит на оренду', presentation: 'modal' }} />
+          <Stack.Screen name="wanted/new" options={{ title: 'Нова заявка', presentation: 'modal' }} />
+          <Stack.Screen name="wanted/[id]" options={{ title: 'Заявка', headerBackTitle: 'Назад' }} />
+          <Stack.Screen name="deals/[id]" options={{ title: 'Оренда', headerBackTitle: 'Назад' }} />
+          <Stack.Screen name="deals/analytics" options={{ title: 'Аналітика', headerBackTitle: 'Назад' }} />
         </Stack.Protected>
         {/* Спільне для обох ролей; стоїть останнім, щоб не ставати стартовим екраном */}
         <Stack.Protected guard={authed && onboarded}>
+          <Stack.Screen name="transaction/new" options={{ title: 'Новий запис', presentation: 'modal' }} />
+          <Stack.Screen name="transaction/[id]" options={{ title: 'Запис', presentation: 'modal' }} />
           <Stack.Screen name="profile" options={{ title: 'Профіль', presentation: 'modal' }} />
         </Stack.Protected>
       </Stack>

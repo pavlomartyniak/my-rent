@@ -32,9 +32,16 @@ export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 
 export const INCOME_CATEGORY = 'Оренда';
 
+/** Облік орендаря: заробіток на орендованому авто й витрати; «Оренда авто» — платежі власнику */
+export const RENTER_INCOME_CATEGORY = 'Заробіток';
+export const RENT_CATEGORY = 'Оренда авто';
+export const RENTER_EXPENSE_CATEGORIES = [RENT_CATEGORY, 'Паливо', 'Мийка', 'Штраф', 'Ремонт', 'Інше'] as const;
+
 export type Transaction = {
   id: string;
   carId: string;
+  /** Запис орендаря належить його оренді (авто власника в carId) */
+  dealId?: string;
   type: TransactionType;
   amount: number;
   /** ISO date, YYYY-MM-DD */

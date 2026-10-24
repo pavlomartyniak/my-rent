@@ -4,9 +4,12 @@ import type { ClientSession, Model } from 'mongoose';
 
 import { Car } from '../schemas/car.schema';
 import { Reminder } from '../schemas/reminder.schema';
+import { Deal } from '../schemas/deal.schema';
+import { Offer } from '../schemas/offer.schema';
 import { RentalRequest } from '../schemas/rental-request.schema';
 import { Transaction } from '../schemas/transaction.schema';
 import { User } from '../schemas/user.schema';
+import { WantedRequest } from '../schemas/wanted-request.schema';
 
 @Injectable()
 export class DataService {
@@ -16,6 +19,9 @@ export class DataService {
     @InjectModel(Transaction.name) private readonly transactions: Model<Transaction>,
     @InjectModel(Reminder.name) private readonly reminders: Model<Reminder>,
     @InjectModel(RentalRequest.name) private readonly rentals: Model<RentalRequest>,
+    @InjectModel(Offer.name) private readonly offers: Model<Offer>,
+    @InjectModel(WantedRequest.name) private readonly wanted: Model<WantedRequest>,
+    @InjectModel(Deal.name) private readonly deals: Model<Deal>,
   ) {}
 
   /** Профіль, авто й нагадування одним запитом — для старту застосунку */
@@ -37,11 +43,18 @@ export class DataService {
     await this.reminders.deleteMany({ userId }, { session });
     // Запити на оренду авто, які щойно видалили
     await this.rentals.deleteMany({ ownerId: userId }, { session });
+    await this.offers.deleteMany({ ownerId: userId }, { session });
   }
 
   async deleteAccount(userId: string) {
     await this.clear(userId);
     await this.rentals.deleteMany({ $or: [{ renterId: userId }, { ownerId: userId }] });
+    // Заявки орендаря разом із пропозиціями на них; пропозиції власника
+    const mine = await this.wanted.find({ renterId: userId }, '_id').lean().exec();
+    await this.offers.deleteMany({ $or: [{ ownerId: userId }, { renterId: userId }, { wantedId: { $in: mine.map((w) => w._id) } }] });
+    await this.wanted.deleteMany({ renterId: userId });
+    // Оренди орендаря (його записи вже видалено в clear)
+    await this.deals.deleteMany({ renterId: userId });
     await this.users.deleteOne({ _id: userId });
   }
 }

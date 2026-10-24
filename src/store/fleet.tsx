@@ -46,7 +46,7 @@ const fromServer = ({ user, cars, reminders }: ServerData): Data => ({
 });
 
 type NewCar = Omit<Car, 'id'>;
-type NewTransaction = Omit<Transaction, 'id'>;
+type NewTransaction = Omit<Transaction, 'id' | 'carId'> & { carId?: string };
 
 type FleetContextValue = Data & {
   /** Дані завантажені з сервера */

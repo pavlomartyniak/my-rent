@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { RefreshControl, View } from 'react-native';
 
 import { Hint } from '@/components/hint';
@@ -15,6 +16,7 @@ import { useState } from 'react';
 
 /** Пошук вільних авто в оренду */
 export default function SearchScreen() {
+  const router = useRouter();
   const [city, setCity] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const { items, total, error, loading, hasMore, loadMore, refresh } = useMarketSearch(city, maxPrice);
@@ -27,6 +29,8 @@ export default function SearchScreen() {
 
       <SearchInput value={city} onChangeText={setCity} placeholder="Місто, наприклад Київ" />
       <NumberField label="Ціна до, ₴ за добу (необов’язково)" value={maxPrice} onChangeValue={setMaxPrice} maxDigits={7} placeholder="2 000" />
+
+      <Button title="Не знайшли? Створити заявку" icon="document-text-outline" variant="secondary" onPress={() => router.push('/wanted/new')} />
 
       {error ? (
         <EmptyState icon="cloud-offline-outline" title="Не вдалося завантажити" text={error} action="Спробувати ще раз" onAction={refresh} />

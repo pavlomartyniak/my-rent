@@ -22,10 +22,10 @@ const STEP = 3;
  * Історія записів авто по місяцях. Сервер віддає її частинами (спершу два найновіші місяці)
  * разом із підсумком кожного місяця, тож телефон не вантажить усі записи.
  */
-export function HistoryList({ carId }: { carId: string }) {
+export function HistoryList({ carId, dealId }: { carId?: string; dealId?: string }) {
   const theme = useTheme();
   const [months, setMonths] = useState(FIRST_MONTHS);
-  const { data, loading, error, retry } = useReport<HistoryPage>(`/transactions/history?carId=${carId}&months=${months}`, { keepPrevious: true });
+  const { data, loading, error, retry } = useReport<HistoryPage>(`/transactions/history?${dealId ? `dealId=${dealId}` : `carId=${carId}`}&months=${months}`, { keepPrevious: true });
 
   if (!data) return <ReportStatus loading={loading} error={error} onRetry={retry} />;
   if (!data.groups.length) {

@@ -12,6 +12,10 @@ export class Transaction {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Car', required: true })
   carId: Types.ObjectId;
 
+  /** Для обліку орендаря: до якої оренди належить запис (carId тоді — авто власника) */
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Deal', index: true })
+  dealId?: Types.ObjectId;
+
   @Prop({ required: true, enum: TRANSACTION_TYPES })
   type: string;
 

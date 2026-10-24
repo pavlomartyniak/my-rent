@@ -1,15 +1,20 @@
 import { Body, Controller, Delete, Get, Header, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
 import { Type } from 'class-transformer';
-import { IsInt, IsMongoId, Max, Min } from 'class-validator';
+import { IsInt, IsMongoId, IsOptional, Max, Min } from 'class-validator';
 
-import { type AuthUser, CurrentUser, Roles } from '../common/current-user';
+import { type AuthUser, CurrentUser } from '../common/current-user';
 import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
 import { CreateTransactionDto, UpdateTransactionDto } from './transactions.dto';
 import { TransactionsService } from './transactions.service';
 
 class HistoryQuery {
+  @IsOptional()
   @IsMongoId()
-  carId: string;
+  carId?: string;
+
+  @IsOptional()
+  @IsMongoId()
+  dealId?: string;
 
   /** Скільки найновіших місяців віддати (за замовчуванням 2) */
   @Type(() => Number)
@@ -19,21 +24,20 @@ class HistoryQuery {
   months = 2;
 }
 
-@Roles('owner')
 @Controller('transactions')
 export class TransactionsController {
   constructor(private readonly transactions: TransactionsService) {}
 
   @Get()
   list(@CurrentUser() user: AuthUser, @Query('carId', new ParseObjectIdPipe()) carId?: string) {
-    return this.transactions.list(user.id, carId);
+    return this.transactions.list(user, carId);
   }
 
   /** Історія авто по місяцях із підсумками (частинами) */
   @Header('Cache-Control', 'no-store')
   @Get('history')
-  history(@CurrentUser() user: AuthUser, @Query() { carId, months }: HistoryQuery) {
-    return this.transactions.history(user.id, carId, months);
+  history(@CurrentUser() user: AuthUser, @Query() { carId, dealId, months }: HistoryQuery) {
+    return this.transactions.history(user, { carId, dealId }, months);
   }
 
   @Get(':id')
@@ -43,12 +47,12 @@ export class TransactionsController {
 
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateTransactionDto) {
-    return this.transactions.create(user.id, dto);
+    return this.transactions.create(user, dto);
   }
 
   @Patch(':id')
   update(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Body() dto: UpdateTransactionDto) {
-    return this.transactions.update(user.id, id, dto);
+    return this.transactions.update(user, id, dto);
   }
 
   @HttpCode(204)

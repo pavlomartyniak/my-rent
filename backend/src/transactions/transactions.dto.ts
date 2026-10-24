@@ -1,12 +1,18 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { IsIn, IsMongoId, IsNumber, IsOptional, IsPositive, IsString, Max, MaxLength } from 'class-validator';
 
-import { EXPENSE_CATEGORIES, INCOME_CATEGORY, TRANSACTION_TYPES } from '../common/constants';
+import { TRANSACTION_TYPES } from '../common/constants';
 import { IsIsoDay } from '../common/is-iso-day';
 
 export class CreateTransactionDto {
+  /** Власник вказує авто, орендар — оренду (dealId) */
+  @IsOptional()
   @IsMongoId()
-  carId: string;
+  carId?: string;
+
+  @IsOptional()
+  @IsMongoId()
+  dealId?: string;
 
   @IsIn(TRANSACTION_TYPES)
   type: 'income' | 'expense';
@@ -19,7 +25,8 @@ export class CreateTransactionDto {
   @IsIsoDay()
   date: string;
 
-  @IsIn([INCOME_CATEGORY, ...EXPENSE_CATEGORIES])
+  @IsString()
+  @MaxLength(40)
   category: string;
 
   @IsOptional()

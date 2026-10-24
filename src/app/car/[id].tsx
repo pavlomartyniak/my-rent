@@ -7,6 +7,7 @@ import { ReportStatus } from '@/components/report-status';
 import { SummaryCard } from '@/components/summary-card';
 import { ThemedText } from '@/components/themed-text';
 import { CarPhoto } from '@/components/car-photo';
+import { PhotoGallery } from '@/components/photo-gallery';
 import { HistoryList } from '@/components/history-list';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -38,6 +39,7 @@ export default function CarScreen() {
     );
   }
 
+  const photos = car.photos?.length ? car.photos : car.photoUri ? [car.photoUri] : [];
   const listed = !!car.listing?.published && car.status === 'Вільне';
 
   async function unpublish() {
@@ -62,12 +64,14 @@ export default function CarScreen() {
         }}
       />
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={car.photoUri ? 'Змінити фото' : 'Додати фото'}
-        onPress={() => router.push({ pathname: '/car/edit', params: { id: car.id } })}>
-        <CarPhoto uri={car.photoUri} style={styles.photo} iconSize={44} placeholder="Додати фото" />
-      </Pressable>
+      {photos.length > 0 ? (
+        // Фото гортаються пальцем, тап відкриває їх на весь екран; змінити їх можна в редагуванні (олівець угорі)
+        <PhotoGallery photos={photos} />
+      ) : (
+        <Pressable accessibilityRole="button" accessibilityLabel="Додати фото" onPress={() => router.push({ pathname: '/car/edit', params: { id: car.id } })}>
+          <CarPhoto style={styles.photo} iconSize={44} placeholder="Додати фото" />
+        </Pressable>
+      )}
 
       {report ? (
         <>

@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { CarsModule } from './cars/cars.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { DataModule } from './data/data.module';
+import { DealsModule } from './deals/deals.module';
 import { DatabaseModule } from './database/database.module';
 import { ExportModule } from './export/export.module';
 import { HealthController } from './health.controller';
@@ -18,6 +19,7 @@ import { RentalsModule } from './rentals/rentals.module';
 import { ReportsModule } from './reports/reports.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { UsersModule } from './users/users.module';
+import { WantedModule } from './wanted/wanted.module';
 
 @Module({
   imports: [
@@ -41,6 +43,7 @@ import { UsersModule } from './users/users.module';
       }),
     }),
     DatabaseModule,
+    DealsModule,
     UsersModule,
     AuthModule,
     CarsModule,
@@ -52,6 +55,7 @@ import { UsersModule } from './users/users.module';
     MarketModule,
     RentalsModule,
     MediaModule,
+    WantedModule,
     DataModule,
   ],
   controllers: [HealthController],

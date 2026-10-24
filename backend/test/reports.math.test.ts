@@ -137,3 +137,48 @@ describe('bestWorst', () => {
     assert.equal(r.worst?.month, 'c');
   });
 });
+
+import { dealOverviewOf } from '../src/reports/reports.math';
+
+describe('dealOverviewOf', () => {
+  const base = { pricePerDay: 1000, startDate: '2026-10-01', endDate: '2026-10-11' };
+
+  it('оренда триває: боргу немає, коли сплачено за минулі доби', () => {
+    const o = dealOverviewOf({ ...base, income: 12000, expense: 5500, rentPaid: 5000, today: '2026-10-06' });
+    assert.equal(o.elapsedDays, 5);
+    assert.equal(o.totalDays, 10);
+    assert.equal(o.rentDue, 5000);
+    assert.equal(o.rentBalance, 0);
+    assert.equal(o.plannedRent, 10000);
+    assert.equal(o.otherExpenses, 500);
+    assert.equal(o.profit, 6500);
+    assert.equal(o.avgProfitPerDay, 1300);
+  });
+  it('недоплата — додатний баланс, переплата — від’ємний', () => {
+    assert.equal(dealOverviewOf({ ...base, income: 0, expense: 2000, rentPaid: 2000, today: '2026-10-06' }).rentBalance, 3000);
+    assert.equal(dealOverviewOf({ ...base, income: 0, expense: 7000, rentPaid: 7000, today: '2026-10-06' }).rentBalance, -2000);
+  });
+  it('до початку оренди минулих діб нема', () => {
+    const o = dealOverviewOf({ ...base, income: 0, expense: 0, rentPaid: 0, today: '2026-09-25' });
+    assert.equal(o.elapsedDays, 0);
+    assert.equal(o.rentDue, 0);
+    assert.equal(o.avgProfitPerDay, 0);
+  });
+  it('після завершення: усі доби періоду, не більше', () => {
+    const o = dealOverviewOf({ ...base, income: 20000, expense: 10000, rentPaid: 10000, today: '2026-12-01' });
+    assert.equal(o.elapsedDays, 10);
+    assert.equal(o.rentDue, 10000);
+    assert.equal(o.rentBalance, 0);
+    assert.equal(o.avgProfitPerDay, 1000);
+  });
+  it('оренда на одну добу (дата початку = дата завершення) — одна доба', () => {
+    const o = dealOverviewOf({ pricePerDay: 800, startDate: '2026-10-10', endDate: '2026-10-10', income: 0, expense: 0, rentPaid: 0, today: '2026-10-20' });
+    assert.equal(o.totalDays, 1);
+    assert.equal(o.rentDue, 800);
+  });
+  it('збиток: прибуток від’ємний, на добу теж', () => {
+    const o = dealOverviewOf({ ...base, income: 1000, expense: 4000, rentPaid: 3000, today: '2026-10-04' });
+    assert.equal(o.profit, -3000);
+    assert.equal(o.avgProfitPerDay, -1000);
+  });
+});

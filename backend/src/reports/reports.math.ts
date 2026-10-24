@@ -136,3 +136,57 @@ export function bestWorst(months: { month: string; profit: number }[]) {
   const sorted = [...months].sort((a, b) => b.profit - a.profit);
   return { best: sorted[0], worst: sorted.length > 1 ? sorted[sorted.length - 1] : null };
 }
+
+// ---- облік орендаря ----
+
+export type DealOverview = Totals & {
+  /** Сплачено власнику за оренду авто (витрати з категорією «Оренда авто») */
+  rentPaid: number;
+  /** Скільки мало бути сплачено станом на сьогодні: ціна за добу × минулі доби */
+  rentDue: number;
+  /** rentDue − rentPaid: більше нуля — є борг, менше — переплата */
+  rentBalance: number;
+  /** Оренда за весь запланований період */
+  plannedRent: number;
+  /** Інші витрати: паливо, мийка, штрафи тощо */
+  otherExpenses: number;
+  elapsedDays: number;
+  totalDays: number;
+  /** Прибуток на добу оренди (доба рахується з першої) */
+  avgProfitPerDay: number;
+};
+
+const MS_PER_DAY = 86_400_000;
+const dayTime = (iso: string) => new Date(`${iso}T00:00:00.000Z`).getTime();
+const calendarDays = (from: string, to: string) => Math.round((dayTime(to) - dayTime(from)) / MS_PER_DAY);
+
+/** Показники однієї оренди для орендаря: що заробив, що витратив і як сплачує за авто */
+export function dealOverviewOf(input: {
+  pricePerDay: number;
+  startDate: string;
+  endDate: string;
+  income: number;
+  expense: number;
+  rentPaid: number;
+  /** YYYY-MM-DD; за замовчуванням сьогодні (UTC) */
+  today?: string;
+}): DealOverview {
+  const today = input.today ?? new Date().toISOString().slice(0, 10);
+  const t = totalsOf(input.income, input.expense);
+  const totalDays = Math.max(1, calendarDays(input.startDate, input.endDate));
+  // Минулі доби: до початку — 0, під час оренди — скільки пройшло, після завершення — весь період
+  const elapsedDays = Math.max(0, Math.min(totalDays, calendarDays(input.startDate, today)));
+  const rentPaid = round2(input.rentPaid);
+  const rentDue = round2(input.pricePerDay * elapsedDays);
+  return {
+    ...t,
+    rentPaid,
+    rentDue,
+    rentBalance: round2(rentDue - rentPaid),
+    plannedRent: round2(input.pricePerDay * totalDays),
+    otherExpenses: round2(t.expense - rentPaid),
+    elapsedDays,
+    totalDays,
+    avgProfitPerDay: round2(t.profit / Math.max(1, elapsedDays)),
+  };
+}

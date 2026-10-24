@@ -11,14 +11,15 @@ export default function AppTabs() {
     <NativeTabs
       backgroundColor={colors.background}
       indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
+      // П'ять вкладок у плаваючому таб-барі: дрібніший підпис і короткі назви, щоб вони не налазили одна на одну
+      labelStyle={{ default: { fontSize: 10 }, selected: { fontSize: 10, color: colors.text } }}>
       <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Автопарк</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Авто</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'car', selected: 'car.fill' }} md="directions_car" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="analytics">
-        <NativeTabs.Trigger.Label>Аналітика</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Звіт</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="chart.bar.fill" md="bar_chart" />
       </NativeTabs.Trigger>
 

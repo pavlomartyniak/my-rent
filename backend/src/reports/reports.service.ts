@@ -2,12 +2,15 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectModel } from '@nestjs/mongoose';
 import { type Model, type PipelineStage, Types } from 'mongoose';
 
+import { RENT_CATEGORY } from '../common/constants';
 import { Car } from '../schemas/car.schema';
+import { Deal } from '../schemas/deal.schema';
 import { Transaction } from '../schemas/transaction.schema';
 import {
   bestWorst,
   categoryShares,
   currentMonth,
+  dealOverviewOf,
   fillSeries,
   margin,
   overviewOf,
@@ -28,6 +31,7 @@ export class ReportsService {
   constructor(
     @InjectModel(Transaction.name) private readonly txs: Model<Transaction>,
     @InjectModel(Car.name) private readonly cars: Model<Car>,
+    @InjectModel(Deal.name) private readonly deals: Model<Deal>,
   ) {}
 
   /** Загальний звіт за місяць або рік: підсумки, порівняння з минулим періодом, графік, витрати, показники по кожному авто */
@@ -116,6 +120,80 @@ export class ReportsService {
     };
   }
 
+  /** Звіт орендаря за місяць або рік: підсумки, порівняння, графік, витрати й показники по кожній оренді */
+  async renterSummary(userId: string, periodKey?: string) {
+    const period = this.period(periodKey);
+    const renter = new Types.ObjectId(userId);
+    const previousKey = previousPeriod(period);
+    const previous = parsePeriod(previousKey)!;
+
+    const [now, before, series, categories, perDeal, allDeals, rentPaid, deals] = await Promise.all([
+      this.totals(renter, period),
+      this.totals(renter, previous),
+      this.series(renter, period),
+      this.categories(renter, period),
+      this.byKey(renter, 'dealId', period),
+      this.byKey(renter, 'dealId'),
+      this.rentPaidByDeal(renter),
+      this.deals.find({ renterId: renter }).sort({ createdAt: -1 }).exec(),
+    ]);
+
+    const totalPaid = [...rentPaid.values()].reduce((s, n) => s + n, 0);
+    return {
+      period: period.key,
+      previousPeriod: previousKey,
+      totals: { ...now, margin: margin(now) },
+      previous: { ...before, margin: margin(before) },
+      change: {
+        profit: pctChange(now.profit, before.profit),
+        income: pctChange(now.income, before.income),
+        expense: pctChange(now.expense, before.expense),
+        marginPoints: margin(now) !== null && margin(before) !== null ? Math.round((margin(now)! - margin(before)!) * 10) / 10 : null,
+      },
+      series,
+      categories,
+      rentPaidTotal: Math.round(totalPaid * 100) / 100,
+      deals: deals.map((deal) => {
+        const id = String(deal._id);
+        const p = perDeal.get(id);
+        const a = allDeals.get(id);
+        return {
+          dealId: id,
+          period: totalsOf(p?.income ?? 0, p?.expense ?? 0),
+          overview: dealOverviewOf({ ...dealTerms(deal), income: a?.income ?? 0, expense: a?.expense ?? 0, rentPaid: rentPaid.get(id) ?? 0 }),
+        };
+      }),
+    };
+  }
+
+  /** Детальний звіт по одній оренді орендаря */
+  async renterDeal(userId: string, dealId: string, periodKey?: string) {
+    const renter = new Types.ObjectId(userId);
+    const deal = await this.deals.findOne({ _id: dealId, renterId: renter }).exec();
+    if (!deal) throw new NotFoundException('Оренду не знайдено');
+
+    const period = this.period(periodKey);
+    const dealFilter = { dealId: deal._id };
+    const [now, series, categories, allCategories, all, rentPaid] = await Promise.all([
+      this.totals(renter, period, dealFilter),
+      this.series(renter, period, dealFilter),
+      this.categories(renter, period, dealFilter),
+      this.categories(renter, undefined, dealFilter),
+      this.byKey(renter, 'dealId', undefined, dealFilter),
+      this.rentPaidByDeal(renter, dealFilter),
+    ]);
+    const a = all.get(String(deal._id));
+    return {
+      dealId: String(deal._id),
+      period: period.key,
+      totals: { ...now, margin: margin(now) },
+      series,
+      categories,
+      allCategories,
+      overview: dealOverviewOf({ ...dealTerms(deal), income: a?.income ?? 0, expense: a?.expense ?? 0, rentPaid: rentPaid.get(String(deal._id)) ?? 0 }),
+    };
+  }
+
   // ---- агрегації ----
 
   private period(key?: string): ParsedPeriod {
@@ -158,10 +236,24 @@ export class ReportsService {
   }
 
   /** Доходи, витрати й дата першого запису по кожному авто (за період або за весь час) */
-  private async byCar(owner: Types.ObjectId, period?: ParsedPeriod, extra?: Record<string, unknown>) {
+  private byCar(owner: Types.ObjectId, period?: ParsedPeriod, extra?: Record<string, unknown>) {
+    return this.byKey(owner, 'carId', period, extra);
+  }
+
+  /** Сплачено за оренду авто по кожній оренді (витрати з категорією «Оренда авто») */
+  private async rentPaidByDeal(renter: Types.ObjectId, extra?: Record<string, unknown>) {
+    const rows = await this.txs.aggregate<{ _id: Types.ObjectId; sum: number }>([
+      this.match(renter, undefined, { ...extra, type: 'expense', category: RENT_CATEGORY }),
+      { $group: { _id: '$dealId', sum: { $sum: '$amount' } } },
+    ]);
+    return new Map(rows.map((r) => [String(r._id), r.sum]));
+  }
+
+  /** Доходи, витрати й дата першого запису, згруповані за полем (авто чи оренда) */
+  private async byKey(owner: Types.ObjectId, key: 'carId' | 'dealId', period?: ParsedPeriod, extra?: Record<string, unknown>) {
     const rows = await this.txs.aggregate<CarRow>([
-      this.match(owner, period, extra),
-      { $group: { _id: { carId: '$carId', type: '$type' }, sum: { $sum: '$amount' }, first: { $min: '$date' } } },
+      this.match(owner, period, { ...extra, [key]: { $ne: null } }),
+      { $group: { _id: { carId: `$${key}`, type: '$type' }, sum: { $sum: '$amount' }, first: { $min: '$date' } } },
     ]);
     const result = new Map<string, { income: number; expense: number; first?: string }>();
     for (const r of rows) {
@@ -174,3 +266,10 @@ export class ReportsService {
     return result;
   }
 }
+
+/** Умови оренди, від яких залежать показники орендаря */
+const dealTerms = (d: { pricePerDay: number; startDate: string; endDate: string }) => ({
+  pricePerDay: d.pricePerDay,
+  startDate: d.startDate,
+  endDate: d.endDate,
+});

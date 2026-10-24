@@ -4,6 +4,8 @@ import { type Connection, type Model, Types } from 'mongoose';
 
 import { RENTAL_STATUSES, type RentalStatus } from '../common/constants';
 import { Car } from '../schemas/car.schema';
+import { Deal } from '../schemas/deal.schema';
+import { Offer } from '../schemas/offer.schema';
 import { RentalRequest, type RentalRequestDocument } from '../schemas/rental-request.schema';
 import { User } from '../schemas/user.schema';
 import type { CreateRentalDto } from './rentals.dto';
@@ -19,6 +21,8 @@ export class RentalsService {
     @InjectModel(RentalRequest.name) private readonly rentals: Model<RentalRequest>,
     @InjectModel(Car.name) private readonly cars: Model<Car>,
     @InjectModel(User.name) private readonly users: Model<User>,
+    @InjectModel(Offer.name) private readonly offers: Model<Offer>,
+    @InjectModel(Deal.name) private readonly deals: Model<Deal>,
     @InjectConnection() private readonly connection: Connection,
   ) {}
 
@@ -121,6 +125,31 @@ export class RentalsService {
         await this.rentals.updateMany(
           { carId: request.carId, status: 'pending', _id: { $ne: request._id } },
           { $set: { status: 'declined', decisionNote: 'Авто вже здано іншому орендарю', respondedAt: new Date() } },
+          { session },
+        );
+        // Це авто вже здано: пропозиції на заявки орендарів з ним теж втрачають сенс
+        await this.offers.updateMany(
+          { carId: request.carId, status: 'pending' },
+          { $set: { status: 'declined', decisionNote: 'Авто вже здано', respondedAt: new Date() } },
+          { session },
+        );
+        // Орендар отримує оренду, по якій веде свій облік
+        await this.deals.create(
+          [
+            {
+              renterId: request.renterId,
+              ownerId: request.ownerId,
+              carId: request.carId,
+              title: request.car.title,
+              photoUri: request.car.photoUri,
+              city: request.car.city,
+              pricePerDay: request.car.pricePerDay,
+              startDate: request.startDate,
+              endDate: request.endDate,
+              source: 'request',
+              sourceId: request._id,
+            },
+          ],
           { session },
         );
         accepted = request;

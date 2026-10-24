@@ -6,6 +6,7 @@ import { FREE_CAR_LIMIT, PRO_CAR_LIMIT } from '../common/constants';
 import { normalize } from '../common/normalize';
 import { Car } from '../schemas/car.schema';
 import { Reminder } from '../schemas/reminder.schema';
+import { Offer } from '../schemas/offer.schema';
 import { RentalRequest } from '../schemas/rental-request.schema';
 import { Transaction } from '../schemas/transaction.schema';
 import { UsersService } from '../users/users.service';
@@ -19,6 +20,7 @@ export class CarsService {
     @InjectModel(Transaction.name) private readonly transactions: Model<Transaction>,
     @InjectModel(Reminder.name) private readonly reminders: Model<Reminder>,
     @InjectModel(RentalRequest.name) private readonly rentals: Model<RentalRequest>,
+    @InjectModel(Offer.name) private readonly offers: Model<Offer>,
     private readonly users: UsersService,
   ) {}
 
@@ -94,6 +96,7 @@ export class CarsService {
       this.transactions.deleteMany({ userId, carId: id }),
       this.reminders.deleteMany({ userId, carId: id }),
       this.rentals.deleteMany({ carId: id }),
+      this.offers.deleteMany({ carId: id }),
     ]);
   }
 }

@@ -15,12 +15,12 @@ class PeriodQuery {
 // Звіти залежать від даних, що змінюються в будь-який момент, тож не кешуються
 const NO_CACHE = 'no-store';
 
-@Roles('owner')
 @Controller('reports')
 export class ReportsController {
   constructor(private readonly reports: ReportsService) {}
 
   /** Загальний звіт за період */
+  @Roles('owner')
   @Header('Cache-Control', NO_CACHE)
   @Get('summary')
   summary(@CurrentUser() user: AuthUser, @Query() { period }: PeriodQuery) {
@@ -28,9 +28,26 @@ export class ReportsController {
   }
 
   /** Детальний звіт по авто */
+  @Roles('owner')
   @Header('Cache-Control', NO_CACHE)
   @Get('cars/:id')
   car(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Query() { period }: PeriodQuery) {
     return this.reports.car(user.id, id, period);
+  }
+
+  /** Звіт орендаря за період */
+  @Roles('renter')
+  @Header('Cache-Control', NO_CACHE)
+  @Get('renter/summary')
+  renterSummary(@CurrentUser() user: AuthUser, @Query() { period }: PeriodQuery) {
+    return this.reports.renterSummary(user.id, period);
+  }
+
+  /** Детальний звіт по одній оренді орендаря */
+  @Roles('renter')
+  @Header('Cache-Control', NO_CACHE)
+  @Get('renter/deals/:id')
+  renterDeal(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Query() { period }: PeriodQuery) {
+    return this.reports.renterDeal(user.id, id, period);
   }
 }

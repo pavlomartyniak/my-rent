@@ -2,23 +2,40 @@ import { StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { STATUS_LABEL, type RentalStatus } from '@/lib/rentals';
 
 import { ThemedText } from './themed-text';
 
-export function StatusBadge({ status }: { status: RentalStatus }) {
+type Tone = 'warning' | 'positive' | 'negative' | 'neutral' | 'accent';
+
+/** Статуси запитів на оренду, заявок орендарів і пропозицій власників */
+const STATUSES: Record<string, { label: string; tone: Tone }> = {
+  pending: { label: 'Очікує відповіді', tone: 'warning' },
+  accepted: { label: 'Прийнято', tone: 'positive' },
+  declined: { label: 'Відхилено', tone: 'negative' },
+  cancelled: { label: 'Скасовано', tone: 'neutral' },
+  withdrawn: { label: 'Відкликано', tone: 'neutral' },
+  open: { label: 'Відкрита', tone: 'accent' },
+  fulfilled: { label: 'Виконана', tone: 'positive' },
+  upcoming: { label: 'Незабаром', tone: 'warning' },
+  active: { label: 'Триває', tone: 'positive' },
+  finished: { label: 'Завершена', tone: 'neutral' },
+};
+
+export function StatusBadge({ status }: { status: string }) {
   const theme = useTheme();
-  const look = {
-    pending: [theme.warningSoft, theme.warning],
-    accepted: [theme.positiveSoft, theme.positive],
-    declined: [theme.negativeSoft, theme.negative],
-    cancelled: [theme.backgroundSelected, theme.textSecondary],
-  }[status];
+  const { label, tone } = STATUSES[status] ?? { label: status, tone: 'neutral' as Tone };
+  const [bg, fg] = {
+    warning: [theme.warningSoft, theme.warning],
+    positive: [theme.positiveSoft, theme.positive],
+    negative: [theme.negativeSoft, theme.negative],
+    neutral: [theme.backgroundSelected, theme.textSecondary],
+    accent: [theme.accentSoft, theme.accent],
+  }[tone];
 
   return (
-    <View style={[styles.badge, { backgroundColor: look[0] }]}>
-      <ThemedText type="small" style={[styles.text, { color: look[1] }]}>
-        {STATUS_LABEL[status]}
+    <View style={[styles.badge, { backgroundColor: bg }]}>
+      <ThemedText type="small" style={[styles.text, { color: fg }]}>
+        {label}
       </ThemedText>
     </View>
   );
