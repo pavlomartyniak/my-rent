@@ -20,7 +20,7 @@ export default function PaywallScreen() {
     <Screen>
       <ThemedText type="subtitle">Pro · {PRO_PRICE}/міс</ThemedText>
       <ThemedText type="default" themeColor="textSecondary">
-        У безкоштовному тарифі можна вести {FREE_CAR_LIMIT} авто.
+        У безкоштовному тарифі можна вести до {FREE_CAR_LIMIT} авто.
       </ThemedText>
 
       <Card style={styles.features}>

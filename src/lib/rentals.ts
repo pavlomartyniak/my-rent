@@ -7,6 +7,8 @@ export type MarketCar = {
   year: number;
   mileage: number;
   photoUri: string | null;
+  /** Усі фото оголошення (https), обкладинка перша */
+  photos: string[];
   city: string;
   pricePerDay: number;
   description: string;

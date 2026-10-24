@@ -66,6 +66,10 @@ export class Car {
   @Prop()
   photoUri?: string;
 
+  /** Усі фото авто; перше з них — обкладинка (дублюється в photoUri) */
+  @Prop({ type: [String], default: [] })
+  photos: string[];
+
   @Prop({ type: CarListingSchema })
   listing?: CarListing;
 }

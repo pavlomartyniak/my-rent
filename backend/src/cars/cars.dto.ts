@@ -1,8 +1,8 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, Max, MaxLength, Min } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, Max, MaxLength, Min } from 'class-validator';
 
-import { CAR_STATUSES } from '../common/constants';
+import { CAR_STATUSES, MAX_PHOTOS } from '../common/constants';
 import { IsIsoDay } from '../common/is-iso-day';
 import { Trim } from '../common/profile';
 
@@ -55,6 +55,14 @@ export class CreateCarDto {
   @IsString()
   @MaxLength(2000)
   photoUri?: string;
+
+  /** Галерея; перше фото стає обкладинкою (photoUri) */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_PHOTOS, { message: `Можна додати до ${MAX_PHOTOS} фото` })
+  @IsString({ each: true })
+  @MaxLength(2000, { each: true })
+  photos?: string[];
 }
 
 export class UpdateCarDto extends PartialType(CreateCarDto) {}

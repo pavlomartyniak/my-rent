@@ -1,14 +1,14 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { CarPhoto } from '@/components/car-photo';
+import { PhotoGallery } from '@/components/photo-gallery';
 import { ReportStatus } from '@/components/report-status';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
-import { Radius, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { formatKm, formatMoney } from '@/lib/format';
 import type { MarketCar } from '@/lib/rentals';
@@ -35,7 +35,7 @@ export default function MarketCarScreen() {
     <Screen>
       <Stack.Screen options={{ title: `${car.brand} ${car.model}` }} />
 
-      <CarPhoto uri={car.photoUri ?? undefined} style={styles.photo} iconSize={44} />
+      <PhotoGallery photos={car.photos?.length ? car.photos : car.photoUri ? [car.photoUri] : []} />
 
       <View>
         <ThemedText type="subtitle">
@@ -78,7 +78,6 @@ export default function MarketCarScreen() {
 }
 
 const styles = StyleSheet.create({
-  photo: { width: '100%', aspectRatio: 16 / 9, borderRadius: Radius.lg },
   price: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.two },
   bold: { fontWeight: 700 },
   note: { textAlign: 'center' },

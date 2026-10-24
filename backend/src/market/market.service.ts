@@ -19,6 +19,8 @@ function publicView(car: CarDocument, ownerName: string) {
     year: car.year,
     mileage: car.mileage,
     photoUri: car.photoUri ?? null,
+    // У публічній галереї лише фото, доступні за https; обкладинка завжди перша
+    photos: (car.photos?.length ? car.photos : car.photoUri ? [car.photoUri] : []).filter((u) => u.startsWith('https://')),
     city: listing.city,
     pricePerDay: listing.pricePerDay,
     description: listing.description,

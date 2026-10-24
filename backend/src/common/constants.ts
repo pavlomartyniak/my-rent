@@ -12,5 +12,8 @@ export type Role = (typeof ROLES)[number];
 export const RENTAL_STATUSES = ['pending', 'accepted', 'declined', 'cancelled'] as const;
 export type RentalStatus = (typeof RENTAL_STATUSES)[number];
 
-export const FREE_CAR_LIMIT = 1;
+/** Скільки фото можна додати до одного авто */
+export const MAX_PHOTOS = 10;
+
+export const FREE_CAR_LIMIT = 2;
 export const PRO_CAR_LIMIT = 20;

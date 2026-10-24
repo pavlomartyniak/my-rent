@@ -10,6 +10,7 @@ import { RentalRequest } from '../schemas/rental-request.schema';
 import { Transaction } from '../schemas/transaction.schema';
 import { UsersService } from '../users/users.service';
 import type { CreateCarDto, ListingDto, UpdateCarDto } from './cars.dto';
+import { normalizePhotos } from './photos';
 
 @Injectable()
 export class CarsService {
@@ -33,7 +34,7 @@ export class CarsService {
     if ((await this.cars.countDocuments({ userId })) >= limit) {
       throw new ForbiddenException(`Ліміт тарифу: ${limit} авто. Перейдіть на Pro, щоб додати більше.`);
     }
-    return this.cars.create({ ...dto, userId });
+    return this.cars.create({ ...normalizePhotos(dto), userId });
   }
 
   async get(userId: string, id: string) {
@@ -43,7 +44,7 @@ export class CarsService {
   }
 
   async update(userId: string, id: string, dto: UpdateCarDto) {
-    const car = await this.cars.findOneAndUpdate({ _id: id, userId }, { $set: dto }, { new: true, runValidators: true }).exec();
+    const car = await this.cars.findOneAndUpdate({ _id: id, userId }, { $set: normalizePhotos(dto) }, { new: true, runValidators: true }).exec();
     if (!car) throw new NotFoundException('Авто не знайдено');
 
     // Авто, яке вже не вільне, не може лишатись в оголошеннях

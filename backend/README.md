@@ -53,7 +53,7 @@ npm run start:dev         # http://localhost:4000
 | GET / PATCH / DELETE | `/me` | профіль (`isPro`, `onboarded`, `dismissedHints`); DELETE видаляє акаунт і всі дані |
 | GET | `/data` | профіль, авто й нагадування одним запитом (записи не віддаються: їх беруть частинами через `/transactions/history`) |
 | DELETE | `/data` | очищає авто, записи й нагадування |
-| GET / POST | `/cars` | список / створення (ліміт: Free — 1 авто, Pro — 20) |
+| GET / POST | `/cars` | список / створення (ліміт: Free — 2 авто, Pro — 20) |
 | GET / PATCH / DELETE | `/cars/:id` | DELETE каскадно видаляє записи й нагадування авто |
 | GET / POST | `/transactions` (`?carId=`) | доходи й витрати |
 | PATCH / DELETE | `/transactions/:id` | |

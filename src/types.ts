@@ -17,6 +17,8 @@ export type Car = {
   driver?: string;
   /** Фото авто: https-посилання (Cloudinary) або локальний URI, якщо завантаження не налаштоване */
   photoUri?: string;
+  /** Усі фото авто (до 10); перше — обкладинка, дублюється в photoUri */
+  photos?: string[];
   /** Оголошення про оренду; воно видиме орендарям, поки published=true і авто вільне */
   listing?: { published: boolean; city: string; pricePerDay: number; description: string };
 };
@@ -57,6 +59,6 @@ export type Reminder = {
   notificationIds?: string[];
 };
 
-export const FREE_CAR_LIMIT = 1;
+export const FREE_CAR_LIMIT = 2;
 export const PRO_CAR_LIMIT = 20;
 export const PRO_PRICE = '$5';

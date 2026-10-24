@@ -49,7 +49,8 @@ export function CarForm({ car }: { car?: Car }) {
   const [mileage, setMileage] = useState(car ? String(car.mileage) : '');
   const [driver, setDriver] = useState(car?.driver ?? '');
   const [rentStart, setRentStart] = useState(car?.rentStart ?? todayISO());
-  const [photoUri, setPhotoUri] = useState(car?.photoUri);
+  // Галерея; для старих авто з одним фото беремо його
+  const [photos, setPhotos] = useState<string[]>(car?.photos?.length ? car.photos : car?.photoUri ? [car.photoUri] : []);
   const [status, setStatus] = useState(car?.status ?? CAR_STATUSES[0]);
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -57,7 +58,7 @@ export function CarForm({ car }: { car?: Car }) {
   const rented = status === RENTED;
   const yearNum = Number(year);
   const errors = {
-    photo: photoUri ? '' : 'Додайте фото авто',
+    photo: photos.length ? '' : 'Додайте хоча б одне фото авто',
     brand: brand ? '' : 'Оберіть марку зі списку',
     model: model ? '' : 'Оберіть модель зі списку',
     year: Number.isInteger(yearNum) && yearNum >= MIN_YEAR && yearNum <= MAX_YEAR ? '' : 'Оберіть рік випуску',
@@ -129,7 +130,8 @@ export function CarForm({ car }: { car?: Car }) {
       status,
       // Для авто, яке не в оренді, водій не зберігається
       driver: rented ? driver.trim() : '',
-      photoUri,
+      photos,
+      photoUri: photos[0] ?? '',
     };
     setSaving(true);
     const ok = await (car ? updateCar(car.id, data) : addCar(data));
@@ -154,7 +156,7 @@ export function CarForm({ car }: { car?: Car }) {
   return (
     <Screen>
       {!car ? <Hint id="car-form">Оберіть марку й модель зі списку, вкажіть рік, вартість і пробіг. VIN і водія можна залишити порожніми.</Hint> : null}
-      <PhotoPicker value={photoUri} onChange={setPhotoUri} error={err('photo')} />
+      <PhotoPicker value={photos} onChange={setPhotos} error={err('photo')} />
       <PickerField label="Марка" value={brand} placeholder="Оберіть марку" onPress={pickBrand} error={err('brand')} />
       <PickerField
         label="Модель"
