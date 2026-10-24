@@ -15,9 +15,13 @@ export type Car = {
   status: CarStatus;
   /** Поточний водій / орендар */
   driver?: string;
-  /** Локальний URI фото авто */
+  /** Фото авто: https-посилання (Cloudinary) або локальний URI, якщо завантаження не налаштоване */
   photoUri?: string;
+  /** Оголошення про оренду; воно видиме орендарям, поки published=true і авто вільне */
+  listing?: { published: boolean; city: string; pricePerDay: number; description: string };
 };
+
+export type Role = 'owner' | 'renter';
 
 export type TransactionType = 'income' | 'expense';
 

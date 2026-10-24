@@ -14,6 +14,7 @@ import { isValidPhone } from '@/lib/profile';
 import { useAuth } from '@/store/auth';
 
 const MODES = ['Вхід', 'Реєстрація'] as const;
+const ROLES = ['Я власник авто', 'Шукаю авто в оренду'] as const;
 
 export default function LoginScreen() {
   const theme = useTheme();
@@ -21,6 +22,7 @@ export default function LoginScreen() {
   const { login, register } = useAuth();
 
   const [mode, setMode] = useState<(typeof MODES)[number]>('Вхід');
+  const [roleLabel, setRoleLabel] = useState<(typeof ROLES)[number]>(ROLES[0]);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
@@ -48,7 +50,7 @@ export default function LoginScreen() {
     if (!valid || busy) return;
     setBusy(true);
     setError(null);
-    const message = signingUp ? await register(email, password, { firstName, lastName, phone }) : await login(email, password);
+    const message = signingUp ? await register(email, password, { firstName, lastName, phone }, roleLabel === ROLES[0] ? 'owner' : 'renter') : await login(email, password);
     setBusy(false);
     if (message) setError(message);
   }
@@ -69,6 +71,12 @@ export default function LoginScreen() {
 
       {signingUp ? (
         <>
+          <View style={styles.role}>
+            <ThemedText type="small" themeColor="textSecondary">
+              Хто ви? Тип акаунта потім змінити не можна
+            </ThemedText>
+            <Segmented options={ROLES} value={roleLabel} onChange={setRoleLabel} />
+          </View>
           <Field label="Ім’я" value={firstName} onChangeText={setFirstName} autoCapitalize="words" autoComplete="given-name" textContentType="givenName" maxLength={50} placeholder="Павло" />
           <Field label="Прізвище" value={lastName} onChangeText={setLastName} autoCapitalize="words" autoComplete="family-name" textContentType="familyName" maxLength={50} placeholder="Мартиняк" />
           <Field
@@ -126,6 +134,7 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   header: { alignItems: 'center', gap: Spacing.two, marginBottom: Spacing.two },
+  role: { gap: Spacing.one },
   badge: { width: 80, height: 80, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
   center: { textAlign: 'center' },
 });

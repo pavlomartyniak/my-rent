@@ -1,3 +1,4 @@
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 
 import { api, ApiError } from '@/lib/api';
@@ -20,13 +21,22 @@ export function useReport<T>(
     keepPrevious?: boolean;
     /** false — завжди чекати свіжу відповідь, не показуючи збережену (для форм редагування) */
     useCache?: boolean;
+    /** Завантажувати наново щоразу, коли екран знову стає активним (списки, що змінюються іншими користувачами) */
+    refetchOnFocus?: boolean;
   } = {},
 ) {
-  const { keepPrevious = false, useCache = true } = options;
+  const { keepPrevious = false, useCache = true, refetchOnFocus = false } = options;
   const { token } = useAuth();
   const { dataVersion } = useFleet();
   const [state, setState] = useState<State<T>>({ key: null, version: -1 });
   const [attempt, setAttempt] = useState(0);
+  const [focusTick, setFocusTick] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (refetchOnFocus) setFocusTick((t) => t + 1);
+    }, [refetchOnFocus]),
+  );
 
   // Кеш прив'язаний до токена, щоб після виходу чужі цифри не показувались
   const key = path && token ? `${token}:${path}` : null;
@@ -45,7 +55,7 @@ export function useReport<T>(
     return () => {
       cancelled = true;
     };
-  }, [path, key, dataVersion, attempt]);
+  }, [path, key, dataVersion, attempt, focusTick]);
 
   const current = state.key === key;
   const settled = current && state.version === dataVersion;

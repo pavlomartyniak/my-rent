@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import type { HydratedDocument } from 'mongoose';
 
-import { THEMES } from '../common/constants';
+import { ROLES, THEMES } from '../common/constants';
 import { jsonOptions } from '../common/json-options';
 
 @Schema(jsonOptions([], ['passwordHash']))
@@ -21,6 +21,10 @@ export class User {
 
   @Prop({ default: '', trim: true })
   phone: string;
+
+  /** Тип акаунта: owner — власник авто (облік), renter — орендар (пошук і запити); не змінюється */
+  @Prop({ enum: ROLES, default: 'owner' })
+  role: string;
 
   @Prop({ default: false })
   isPro: boolean;

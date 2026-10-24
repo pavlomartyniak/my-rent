@@ -36,7 +36,7 @@ export function wakeUpServer() {
 }
 
 export async function api<T = void>(
-  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   path: string,
   body?: unknown,
   /** `text: true` — повернути відповідь як рядок (наприклад, CSV) замість JSON */

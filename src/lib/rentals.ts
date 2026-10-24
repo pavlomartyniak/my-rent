@@ -1,0 +1,43 @@
+/** Відповіді ендпоінтів /market і /rentals */
+
+export type MarketCar = {
+  id: string;
+  brand: string;
+  model: string;
+  year: number;
+  mileage: number;
+  photoUri: string | null;
+  city: string;
+  pricePerDay: number;
+  description: string;
+  /** Ім'я власника з ініціалом прізвища */
+  owner: string;
+};
+
+export type MarketPage = { page: number; pages: number; total: number; items: MarketCar[] };
+
+export type RentalStatus = 'pending' | 'accepted' | 'declined' | 'cancelled';
+
+export type RentalView = {
+  id: string;
+  status: RentalStatus;
+  carId: string;
+  startDate: string;
+  endDate: string;
+  days: number;
+  totalPrice: number;
+  message: string;
+  decisionNote: string;
+  createdAt: string;
+  respondedAt: string | null;
+  car: { title: string; city: string; pricePerDay: number; photoUri?: string };
+  /** Для орендаря — власник, для власника — орендар; телефон з'являється лише після прийняття */
+  counterpart: { name: string; phone?: string };
+};
+
+export const STATUS_LABEL: Record<RentalStatus, string> = {
+  pending: 'Очікує відповіді',
+  accepted: 'Прийнято',
+  declined: 'Відхилено',
+  cancelled: 'Скасовано',
+};

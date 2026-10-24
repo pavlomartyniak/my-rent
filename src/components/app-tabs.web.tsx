@@ -27,6 +27,9 @@ export default function AppTabs() {
           <TabTrigger name="analytics" href="/analytics" asChild>
             <TabButton>Аналітика</TabButton>
           </TabTrigger>
+          <TabTrigger name="requests" href="/requests" asChild>
+            <TabButton>Запити</TabButton>
+          </TabTrigger>
           <TabTrigger name="reminders" href="/reminders" asChild>
             <TabButton>Нагадування</TabButton>
           </TabTrigger>

@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Put } from '@nestjs/common';
 
-import { type AuthUser, CurrentUser } from '../common/current-user';
+import { type AuthUser, CurrentUser, Roles } from '../common/current-user';
 import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
-import { CreateCarDto, UpdateCarDto } from './cars.dto';
+import { CreateCarDto, ListingDto, UpdateCarDto } from './cars.dto';
 import { CarsService } from './cars.service';
 
+@Roles('owner')
 @Controller('cars')
 export class CarsController {
   constructor(private readonly cars: CarsService) {}
@@ -27,6 +28,18 @@ export class CarsController {
   @Patch(':id')
   update(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Body() dto: UpdateCarDto) {
     return this.cars.update(user.id, id, dto);
+  }
+
+  /** Опублікувати оголошення про оренду (або оновити його) */
+  @Put(':id/listing')
+  publish(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Body() dto: ListingDto) {
+    return this.cars.publish(user.id, id, dto);
+  }
+
+  /** Зняти оголошення з публікації */
+  @Delete(':id/listing')
+  unpublish(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
+    return this.cars.unpublish(user.id, id);
   }
 
   @HttpCode(204)

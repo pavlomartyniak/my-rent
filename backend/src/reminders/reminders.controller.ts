@@ -1,10 +1,11 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
 
-import { type AuthUser, CurrentUser } from '../common/current-user';
+import { type AuthUser, CurrentUser, Roles } from '../common/current-user';
 import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
 import { CreateReminderDto, UpdateReminderDto } from './reminders.dto';
 import { RemindersService } from './reminders.service';
 
+@Roles('owner')
 @Controller('reminders')
 export class RemindersController {
   constructor(private readonly reminders: RemindersService) {}

@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 
 import { api, ApiError, setApiToken, setUnauthorizedHandler, wakeUpServer } from '@/lib/api';
 import type { Profile } from '@/lib/profile';
+import type { Role } from '@/types';
 
 const TOKEN_KEY = 'my-rent.token';
 
@@ -12,7 +13,7 @@ type AuthContextValue = {
   token: string | null;
   /** Повертає текст помилки або null, якщо успішно */
   login: (email: string, password: string) => Promise<string | null>;
-  register: (email: string, password: string, profile: Profile) => Promise<string | null>;
+  register: (email: string, password: string, profile: Profile, role: Role) => Promise<string | null>;
   signOut: () => Promise<void>;
 };
 
@@ -65,8 +66,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       status: loading ? 'loading' : token ? 'in' : 'out',
       token,
       login: (email, password) => authenticate('/auth/login', { email: email.trim(), password }),
-      register: (email, password, profile) =>
+      register: (email, password, profile, role) =>
         authenticate('/auth/register', {
+          role,
           email: email.trim(),
           password,
           firstName: profile.firstName.trim(),

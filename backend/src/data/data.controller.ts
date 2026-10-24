@@ -1,6 +1,6 @@
 import { Controller, Delete, Get, HttpCode } from '@nestjs/common';
 
-import { type AuthUser, CurrentUser } from '../common/current-user';
+import { type AuthUser, CurrentUser, Roles } from '../common/current-user';
 import { DataService } from './data.service';
 
 @Controller()
@@ -12,6 +12,7 @@ export class DataController {
     return this.data.all(user.id);
   }
 
+  @Roles('owner')
   @HttpCode(204)
   @Delete('data')
   async clear(@CurrentUser() user: AuthUser) {

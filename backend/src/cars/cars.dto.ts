@@ -1,8 +1,10 @@
 import { PartialType } from '@nestjs/mapped-types';
+import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, Max, MaxLength, Min } from 'class-validator';
 
 import { CAR_STATUSES } from '../common/constants';
 import { IsIsoDay } from '../common/is-iso-day';
+import { Trim } from '../common/profile';
 
 export class CreateCarDto {
   @IsString()
@@ -56,3 +58,24 @@ export class CreateCarDto {
 }
 
 export class UpdateCarDto extends PartialType(CreateCarDto) {}
+
+/** Оголошення про оренду: що бачать орендарі */
+export class ListingDto {
+  @Trim()
+  @IsString()
+  @IsNotEmpty({ message: 'Вкажіть місто' })
+  @MaxLength(60, { message: 'Назва міста занадто довга' })
+  city: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  @IsPositive({ message: 'Ціна за добу має бути більшою за нуль' })
+  @Max(1_000_000)
+  pricePerDay: number;
+
+  @Trim()
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000, { message: 'Опис занадто довгий' })
+  description?: string;
+}

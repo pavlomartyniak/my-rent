@@ -11,7 +11,10 @@ import { DataModule } from './data/data.module';
 import { DatabaseModule } from './database/database.module';
 import { ExportModule } from './export/export.module';
 import { HealthController } from './health.controller';
+import { MarketModule } from './market/market.module';
+import { MediaModule } from './media/media.module';
 import { RemindersModule } from './reminders/reminders.module';
+import { RentalsModule } from './rentals/rentals.module';
 import { ReportsModule } from './reports/reports.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { UsersModule } from './users/users.module';
@@ -46,6 +49,9 @@ import { UsersModule } from './users/users.module';
     RemindersModule,
     ReportsModule,
     ExportModule,
+    MarketModule,
+    RentalsModule,
+    MediaModule,
     DataModule,
   ],
   controllers: [HealthController],

@@ -18,6 +18,7 @@ import { Segmented } from '@/components/ui/segmented';
 import { Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { daysUntil, monthKey, monthTitle, todayISO } from '@/lib/date';
+import type { RentalView } from '@/lib/rentals';
 import type { SummaryReport } from '@/lib/reports';
 import { useFleet } from '@/store/fleet';
 
@@ -31,6 +32,9 @@ export default function HomeScreen() {
   const month = monthKey(todayISO());
   // Підсумок місяця й прибуток по кожному авто рахує сервер
   const { data: report, loading, error, retry } = useReport<SummaryReport>(`/reports/summary?period=${month}`);
+  // Нові запити орендарів на мої авто
+  const { data: incoming } = useReport<RentalView[]>('/rentals/incoming?status=pending', { refetchOnFocus: true });
+  const newRequests = incoming?.length ?? 0;
 
   // Показуємо лише одне найближче нагадування, і тільки якщо воно терміново
   const next = reminders.filter((r) => !r.done).sort((a, b) => a.date.localeCompare(b.date))[0];
@@ -70,6 +74,23 @@ export default function HomeScreen() {
       )}
 
       <Button title="Додати дохід або витрату" icon="add" onPress={() => router.push('/transaction/new')} />
+
+      {newRequests > 0 ? (
+        <Pressable accessibilityRole="button" onPress={() => router.navigate('/requests')}>
+          <Card style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.three }}>
+            <Icon name="mail-unread" size={24} color="accent" />
+            <View style={{ flex: 1 }}>
+              <ThemedText type="default" style={{ fontWeight: 600 }}>
+                Нові запити на оренду: {newRequests}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                Орендарі чекають вашої відповіді
+              </ThemedText>
+            </View>
+            <Icon name="chevron-forward" size={18} color="textSecondary" />
+          </Card>
+        </Pressable>
+      ) : null}
 
       {next && nextDays <= 7 ? (
         <Pressable accessibilityRole="button" onPress={() => router.navigate('/reminders')}>

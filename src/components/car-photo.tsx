@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Spacing } from '@/constants/theme';
+import { thumbnailUrl } from '@/lib/media';
 import { useTheme } from '@/hooks/use-theme';
 
 import { ThemedText } from './themed-text';
@@ -23,7 +24,7 @@ export function CarPhoto({ uri, style, iconSize = 28, placeholder }: Props) {
   return (
     <View style={[styles.box, { backgroundColor: theme.accentSoft }, style]}>
       {uri ? (
-        <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel="Фото авто" />
+        <Image source={{ uri: thumbnailUrl(uri) }} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel="Фото авто" />
       ) : (
         <>
           <Icon name="car-sport" size={iconSize} color="accent" />

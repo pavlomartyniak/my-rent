@@ -24,6 +24,7 @@ export function CarCard({ car, profit }: { car: Car; profit?: number }) {
             <ThemedText type="small" themeColor="textSecondary">
               {car.year}
               {car.driver ? ` · ${car.driver}` : ''}
+              {car.listing?.published && car.status === 'Вільне' ? ' · В оголошеннях' : ''}
             </ThemedText>
           </View>
           <ThemedText type="default" style={styles.name} themeColor={profit === undefined ? 'textSecondary' : profit >= 0 ? 'positive' : 'negative'}>

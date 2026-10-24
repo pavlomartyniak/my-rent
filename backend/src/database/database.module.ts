@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 
 import { Car, CarSchema } from '../schemas/car.schema';
 import { Reminder, ReminderSchema } from '../schemas/reminder.schema';
+import { RentalRequest, RentalRequestSchema } from '../schemas/rental-request.schema';
 import { Transaction, TransactionSchema } from '../schemas/transaction.schema';
 import { User, UserSchema } from '../schemas/user.schema';
 
@@ -15,6 +16,7 @@ import { User, UserSchema } from '../schemas/user.schema';
       { name: Car.name, schema: CarSchema },
       { name: Transaction.name, schema: TransactionSchema },
       { name: Reminder.name, schema: ReminderSchema },
+      { name: RentalRequest.name, schema: RentalRequestSchema },
     ]),
   ],
   exports: [MongooseModule],

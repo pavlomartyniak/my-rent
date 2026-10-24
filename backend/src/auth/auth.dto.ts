@@ -1,8 +1,14 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength, ValidateIf } from 'class-validator';
+import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength, ValidateIf } from 'class-validator';
 
+import { ROLES } from '../common/constants';
 import { PHONE_PATTERN, Trim } from '../common/profile';
 
 export class RegisterDto {
+  /** Тип акаунта; за замовчуванням власник */
+  @IsOptional()
+  @IsIn(ROLES)
+  role?: string;
+
   @Trim()
   @IsString()
   @IsNotEmpty({ message: 'Вкажіть ім’я' })

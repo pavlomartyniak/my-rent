@@ -2,7 +2,7 @@ import { Controller, Get, Header, Query, Res } from '@nestjs/common';
 import { IsMongoId, IsOptional, Matches } from 'class-validator';
 import type { Response } from 'express';
 
-import { type AuthUser, CurrentUser } from '../common/current-user';
+import { type AuthUser, CurrentUser, Roles } from '../common/current-user';
 import { ExportService } from './export.service';
 
 class ExportQuery {
@@ -17,6 +17,7 @@ class ExportQuery {
   period?: string;
 }
 
+@Roles('owner')
 @Controller('export')
 export class ExportController {
   constructor(private readonly exports: ExportService) {}

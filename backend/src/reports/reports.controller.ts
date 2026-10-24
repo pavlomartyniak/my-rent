@@ -1,7 +1,7 @@
 import { Controller, Get, Header, Param, Query } from '@nestjs/common';
 import { IsOptional, Matches } from 'class-validator';
 
-import { type AuthUser, CurrentUser } from '../common/current-user';
+import { type AuthUser, CurrentUser, Roles } from '../common/current-user';
 import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
 import { ReportsService } from './reports.service';
 
@@ -15,6 +15,7 @@ class PeriodQuery {
 // Звіти залежать від даних, що змінюються в будь-який момент, тож не кешуються
 const NO_CACHE = 'no-store';
 
+@Roles('owner')
 @Controller('reports')
 export class ReportsController {
   constructor(private readonly reports: ReportsService) {}

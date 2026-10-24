@@ -6,5 +6,11 @@ export const REMINDER_KINDS = ['ТО', 'Страховка', 'Інше'] as cons
 
 export const THEMES = ['system', 'light', 'dark'] as const;
 
+export const ROLES = ['owner', 'renter'] as const;
+export type Role = (typeof ROLES)[number];
+
+export const RENTAL_STATUSES = ['pending', 'accepted', 'declined', 'cancelled'] as const;
+export type RentalStatus = (typeof RENTAL_STATUSES)[number];
+
 export const FREE_CAR_LIMIT = 1;
 export const PRO_CAR_LIMIT = 20;

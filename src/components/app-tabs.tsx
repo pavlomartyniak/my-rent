@@ -22,6 +22,11 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Icon sf="chart.bar.fill" md="bar_chart" />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="requests">
+        <NativeTabs.Trigger.Label>Запити</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'tray', selected: 'tray.fill' }} md="inbox" />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="reminders">
         <NativeTabs.Trigger.Label>Нагадування</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'bell', selected: 'bell.fill' }} md="notifications" />

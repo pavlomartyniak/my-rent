@@ -9,15 +9,24 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useFleet } from '@/store/fleet';
 
-const STEPS: { icon: IconName; title: string; text: string }[] = [
+type Step = { icon: IconName; title: string; text: string };
+
+const OWNER_STEPS: Step[] = [
   { icon: 'car-sport', title: 'Усі авто в одному місці', text: 'Додайте машини в оренді: марка, VIN, пробіг, водій і дата початку оренди.' },
   { icon: 'stats-chart', title: 'Прибуток і ROI', text: 'Вносьте доходи та витрати за кілька тапів — застосунок сам порахує прибуток і окупність кожного авто.' },
-  { icon: 'notifications', title: 'Жодних пропущених дат', text: 'Нагадування про ТО й страховку прийдуть за день і в сам день, щоб авто не простоювало.' },
+  { icon: 'megaphone', title: 'Здавайте через застосунок', text: 'Опублікуйте вільне авто, і орендарі надішлють запити. Прийнявши запит, ви автоматично додаєте оренду в облік.' },
+];
+
+const RENTER_STEPS: Step[] = [
+  { icon: 'search', title: 'Знайдіть авто в оренду', text: 'Шукайте вільні авто від власників у своєму місті та дивіться ціну за добу.' },
+  { icon: 'paper-plane', title: 'Надішліть запит', text: 'Оберіть дати й напишіть власнику. Запит нічого не бронює, поки власник його не прийме.' },
+  { icon: 'call', title: 'Домовтесь із власником', text: 'Після підтвердження ви побачите номер власника, щоб домовитись про передачу авто.' },
 ];
 
 export default function OnboardingScreen() {
   const theme = useTheme();
-  const { finishOnboarding } = useFleet();
+  const { finishOnboarding, role } = useFleet();
+  const STEPS = role === 'renter' ? RENTER_STEPS : OWNER_STEPS;
   const [step, setStep] = useState(0);
   const last = step === STEPS.length - 1;
   const s = STEPS[step];

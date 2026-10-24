@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException, type OnModuleInit } from '@nestj
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { normalize } from '../common/normalize';
 import { BRAND_ALIASES } from './catalog.aliases';
 
 type RawGeneration = { id: number; name: string; year_from: number | null; year_to: number | null };
@@ -15,16 +16,6 @@ export type ModelDetails = ModelSummary & { generations: Generation[] };
 
 type IndexedModel = { summary: ModelSummary; generations: Generation[]; search: string };
 type IndexedBrand = { id: number; name: string; search: string; models: IndexedModel[] };
-
-/** Нижній регістр, без діакритики (Škoda → skoda), розділові знаки → пробіли */
-export function normalize(text: string) {
-  return text
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim();
-}
 
 /** Усі слова запиту мають зустрічатися в тексті */
 const matches = (search: string, tokens: string[]) => tokens.every((t) => search.includes(t));

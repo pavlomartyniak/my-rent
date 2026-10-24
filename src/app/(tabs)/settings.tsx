@@ -23,9 +23,10 @@ const THEMES: { label: string; value: ThemePreference }[] = [
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { email, firstName, lastName, phone, cars, isPro, carLimit, setPro, clearAll, resetHints, setTheme, deleteAccount } = useFleet();
+  const { role, email, firstName, lastName, phone, cars, isPro, carLimit, setPro, clearAll, resetHints, setTheme, deleteAccount } = useFleet();
   const { signOut } = useAuth();
   const { preference } = useThemePreference();
+  const owner = role === 'owner';
 
   const confirm = (title: string, message: string, action: () => void) =>
     Alert.alert(title, message, [
@@ -80,31 +81,35 @@ export default function SettingsScreen() {
         </View>
       </SettingsGroup>
 
-      <SettingsGroup title="Тариф">
-        <SettingsRow
-          icon="diamond-outline"
-          title={isPro ? 'Тариф Pro' : 'Тариф Free'}
-          subtitle={isPro ? `Авто: ${cars.length} з ${carLimit}` : `Авто: ${cars.length} з ${carLimit}. У Pro — до ${PRO_CAR_LIMIT} авто`}
-          onPress={() => (isPro ? void setPro(false) : router.push('/paywall'))}
-        />
-      </SettingsGroup>
+      {owner ? (
+        <SettingsGroup title="Тариф">
+          <SettingsRow
+            icon="diamond-outline"
+            title={isPro ? 'Тариф Pro' : 'Тариф Free'}
+            subtitle={isPro ? `Авто: ${cars.length} з ${carLimit}` : `Авто: ${cars.length} з ${carLimit}. У Pro — до ${PRO_CAR_LIMIT} авто`}
+            onPress={() => (isPro ? void setPro(false) : router.push('/paywall'))}
+          />
+        </SettingsGroup>
+      ) : null}
 
-      <SettingsGroup title="Дані та сповіщення">
-        <SettingsRow
-          icon="download-outline"
-          title="Експорт у CSV"
-          subtitle="Поділитися всіма доходами й витратами у вигляді таблиці"
-          onPress={() =>
-            exportCsv().catch((e) => Alert.alert('Не вдалося експортувати', e instanceof ApiError ? e.message : 'Спробуйте ще раз'))
-          }
-        />
-        <SettingsRow
-          icon="notifications-outline"
-          title="Сповіщення"
-          subtitle="Дозволити нагадування про ТО й страховку"
-          onPress={enableNotifications}
-        />
-      </SettingsGroup>
+      {owner ? (
+        <SettingsGroup title="Дані та сповіщення">
+          <SettingsRow
+            icon="download-outline"
+            title="Експорт у CSV"
+            subtitle="Поділитися всіма доходами й витратами у вигляді таблиці"
+            onPress={() =>
+              exportCsv().catch((e) => Alert.alert('Не вдалося експортувати', e instanceof ApiError ? e.message : 'Спробуйте ще раз'))
+            }
+          />
+          <SettingsRow
+            icon="notifications-outline"
+            title="Сповіщення"
+            subtitle="Дозволити нагадування про ТО й страховку"
+            onPress={enableNotifications}
+          />
+        </SettingsGroup>
+      ) : null}
 
       <SettingsGroup title="Допомога">
         <SettingsRow
@@ -117,15 +122,17 @@ export default function SettingsScreen() {
         />
       </SettingsGroup>
 
-      <SettingsGroup title="Дані застосунку">
-        <SettingsRow
-          icon="trash-outline"
-          title="Видалити всі дані"
-          subtitle="Авто, записи й нагадування буде стерто безповоротно"
-          danger
-          onPress={() => confirm('Видалити всі дані?', 'Авто, записи й нагадування буде стерто безповоротно.', clearAll)}
-        />
-      </SettingsGroup>
+      {owner ? (
+        <SettingsGroup title="Дані застосунку">
+          <SettingsRow
+            icon="trash-outline"
+            title="Видалити всі дані"
+            subtitle="Авто, записи й нагадування буде стерто безповоротно"
+            danger
+            onPress={() => confirm('Видалити всі дані?', 'Авто, записи й нагадування буде стерто безповоротно.', clearAll)}
+          />
+        </SettingsGroup>
+      ) : null}
     </Screen>
   );
 }

@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Header, HttpCode, Param, Patch, Post, Qu
 import { Type } from 'class-transformer';
 import { IsInt, IsMongoId, Max, Min } from 'class-validator';
 
-import { type AuthUser, CurrentUser } from '../common/current-user';
+import { type AuthUser, CurrentUser, Roles } from '../common/current-user';
 import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
 import { CreateTransactionDto, UpdateTransactionDto } from './transactions.dto';
 import { TransactionsService } from './transactions.service';
@@ -19,6 +19,7 @@ class HistoryQuery {
   months = 2;
 }
 
+@Roles('owner')
 @Controller('transactions')
 export class TransactionsController {
   constructor(private readonly transactions: TransactionsService) {}

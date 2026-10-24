@@ -4,13 +4,15 @@ import { Alert } from 'react-native';
 import { api, ApiError } from '@/lib/api';
 import type { Profile } from '@/lib/profile';
 import { cancelNotifications, scheduleReminder } from '@/lib/notifications';
-import { FREE_CAR_LIMIT, PRO_CAR_LIMIT, type Car, type Reminder, type Transaction } from '@/types';
+import { FREE_CAR_LIMIT, PRO_CAR_LIMIT, type Car, type Reminder, type Role, type Transaction } from '@/types';
 
 import { useAuth } from './auth';
 import { isThemePreference, useThemePreference, type ThemePreference } from './theme';
 
 type Data = Profile & {
   email: string;
+  /** Тип акаунта: власник авто чи орендар */
+  role: Role;
   cars: Car[];
   reminders: Reminder[];
   isPro: boolean;
@@ -22,15 +24,16 @@ type Data = Profile & {
 
 /** Відповідь GET /data і POST /data/import */
 type ServerData = {
-  user: Partial<Profile> & { email: string; isPro: boolean; onboarded: boolean; dismissedHints: string[]; theme?: ThemePreference };
+  user: Partial<Profile> & { email: string; role?: Role; isPro: boolean; onboarded: boolean; dismissedHints: string[]; theme?: ThemePreference };
   cars: Car[];
   reminders: Reminder[];
 };
 
-const EMPTY: Data = { email: '', firstName: '', lastName: '', phone: '', cars: [], reminders: [], isPro: false, onboarded: false, dismissedHints: [], theme: 'system' };
+const EMPTY: Data = { email: '', role: 'owner', firstName: '', lastName: '', phone: '', cars: [], reminders: [], isPro: false, onboarded: false, dismissedHints: [], theme: 'system' };
 
 const fromServer = ({ user, cars, reminders }: ServerData): Data => ({
   email: user.email,
+  role: user.role === 'renter' ? 'renter' : 'owner',
   firstName: user.firstName ?? '',
   lastName: user.lastName ?? '',
   phone: user.phone ?? '',
@@ -52,6 +55,8 @@ type FleetContextValue = Data & {
   dataVersion: number;
   loadError: string | null;
   reload: () => void;
+  /** Позначити, що дані змінились поза стором (запити на оренду): звіти й списки завантажаться наново */
+  invalidate: () => void;
   carLimit: number;
   canAddCar: boolean;
   // Усі зміни йдуть на сервер; повертають true, якщо вдалося (помилку показують самі)
@@ -300,6 +305,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
       dataVersion,
       loadError: current?.error ?? null,
       reload,
+      invalidate: touch,
       carLimit,
       canAddCar: data.cars.length < carLimit,
       addCar,
@@ -320,7 +326,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
       clearAll,
       deleteAccount,
     }),
-    [data, ready, dataVersion, current?.error, reload, carLimit, addCar, updateCar, deleteCar, addTransaction, updateTransaction, deleteTransaction, addReminder, toggleReminder, deleteReminder, setPro, finishOnboarding, dismissHint, resetHints, setTheme, updateProfile, clearAll, deleteAccount],
+    [data, ready, dataVersion, current?.error, reload, touch, carLimit, addCar, updateCar, deleteCar, addTransaction, updateTransaction, deleteTransaction, addReminder, toggleReminder, deleteReminder, setPro, finishOnboarding, dismissHint, resetHints, setTheme, updateProfile, clearAll, deleteAccount],
   );
 
   return <FleetContext.Provider value={value}>{children}</FleetContext.Provider>;

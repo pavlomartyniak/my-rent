@@ -26,18 +26,19 @@ export class AuthService {
       firstName: dto.firstName,
       lastName: dto.lastName,
       phone: dto.phone ?? '',
+      role: dto.role ?? 'owner',
     });
-    return this.session(user.id, this.users.toPublic(user));
+    return this.session(user.id, user.role, this.users.toPublic(user));
   }
 
   async login(dto: LoginDto) {
     const user = await this.users.findByEmail(dto.email);
     const ok = await bcrypt.compare(dto.password, user?.passwordHash ?? DUMMY_HASH);
     if (!user || !ok) throw new UnauthorizedException('Невірний email або пароль');
-    return this.session(user.id, this.users.toPublic(user));
+    return this.session(user.id, user.role, this.users.toPublic(user));
   }
 
-  private async session(userId: string, user: unknown) {
-    return { token: await this.jwt.signAsync({ sub: userId }), user };
+  private async session(userId: string, role: string, user: unknown) {
+    return { token: await this.jwt.signAsync({ sub: userId, role }), user };
   }
 }

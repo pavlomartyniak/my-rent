@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { Hint } from '@/components/hint';
 import { PaybackCard } from '@/components/payback-card';
@@ -17,6 +17,7 @@ import { SectionHeader } from '@/components/ui/section-header';
 import { Radius, Spacing } from '@/constants/theme';
 import { formatDate } from '@/lib/date';
 import { useReport } from '@/hooks/use-report';
+import { api, ApiError } from '@/lib/api';
 import type { CarReport } from '@/lib/reports';
 import { formatKm, formatMoney, formatMonths } from '@/lib/format';
 import { useFleet } from '@/store/fleet';
@@ -24,7 +25,7 @@ import { useFleet } from '@/store/fleet';
 export default function CarScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { cars } = useFleet();
+  const { cars, reload } = useFleet();
   const car = cars.find((c) => c.id === id);
   // Показники за весь час рахує сервер
   const { data: report, loading, error, retry } = useReport<CarReport>(car ? `/reports/cars/${car.id}` : null);
@@ -35,6 +36,17 @@ export default function CarScreen() {
         <EmptyState icon="alert-circle-outline" title="Авто не знайдено" />
       </Screen>
     );
+  }
+
+  const listed = !!car.listing?.published && car.status === 'Вільне';
+
+  async function unpublish() {
+    try {
+      await api('DELETE', `/cars/${car!.id}/listing`);
+      reload();
+    } catch (e) {
+      Alert.alert('Не вдалося зняти оголошення', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
+    }
   }
 
   const add = (type: 'income' | 'expense') => router.push({ pathname: '/transaction/new', params: { carId: car.id, type } });
@@ -82,6 +94,35 @@ export default function CarScreen() {
         onPress={() => router.push({ pathname: '/car/analytics', params: { id: car.id } })}
       />
 
+      <SectionHeader title="Оголошення для орендарів" />
+      <Card>
+        {listed ? (
+          <>
+            <ThemedText type="default" style={styles.bold}>
+              Опубліковано · {car.listing!.city}
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {formatMoney(car.listing!.pricePerDay)} за добу. Орендарі бачать це авто в пошуку й можуть надсилати запити.
+            </ThemedText>
+            <View style={styles.buttons}>
+              <Button title="Редагувати" variant="secondary" style={styles.flex} onPress={() => router.push({ pathname: '/car/listing', params: { id: car.id } })} />
+              <Button title="Зняти" variant="danger" style={styles.flex} onPress={() => void unpublish()} />
+            </View>
+          </>
+        ) : car.status === 'Вільне' ? (
+          <>
+            <ThemedText type="small" themeColor="textSecondary">
+              Опублікуйте авто, щоб орендарі могли знайти його й надіслати запит на оренду.
+            </ThemedText>
+            <Button title="Опублікувати для орендарів" icon="megaphone-outline" onPress={() => router.push({ pathname: '/car/listing', params: { id: car.id } })} />
+          </>
+        ) : (
+          <ThemedText type="small" themeColor="textSecondary">
+            Оголошення доступне лише для авто зі статусом «Вільне». Змініть статус у редагуванні авто.
+          </ThemedText>
+        )}
+      </Card>
+
       <Hint id="car">Окупність (ROI) — це прибуток, поділений на вартість авто. Тапніть на запис в історії, щоб змінити або видалити його.</Hint>
 
       <SectionHeader title="Історія" />
@@ -115,6 +156,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
+  bold: { fontWeight: 700 },
   photo: { width: '100%', aspectRatio: 16 / 9, borderRadius: Radius.lg },
   buttons: { flexDirection: 'row', gap: Spacing.two },
   flex: { flex: 1 },
