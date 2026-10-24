@@ -12,6 +12,13 @@ class SearchQuery {
   @MaxLength(60)
   city?: string;
 
+  /** Область з довідника: усі її міста (діє, якщо місто не вказано) */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  regionId?: number;
+
   /** Марка або модель */
   @IsOptional()
   @IsString()

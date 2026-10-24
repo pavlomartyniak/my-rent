@@ -2,12 +2,13 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model, Types } from 'mongoose';
 
+import { PlacesService } from '../catalog/places.service';
 import { escapeRegex, normalize } from '../common/normalize';
 import { maskedName } from '../rentals/rentals.math';
 import { Car, type CarDocument } from '../schemas/car.schema';
 import { User } from '../schemas/user.schema';
 
-export type MarketQuery = { city?: string; q?: string; minPrice?: number; maxPrice?: number; page: number; limit: number };
+export type MarketQuery = { city?: string; regionId?: number; q?: string; minPrice?: number; maxPrice?: number; page: number; limit: number };
 
 /** Лише публічні поля: без VIN, вартості авто, водія, контактів і прізвища власника */
 function publicView(car: CarDocument, ownerName: string) {
@@ -33,6 +34,7 @@ export class MarketService {
   constructor(
     @InjectModel(Car.name) private readonly cars: Model<Car>,
     @InjectModel(User.name) private readonly users: Model<User>,
+    private readonly places: PlacesService,
   ) {}
 
   /** Вільні авто з опублікованими оголошеннями, найновіші першими */
@@ -41,6 +43,8 @@ export class MarketService {
 
     const cityKey = normalize(query.city ?? '');
     if (cityKey) filter['listing.cityKey'] = { $regex: escapeRegex(cityKey) };
+    // Уся область: будь-яке місто з її списку
+    else if (query.regionId !== undefined) filter['listing.cityKey'] = { $in: this.places.cityKeysOfRegion(query.regionId) };
 
     const q = (query.q ?? '').trim();
     if (q) {

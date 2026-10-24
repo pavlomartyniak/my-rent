@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
+import { CityField } from '@/components/place-field';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { DateField } from '@/components/ui/date-field';
@@ -41,7 +42,7 @@ export default function NewWantedScreen() {
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
 
-  const cityError = city.trim() ? '' : 'Вкажіть місто';
+  const cityError = city.trim() ? '' : 'Оберіть місто';
 
   function pickBrand() {
     openCatalogPicker({
@@ -117,7 +118,7 @@ export default function NewWantedScreen() {
         />
       ) : null}
 
-      <Field label="Місто" value={city} onChangeText={setCity} error={submitted ? cityError : undefined} placeholder="Київ" maxLength={60} autoCapitalize="words" />
+      <CityField value={city} onChange={setCity} error={submitted ? cityError : undefined} />
       <DateField label="Початок оренди" value={start} onChange={changeStart} minimumDate={new Date()} />
       <DateField label="Завершення оренди" value={end} onChange={setEnd} minimumDate={fromISODate(start)} />
       <NumberField label="Бюджет, ₴ за добу (необов’язково)" value={budget} onChangeValue={setBudget} maxDigits={7} placeholder="1 500" />

@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model, Types } from 'mongoose';
 
+import { PlacesService } from '../catalog/places.service';
 import { escapeRegex, normalize } from '../common/normalize';
 import { maskedName, rentalDays, todayUtc, validateRange } from '../rentals/rentals.math';
 import { Offer } from '../schemas/offer.schema';
@@ -37,6 +38,7 @@ export class WantedService {
     @InjectModel(WantedRequest.name) private readonly wanted: Model<WantedRequest>,
     @InjectModel(Offer.name) private readonly offers: Model<Offer>,
     @InjectModel(User.name) private readonly users: Model<User>,
+    private readonly places: PlacesService,
   ) {}
 
   async create(renterId: string, dto: CreateWantedDto) {
@@ -81,6 +83,7 @@ export class WantedService {
     const filter: Record<string, unknown> = { status: 'open', endDate: { $gte: todayUtc() } };
     const cityKey = normalize(query.city ?? '');
     if (cityKey) filter['cityKey'] = { $regex: escapeRegex(cityKey) };
+    else if (query.regionId !== undefined) filter['cityKey'] = { $in: this.places.cityKeysOfRegion(query.regionId) };
     const q = (query.q ?? '').trim();
     if (q) {
       const rx = { $regex: escapeRegex(q), $options: 'i' };

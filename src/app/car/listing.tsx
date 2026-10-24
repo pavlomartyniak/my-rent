@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 
+import { CityField } from '@/components/place-field';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Field } from '@/components/ui/field';
@@ -33,7 +34,7 @@ export default function ListingScreen() {
 
   const cloudPhoto = !!car.photoUri?.startsWith('https://');
   const errors = {
-    city: city.trim() ? '' : 'Вкажіть місто',
+    city: city.trim() ? '' : 'Оберіть місто',
     price: Number(price) > 0 ? '' : 'Вкажіть ціну за добу',
   };
 
@@ -77,7 +78,7 @@ export default function ListingScreen() {
 
   return (
     <Screen>
-      <Field label="Місто" value={city} onChangeText={setCity} error={submitted ? errors.city : undefined} placeholder="Київ" maxLength={60} autoCapitalize="words" />
+      <CityField value={city} onChange={setCity} error={submitted ? errors.city : undefined} />
       <NumberField label="Ціна за добу, ₴" value={price} onChangeValue={setPrice} error={submitted ? errors.price : undefined} maxDigits={7} placeholder="1 200" />
       <Field
         label="Опис (необов’язково)"

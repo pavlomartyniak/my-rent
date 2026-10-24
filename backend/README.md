@@ -91,6 +91,7 @@ npm run start:dev         # http://localhost:4000
 | GET | `/offers/mine` | власник: мої пропозиції |
 | POST | `/offers/:id/withdraw` | власник: відкликати пропозицію, що очікує |
 | POST | `/media/upload-signature` | власник: підпис для прямого завантаження фото в Cloudinary |
+| GET | `/catalog/regions`, `/catalog/cities` (`?regionId=`, `?q=`, `?limit=`) | довідник областей і міст України (дані AUTO.RIA) для вибору міста; `/market/cars` і `/wanted` фільтруються за `?city=` або `?regionId=` (уся область) |
 | GET | `/catalog/brands` (`?q=`) | марки авто; пошук латиницею й кирилицею («skoda», «шкода», «Škoda») |
 | GET | `/catalog/models` (`?brandId=`, `?q=`, `?limit=`) | моделі однієї марки або пошук по всьому каталогу («camry», «toyota corolla»); відповідь `{total, items}`, `limit` до 200 |
 | GET | `/catalog/models/:id` | модель з поколіннями та роками випуску |

@@ -8,6 +8,7 @@ import { SummaryCard } from '@/components/summary-card';
 import { ThemedText } from '@/components/themed-text';
 import { CarPhoto } from '@/components/car-photo';
 import { PhotoGallery } from '@/components/photo-gallery';
+import { DeleteCar } from '@/components/delete-car';
 import { TerminateDeal } from '@/components/terminate-deal';
 import type { DealView } from '@/lib/deals';
 import { HistoryList } from '@/components/history-list';
@@ -162,6 +163,8 @@ export default function CarScreen() {
         <InfoRow label="В оренді з" value={formatDate(car.rentStart)} />
         <InfoRow label="Вартість" value={formatMoney(car.price)} />
       </Card>
+
+      <DeleteCar carId={car.id} name={`${car.brand} ${car.model}`} />
     </Screen>
   );
 }

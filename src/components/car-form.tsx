@@ -9,6 +9,7 @@ import { isValidISODate, todayISO } from '@/lib/date';
 import { useFleet } from '@/store/fleet';
 import { CAR_STATUSES, type Car } from '@/types';
 
+import { DeleteCar } from './delete-car';
 import { Hint } from './hint';
 import { PhotoPicker } from './photo-picker';
 import { Button } from './ui/button';
@@ -35,7 +36,7 @@ function yearOptions(range?: { from: number | null; to: number | null }) {
 /** Форма додавання/редагування авто. Обов'язкове — тільки базове, решта в «Додатково». */
 export function CarForm({ car }: { car?: Car }) {
   const router = useRouter();
-  const { addCar, updateCar, deleteCar } = useFleet();
+  const { addCar, updateCar } = useFleet();
 
   const [brand, setBrand] = useState(car?.brand ?? '');
   // id марки в каталозі; для збереженого авто невідомий, знаходимо за назвою, коли потрібно
@@ -139,20 +140,6 @@ export function CarForm({ car }: { car?: Car }) {
     if (ok) router.back();
   }
 
-  function onDelete() {
-    if (!car) return;
-    Alert.alert('Видалити авто?', 'Усі його записи та нагадування також буде видалено.', [
-      { text: 'Скасувати', style: 'cancel' },
-      {
-        text: 'Видалити',
-        style: 'destructive',
-        onPress: async () => {
-          if (await deleteCar(car.id)) router.dismissAll();
-        },
-      },
-    ]);
-  }
-
   return (
     <Screen>
       {!car ? <Hint id="car-form">Оберіть марку й модель зі списку, вкажіть рік, вартість і пробіг. VIN і водія можна залишити порожніми.</Hint> : null}
@@ -195,7 +182,7 @@ export function CarForm({ car }: { car?: Car }) {
       ) : null}
 
       <Button title={saving ? 'Зберігаємо…' : 'Зберегти'} disabled={saving} onPress={onSave} />
-      {car ? <Button title="Видалити авто" variant="danger" onPress={onDelete} /> : null}
+      {car ? <DeleteCar carId={car.id} name={`${car.brand} ${car.model}`} /> : null}
     </Screen>
   );
 }
