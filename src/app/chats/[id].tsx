@@ -20,6 +20,11 @@ import { useFleet } from '@/store/fleet';
 
 const PAGE = 40;
 
+/** Відкриває набір номера; в симуляторі чи на пристрої без телефону просто показує номер */
+function callPhone(phone: string) {
+  Linking.openURL(`tel:${phone.replace(/[^\d+]/g, '')}`).catch(() => Alert.alert('Не вдалося відкрити набір номера', `Номер: ${phone}`));
+}
+
 /** Розмова: повідомлення приходять у реальному часі, надсилаються з миттєвим відображенням */
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -202,12 +207,12 @@ export default function ChatScreen() {
           <ThemedText type="default" style={styles.bold} numberOfLines={1}>
             {chat?.counterpart.name ?? 'Розмова'}
           </ThemedText>
-          <ThemedText type="small" themeColor={typing ? 'accent' : 'textSecondary'} numberOfLines={1}>
-            {typing ? 'друкує…' : chat?.counterpart.phone ?? (chat?.context?.title || ' ')}
+          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+            {chat?.counterpart.phone ?? (chat?.context?.title || ' ')}
           </ThemedText>
         </View>
         {chat?.counterpart.phone ? (
-          <IconButton icon="call" label={`Зателефонувати: ${chat.counterpart.phone}`} onPress={() => void Linking.openURL(`tel:${chat.counterpart.phone!.replace(/[^\d+]/g, '')}`)} />
+          <IconButton icon="call" label={`Зателефонувати: ${chat.counterpart.phone}`} onPress={() => callPhone(chat.counterpart.phone!)} />
         ) : null}
         <IconButton icon="trash-outline" label="Видалити розмову" tone="neutral" onPress={confirmDelete} />
       </View>
@@ -262,6 +267,18 @@ export default function ChatScreen() {
                   Розмова ще порожня. Напишіть перше повідомлення.
                 </ThemedText>
               </View>
+            }
+            // У перевернутому списку «header» стоїть внизу: «друкує…» з'являється одразу під останнім повідомленням
+            ListHeaderComponent={
+              typing ? (
+                <View style={styles.typing}>
+                  <View style={[styles.typingBubble, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+                    <ThemedText type="small" themeColor="accent" style={styles.typingText}>
+                      {chat?.counterpart.name.split(' ')[0] ?? 'Співрозмовник'} друкує…
+                    </ThemedText>
+                  </View>
+                </View>
+              ) : undefined
             }
             ListFooterComponent={loadingMore ? <ActivityIndicator color={theme.accent} style={{ margin: Spacing.three }} /> : undefined}
             renderItem={({ item, index }) => {
@@ -364,6 +381,9 @@ const styles = StyleSheet.create({
   meta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
   time: { fontSize: 11, lineHeight: 14 },
   failed: { textAlign: 'right', marginTop: 2 },
+  typing: { flexDirection: 'row', justifyContent: 'flex-start', paddingTop: 2 },
+  typingBubble: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, borderRadius: Radius.lg, borderWidth: 1 },
+  typingText: { fontStyle: 'italic', fontWeight: 600 },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.two, paddingHorizontal: Spacing.three, paddingTop: Spacing.two, borderTopWidth: StyleSheet.hairlineWidth },
   input: { flex: 1, minHeight: 44, maxHeight: 130, borderRadius: 22, borderWidth: 1, paddingHorizontal: Spacing.three, paddingTop: 11, paddingBottom: 11, fontSize: 16 },
   send: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
