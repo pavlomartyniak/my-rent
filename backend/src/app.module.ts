@@ -6,6 +6,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { AuthModule } from './auth/auth.module';
 import { CarsModule } from './cars/cars.module';
+import { LifecycleModule } from './lifecycle/lifecycle.module';
 import { ChatModule } from './chat/chat.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { DataModule } from './data/data.module';
@@ -46,6 +47,7 @@ import { WantedModule } from './wanted/wanted.module';
     DatabaseModule,
     DealsModule,
     ChatModule,
+    LifecycleModule,
     UsersModule,
     AuthModule,
     CarsModule,

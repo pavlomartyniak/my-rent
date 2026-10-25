@@ -51,5 +51,5 @@ export class Offer {
 export type OfferDocument = HydratedDocument<Offer>;
 export const OfferSchema = SchemaFactory.createForClass(Offer);
 OfferSchema.index({ ownerId: 1, createdAt: -1 });
-// Відхилені й відкликані пропозиції видаляються самі через 30 днів після останньої зміни
-OfferSchema.index({ updatedAt: 1 }, { expireAfterSeconds: FINISHED_RETENTION_SECONDS, partialFilterExpression: { status: { $in: ['declined', 'withdrawn'] } } });
+// Відхилені, відкликані й завершені пропозиції видаляються самі через 30 днів після останньої зміни
+OfferSchema.index({ updatedAt: 1 }, { expireAfterSeconds: FINISHED_RETENTION_SECONDS, partialFilterExpression: { status: { $in: ['declined', 'withdrawn', 'ended'] } } });

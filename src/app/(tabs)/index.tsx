@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { CarCard } from '@/components/car-card';
 import { Hint } from '@/components/hint';
+import { ReleasePrompt } from '@/components/release-prompt';
 import { TerminationBanner } from '@/components/termination-banner';
 import { dueLabel } from '@/components/reminder-row';
 import { ReportStatus } from '@/components/report-status';
@@ -68,6 +69,8 @@ export default function HomeScreen() {
   return (
     <Screen tabs>
       <ScreenTitle>Мої авто</ScreenTitle>
+
+      <ReleasePrompt />
 
       <TerminationBanner onPress={() => router.navigate('/requests')} />
 

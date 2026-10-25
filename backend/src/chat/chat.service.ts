@@ -260,6 +260,25 @@ export class ChatService implements OnModuleInit {
     this.gateway.emitTo([String(other)], 'typing', { conversationId, userId });
   }
 
+  /**
+   * Прибирає розмови, які більше нічого не дають: без повідомлень (відкрили й не написали) або без активної
+   * домовленості (запит відхилено, оренда завершена чи розірвана), якщо в них давно нічого не писали.
+   */
+  async purgeInactive(cutoff: Date, limit = 200) {
+    const idle = await this.conversations
+      .find({ $or: [{ lastActivityAt: { $lt: cutoff } }, { lastMessage: { $exists: false }, createdAt: { $lt: new Date(Date.now() - 86_400_000) } }] })
+      .limit(limit)
+      .exec();
+    if (!idle.length) return 0;
+    const info = await this.infoFor(idle);
+    const dead = idle.filter((c) => !c.lastMessage || !['pending', 'accepted', 'upcoming', 'active'].includes(info.get(String(c._id))?.stage ?? 'closed'));
+    if (!dead.length) return 0;
+    const ids = dead.map((c) => c._id);
+    await this.messages.deleteMany({ conversationId: { $in: ids } });
+    await this.conversations.deleteMany({ _id: { $in: ids } });
+    return dead.length;
+  }
+
   // ---- допоміжне ----
 
   private mine(user: AuthUser) {

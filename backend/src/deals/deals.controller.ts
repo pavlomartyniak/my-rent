@@ -33,6 +33,30 @@ export class DealsController {
     return (await this.deals.activeForCar(user.id, carId)) ?? { none: true };
   }
 
+  /** Власник: оренди, що закінчились, а авто досі «В оренді»; застосунок пропонує звільнити його */
+  @Roles('owner')
+  @Header('Cache-Control', 'no-store')
+  @Get('awaiting-release')
+  awaitingRelease(@CurrentUser() user: AuthUser) {
+    return this.deals.awaitingRelease(user.id);
+  }
+
+  /** Власник підтверджує: оренда закінчилась, авто знову вільне */
+  @Roles('owner')
+  @HttpCode(204)
+  @Post(':id/release')
+  release(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
+    return this.deals.release(user.id, id);
+  }
+
+  /** Власник відповів «оренда триває»: більше не питати */
+  @Roles('owner')
+  @HttpCode(204)
+  @Post(':id/keep')
+  keep(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
+    return this.deals.keepRented(user.id, id);
+  }
+
   /** Власник: завершені й розірвані оренди цього авто (архів) */
   @Roles('owner')
   @Header('Cache-Control', 'no-store')

@@ -3,6 +3,7 @@ import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { type Connection, type Model, Types } from 'mongoose';
 
 import { fullName, maskedName, rentalDays, todayUtc, totalPrice } from '../rentals/rentals.math';
+import { FINISHED_OFFER_STATUSES } from '../common/constants';
 import { dealStageOf } from '../deals/deal-stage';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
@@ -74,7 +75,7 @@ export class OffersService {
     const people = await this.people(items.map((o) => o.ownerId));
     // Етап оренди, що виросла з цієї заявки, якщо вона виконана
     let dealStage: string | null = null;
-    const accepted = items.find((o) => o.status === 'accepted');
+    const accepted = items.find((o) => o.status === 'accepted' || o.status === 'ended');
     if (w.status === 'fulfilled' && accepted) {
       const deal = await this.deals.findOne({ source: 'offer', sourceId: accepted._id }).lean().exec();
       if (deal) dealStage = dealStageOf(deal, todayUtc());
@@ -91,9 +92,10 @@ export class OffersService {
     const wanted = await this.wanted.find({ _id: { $in: items.map((o) => o.wantedId) } }).exec();
     const byId = new Map(wanted.map((w) => [String(w._id), w]));
     const people = await this.people(items.map((o) => o.renterId));
+    const info = await this.dealInfo(items);
     return items.flatMap((o) => {
       const w = byId.get(String(o.wantedId));
-      return w ? [this.view(o, 'owner', w, people)] : [];
+      return w ? [this.view(o, 'owner', w, people, info.get(String(o._id)))] : [];
     });
   }
 
@@ -101,24 +103,24 @@ export class OffersService {
   async hide(user: { id: string; role: 'owner' | 'renter' }, id: string) {
     const side = user.role === 'owner' ? { ownerId: user.id } : { renterId: user.id };
     const o = await this.offers
-      .findOneAndUpdate({ _id: id, ...side, status: { $in: ['declined', 'withdrawn'] } }, { $addToSet: { hiddenFor: user.role } }, { returnDocument: 'after', timestamps: false })
+      .findOneAndUpdate({ _id: id, ...side, status: { $in: [...FINISHED_OFFER_STATUSES] } }, { $addToSet: { hiddenFor: user.role } }, { returnDocument: 'after', timestamps: false })
       .exec();
     if (!o) {
-      if (await this.offers.exists({ _id: id, ...side })) throw new ConflictException('Видалити можна лише відхилену чи відкликану пропозицію');
+      if (await this.offers.exists({ _id: id, ...side })) throw new ConflictException('Видалити можна лише відхилену, відкликану чи завершену пропозицію');
       throw new NotFoundException('Пропозицію не знайдено');
     }
     if (o.hiddenFor.includes('owner') && o.hiddenFor.includes('renter')) await this.offers.deleteOne({ _id: o._id }).exec();
   }
 
   async withdraw(ownerId: string, id: string) {
-    const o = await this.offers.findOneAndUpdate({ _id: id, ownerId, status: 'pending' }, { $set: { status: 'withdrawn', respondedAt: new Date() } }, { returnDocument: 'after' }).exec();
+    const o = await this.offers.findOneAndUpdate({ _id: id, ownerId, status: 'pending' }, { $set: { status: 'withdrawn', respondedAt: new Date() }, $addToSet: { hiddenFor: 'owner' } }, { returnDocument: 'after' }).exec();
     if (!o) throw await this.notPending(id, { ownerId });
     return { id: String(o._id), status: o.status };
   }
 
   async decline(renterId: string, id: string, note = '') {
     const o = await this.offers
-      .findOneAndUpdate({ _id: id, renterId, status: 'pending' }, { $set: { status: 'declined', decisionNote: note, respondedAt: new Date() } }, { returnDocument: 'after' })
+      .findOneAndUpdate({ _id: id, renterId, status: 'pending' }, { $set: { status: 'declined', decisionNote: note, respondedAt: new Date() }, $addToSet: { hiddenFor: 'renter' } }, { returnDocument: 'after' })
       .exec();
     if (!o) throw await this.notPending(id, { renterId });
     return { id: String(o._id), status: o.status };
@@ -164,7 +166,7 @@ export class OffersService {
         const now = new Date();
         await this.offers.updateMany(
           { wantedId: w._id, status: 'pending', _id: { $ne: offer._id } },
-          { $set: { status: 'declined', decisionNote: 'Орендар обрав іншу пропозицію', respondedAt: now } },
+          { $set: { status: 'declined', decisionNote: 'Орендар обрав іншу пропозицію', respondedAt: now }, $addToSet: { hiddenFor: 'renter' } },
           { session },
         );
         // Це саме авто більше не вільне: відхиляємо й інші пропозиції та запити з ним
@@ -207,6 +209,17 @@ export class OffersService {
 
   // ---- допоміжне ----
 
+  /** Етап оренди, що виросла з прийнятої пропозиції: замість «Прийнято» люди бачать «Триває», «Розірвано» тощо */
+  private async dealInfo(items: OfferDocument[]) {
+    const ids = items.filter((o) => o.status === 'accepted' || o.status === 'ended').map((o) => o._id);
+    const result = new Map<string, { dealId: string; dealStage: string }>();
+    if (!ids.length) return result;
+    const deals = await this.deals.find({ source: 'offer', sourceId: { $in: ids } }).lean().exec();
+    const today = todayUtc();
+    for (const d of deals) result.set(String(d.sourceId), { dealId: String(d._id), dealStage: dealStageOf(d, today) });
+    return result;
+  }
+
   private async notPending(id: string, owner: { renterId?: string; ownerId?: string }) {
     return (await this.offers.exists({ _id: id, ...owner })) ? new ConflictException('Пропозицію вже оброблено') : new NotFoundException('Пропозицію не знайдено');
   }
@@ -221,9 +234,9 @@ export class OffersService {
    * Подання пропозиції. Співрозмовник: для орендаря — власник, для власника — орендар.
    * До прийняття обидва бачать лише ім'я з ініціалом; повне ім'я й телефон — після прийняття.
    */
-  private view(o: OfferDocument, as: 'renter' | 'owner', w: { startDate: string; endDate: string; city: string; brand: string; model: string; status: string; _id: Types.ObjectId }, people: Map<string, Person>) {
+  private view(o: OfferDocument, as: 'renter' | 'owner', w: { startDate: string; endDate: string; city: string; brand: string; model: string; status: string; _id: Types.ObjectId }, people: Map<string, Person>, deal?: { dealId: string; dealStage: string }) {
     const other = people.get(String(as === 'renter' ? o.ownerId : o.renterId));
-    const accepted = o.status === 'accepted';
+    const accepted = o.status === 'accepted' || o.status === 'ended';
     const counterpart = other
       ? accepted
         ? { name: fullName(other.firstName, other.lastName), ...(other.phone ? { phone: other.phone } : {}) }
@@ -233,6 +246,8 @@ export class OffersService {
     return {
       id: String(o._id),
       status: o.status,
+      dealId: deal?.dealId ?? null,
+      dealStage: deal?.dealStage ?? null,
       wantedId: String(w._id),
       carId: String(o.carId),
       pricePerDay: o.pricePerDay,

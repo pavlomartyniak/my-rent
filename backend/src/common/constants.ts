@@ -24,10 +24,16 @@ export const WANTED_STATUSES = ['open', 'fulfilled', 'cancelled'] as const;
 export type WantedStatus = (typeof WANTED_STATUSES)[number];
 
 /** Пропозиція власника на заявку */
-export const OFFER_STATUSES = ['pending', 'accepted', 'declined', 'withdrawn'] as const;
+/** ended — прийнята пропозиція, оренда за якою вже завершилась чи розірвана */
+export const OFFER_STATUSES = ['pending', 'accepted', 'declined', 'withdrawn', 'ended'] as const;
 export type OfferStatus = (typeof OFFER_STATUSES)[number];
 
-export const RENTAL_STATUSES = ['pending', 'accepted', 'declined', 'cancelled'] as const;
+/** ended — прийнятий запит, оренда за яким вже завершилась чи розірвана */
+export const RENTAL_STATUSES = ['pending', 'accepted', 'declined', 'cancelled', 'ended'] as const;
+
+/** Статуси, за яких запит чи пропозиція вже нічого не вирішують: їх можна прибрати зі списку, а за 30 днів вони зникнуть самі */
+export const FINISHED_RENTAL_STATUSES = ['declined', 'cancelled', 'ended'] as const;
+export const FINISHED_OFFER_STATUSES = ['declined', 'withdrawn', 'ended'] as const;
 export type RentalStatus = (typeof RENTAL_STATUSES)[number];
 
 /** Скільки фото можна додати до одного авто */

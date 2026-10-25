@@ -35,7 +35,7 @@ export function RenterRentals() {
   }
 
   const confirmCancel = (r: RentalView) =>
-    Alert.alert('Скасувати запит?', `Власник більше не побачить запит на «${r.car.title}».`, [
+    Alert.alert('Скасувати запит?', `Власник побачить, що запит скасовано, а у вас він зникне зі списку.`, [
       { text: 'Не скасовувати', style: 'cancel' },
       { text: 'Скасувати запит', style: 'destructive', onPress: () => void cancel(r) },
     ]);
@@ -44,7 +44,7 @@ export function RenterRentals() {
 
   return (
     <>
-      <Hint id="my-requests">Після того як власник прийме запит, тут з’явиться його номер телефону, щоб домовитись про передачу авто. Потягніть список вниз, щоб оновити.</Hint>
+      <Hint id="my-requests">Після того як власник прийме запит, тут з’явиться його номер телефону, щоб домовитись про передачу авто. Скасований вами запит одразу зникає зі списку, а відхилений і завершені лишаються на 30 днів: їх можна видалити раніше.</Hint>
       {data.length === 0 ? (
         <EmptyState
           icon="paper-plane-outline"
@@ -58,7 +58,7 @@ export function RenterRentals() {
           {data.map((r) => (
             <RentalCard key={r.id} rental={r} viewer="renter">
               {r.status === 'pending' ? <Button title="Скасувати запит" variant="danger" disabled={busy === r.id} onPress={() => confirmCancel(r)} /> : null}
-              {r.status === 'declined' || r.status === 'cancelled' ? <RemoveFinished path={`/rentals/${r.id}`} what="запит" onDone={retry} /> : null}
+              {r.status === 'declined' || r.status === 'cancelled' || r.status === 'ended' ? <RemoveFinished path={`/rentals/${r.id}`} what="запит" onDone={retry} /> : null}
             </RentalCard>
           ))}
         </View>

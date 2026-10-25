@@ -21,6 +21,7 @@ const STATUSES: Record<string, { label: string; tone: Tone }> = {
   finished: { label: 'Завершена', tone: 'neutral' },
   terminated: { label: 'Розірвано', tone: 'negative' },
   closed: { label: 'Закрито', tone: 'neutral' },
+  ended: { label: 'Завершено', tone: 'neutral' },
 };
 
 export function StatusBadge({ status }: { status: string }) {

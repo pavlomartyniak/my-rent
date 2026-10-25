@@ -34,7 +34,7 @@ export function OwnerOffers() {
   }
 
   const confirmWithdraw = (o: OfferView) =>
-    Alert.alert('Відкликати пропозицію?', 'Орендар більше не побачить її серед пропозицій.', [
+    Alert.alert('Відкликати пропозицію?', 'Орендар більше не побачить її, а у вас вона зникне зі списку.', [
       { text: 'Не відкликати', style: 'cancel' },
       { text: 'Відкликати', style: 'destructive', onPress: () => void withdraw(o) },
     ]);
@@ -43,7 +43,7 @@ export function OwnerOffers() {
 
   return (
     <>
-      <Hint id="my-offers">Тут видно ваші пропозиції орендарям. Коли орендар прийме пропозицію, авто автоматично потрапить в облік як «В оренді», а ви побачите його телефон.</Hint>
+      <Hint id="my-offers">Тут видно ваші пропозиції орендарям. Коли орендар прийме пропозицію, авто автоматично потрапить в облік як «В оренді», а ви побачите його телефон. Відкликана вами пропозиція одразу зникає, а відхилена чи завершена лишається на 30 днів: її можна видалити раніше.</Hint>
       {data.length === 0 ? (
         <EmptyState icon="paper-plane-outline" title="Пропозицій ще немає" text="Відкрийте «Заявки орендарів» і запропонуйте своє вільне авто." />
       ) : (
@@ -51,7 +51,7 @@ export function OwnerOffers() {
           {data.map((o) => (
             <OfferCard key={o.id} offer={o} viewer="owner">
               {o.status === 'pending' ? <Button title="Відкликати пропозицію" variant="danger" disabled={busy === o.id} onPress={() => confirmWithdraw(o)} /> : null}
-              {o.status === 'declined' || o.status === 'withdrawn' ? <RemoveFinished path={`/offers/${o.id}`} what="пропозицію" onDone={retry} /> : null}
+              {o.status === 'declined' || o.status === 'withdrawn' || o.status === 'ended' ? <RemoveFinished path={`/offers/${o.id}`} what="пропозицію" onDone={retry} /> : null}
             </OfferCard>
           ))}
         </View>

@@ -37,7 +37,7 @@ export function RentalCard({ rental: r, viewer, children }: Props) {
             {r.car.city}
           </ThemedText>
         </View>
-        <StatusBadge status={r.status} />
+        <StatusBadge status={r.dealStage ?? r.status} />
       </View>
 
       <View style={styles.rows}>

@@ -20,11 +20,14 @@ export type MarketCar = {
 
 export type MarketPage = { page: number; pages: number; total: number; items: MarketCar[] };
 
-export type RentalStatus = 'pending' | 'accepted' | 'declined' | 'cancelled';
+export type RentalStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'ended';
 
 export type RentalView = {
   id: string;
   status: RentalStatus;
+  /** Оренда, що виросла з прийнятого запиту, і її етап (upcoming/active/finished/terminated): показується замість «Прийнято» */
+  dealId: string | null;
+  dealStage: string | null;
   carId: string;
   startDate: string;
   endDate: string;
@@ -44,4 +47,5 @@ export const STATUS_LABEL: Record<RentalStatus, string> = {
   accepted: 'Прийнято',
   declined: 'Відхилено',
   cancelled: 'Скасовано',
+  ended: 'Завершено',
 };

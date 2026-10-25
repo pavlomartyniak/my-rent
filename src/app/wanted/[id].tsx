@@ -50,7 +50,7 @@ export default function WantedDetailsScreen() {
     );
 
   const confirmDecline = (o: OfferView) =>
-    Alert.alert('Відхилити пропозицію?', `Власник побачить, що пропозицію відхилено.`, [
+    Alert.alert('Відхилити пропозицію?', 'Власник побачить, що пропозицію відхилено, а у вас вона зникне зі списку.', [
       { text: 'Скасувати', style: 'cancel' },
       { text: 'Відхилити', style: 'destructive', onPress: () => void run(o.id, () => api('POST', `/offers/${o.id}/decline`, {}), 'Не вдалося відхилити') },
     ]);

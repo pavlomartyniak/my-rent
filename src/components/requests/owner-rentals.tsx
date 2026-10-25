@@ -14,7 +14,7 @@ import { api, ApiError } from '@/lib/api';
 import type { RentalView } from '@/lib/rentals';
 import { useFleet } from '@/store/fleet';
 
-const ORDER = { pending: 0, accepted: 1, declined: 2, cancelled: 3 } as const;
+const ORDER = { pending: 0, accepted: 1, ended: 2, declined: 3, cancelled: 4 } as const;
 
 /** Запити орендарів на мої опубліковані авто: прийняти або відхилити */
 export function OwnerRentals() {
@@ -52,7 +52,7 @@ export function OwnerRentals() {
     );
 
   const confirmDecline = (r: RentalView) =>
-    Alert.alert('Відхилити запит?', `${r.counterpart.name} побачить, що запит відхилено.`, [
+    Alert.alert('Відхилити запит?', `${r.counterpart.name} побачить, що запит відхилено, а у вас він зникне зі списку.`, [
       { text: 'Скасувати', style: 'cancel' },
       { text: 'Відхилити', style: 'destructive', onPress: () => void respond(r, 'decline') },
     ]);
@@ -62,7 +62,7 @@ export function OwnerRentals() {
   return (
     <>
       <Hint id="requests">
-        Тут з’являються запити орендарів на ваші опубліковані авто. Прийнявши запит, ви автоматично додаєте оренду в облік: статус авто, водій і дата початку оновляться самі.
+        Тут з’являються запити орендарів на ваші опубліковані авто. Прийнявши запит, ви автоматично додаєте оренду в облік: статус авто, водій і дата початку оновляться самі. Запит, який ви відхилили, одразу зникає зі списку, а відхилені системою й завершені лишаються на 30 днів.
       </Hint>
       {sorted.length === 0 ? (
         <EmptyState
@@ -86,7 +86,7 @@ export function OwnerRentals() {
                     <Button title="Відхилити" icon="close" variant="danger" style={{ flex: 1 }} disabled={busy === r.id} onPress={() => confirmDecline(r)} />
                   </View>
                 ) : null}
-                {r.status === 'declined' || r.status === 'cancelled' ? <RemoveFinished path={`/rentals/${r.id}`} what="запит" onDone={retry} /> : null}
+                {r.status === 'declined' || r.status === 'cancelled' || r.status === 'ended' ? <RemoveFinished path={`/rentals/${r.id}`} what="запит" onDone={retry} /> : null}
               </RentalCard>
             ))}
           </View>

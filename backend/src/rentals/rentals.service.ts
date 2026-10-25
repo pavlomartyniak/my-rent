@@ -2,7 +2,8 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { type Connection, type Model, Types } from 'mongoose';
 
-import { RENTAL_STATUSES, type RentalStatus } from '../common/constants';
+import { FINISHED_RENTAL_STATUSES, RENTAL_STATUSES, type RentalStatus } from '../common/constants';
+import { dealStageOf } from '../deals/deal-stage';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
 import { Offer } from '../schemas/offer.schema';
@@ -62,7 +63,8 @@ export class RentalsService {
   async mine(renterId: string) {
     const items = await this.rentals.find({ renterId, hiddenFor: { $ne: 'renter' } }).sort({ createdAt: -1 }).limit(200).exec();
     const people = await this.people(items.map((r) => r.ownerId));
-    return items.map((r) => this.view(r, 'renter', people));
+    const stages = await this.dealInfo(items);
+    return items.map((r) => this.view(r, 'renter', people, stages.get(String(r._id))));
   }
 
   /** Вхідні запити (власник); `status` — необов'язковий фільтр */
@@ -74,7 +76,8 @@ export class RentalsService {
       .limit(200)
       .exec();
     const people = await this.people(items.map((r) => r.renterId));
-    return items.map((r) => this.view(r, 'owner', people));
+    const stages = await this.dealInfo(items);
+    return items.map((r) => this.view(r, 'owner', people, stages.get(String(r._id))));
   }
 
   /**
@@ -84,10 +87,10 @@ export class RentalsService {
   async hide(user: { id: string; role: 'owner' | 'renter' }, id: string) {
     const side = user.role === 'owner' ? { ownerId: user.id } : { renterId: user.id };
     const r = await this.rentals
-      .findOneAndUpdate({ _id: id, ...side, status: { $in: ['cancelled', 'declined'] } }, { $addToSet: { hiddenFor: user.role } }, { returnDocument: 'after', timestamps: false })
+      .findOneAndUpdate({ _id: id, ...side, status: { $in: [...FINISHED_RENTAL_STATUSES] } }, { $addToSet: { hiddenFor: user.role } }, { returnDocument: 'after', timestamps: false })
       .exec();
     if (!r) {
-      if (await this.rentals.exists({ _id: id, ...side })) throw new ConflictException('Видалити можна лише скасований чи відхилений запит');
+      if (await this.rentals.exists({ _id: id, ...side })) throw new ConflictException('Видалити можна лише скасований, відхилений чи завершений запит');
       throw new NotFoundException('Запит не знайдено');
     }
     if (r.hiddenFor.includes('owner') && r.hiddenFor.includes('renter')) await this.rentals.deleteOne({ _id: r._id }).exec();
@@ -95,7 +98,7 @@ export class RentalsService {
 
   async cancel(renterId: string, id: string) {
     const updated = await this.rentals
-      .findOneAndUpdate({ _id: id, renterId, status: 'pending' }, { $set: { status: 'cancelled', respondedAt: new Date() } }, { returnDocument: 'after' })
+      .findOneAndUpdate({ _id: id, renterId, status: 'pending' }, { $set: { status: 'cancelled', respondedAt: new Date() }, $addToSet: { hiddenFor: 'renter' } }, { returnDocument: 'after' })
       .exec();
     if (!updated) throw await this.notPending(id, { renterId });
     return this.view(updated, 'renter', await this.people([updated.ownerId]));
@@ -103,7 +106,7 @@ export class RentalsService {
 
   async decline(ownerId: string, id: string, note = '') {
     const updated = await this.rentals
-      .findOneAndUpdate({ _id: id, ownerId, status: 'pending' }, { $set: { status: 'declined', decisionNote: note, respondedAt: new Date() } }, { returnDocument: 'after' })
+      .findOneAndUpdate({ _id: id, ownerId, status: 'pending' }, { $set: { status: 'declined', decisionNote: note, respondedAt: new Date() }, $addToSet: { hiddenFor: 'owner' } }, { returnDocument: 'after' })
       .exec();
     if (!updated) throw await this.notPending(id, { ownerId });
     return this.view(updated, 'owner', await this.people([updated.renterId]));
@@ -140,13 +143,13 @@ export class RentalsService {
 
         await this.rentals.updateMany(
           { carId: request.carId, status: 'pending', _id: { $ne: request._id } },
-          { $set: { status: 'declined', decisionNote: 'Авто вже здано іншому орендарю', respondedAt: new Date() } },
+          { $set: { status: 'declined', decisionNote: 'Авто вже здано іншому орендарю', respondedAt: new Date() }, $addToSet: { hiddenFor: 'owner' } },
           { session },
         );
         // Це авто вже здано: пропозиції на заявки орендарів з ним теж втрачають сенс
         await this.offers.updateMany(
           { carId: request.carId, status: 'pending' },
-          { $set: { status: 'declined', decisionNote: 'Авто вже здано', respondedAt: new Date() } },
+          { $set: { status: 'declined', decisionNote: 'Авто вже здано', respondedAt: new Date() }, $addToSet: { hiddenFor: 'owner' } },
           { session },
         );
         // Орендар отримує оренду, по якій веде свій облік
@@ -178,6 +181,17 @@ export class RentalsService {
 
   // ---- допоміжне ----
 
+  /** Етап оренди, що виросла з прийнятого запиту: замість «Прийнято» люди бачать «Триває», «Розірвано» тощо */
+  private async dealInfo(items: RentalRequestDocument[]) {
+    const ids = items.filter((r) => r.status === 'accepted' || r.status === 'ended').map((r) => r._id);
+    const result = new Map<string, { dealId: string; dealStage: string }>();
+    if (!ids.length) return result;
+    const deals = await this.deals.find({ source: 'request', sourceId: { $in: ids } }).lean().exec();
+    const today = todayUtc();
+    for (const d of deals) result.set(String(d.sourceId), { dealId: String(d._id), dealStage: dealStageOf(d, today) });
+    return result;
+  }
+
   /** Чому запит не вдалось змінити: його немає чи він уже не очікує відповіді */
   private async notPending(id: string, owner: { renterId?: string; ownerId?: string }) {
     const exists = await this.rentals.exists({ _id: id, ...owner });
@@ -194,9 +208,10 @@ export class RentalsService {
    * Подання запиту для клієнта. Співрозмовник: для орендаря — власник, для власника — орендар.
    * Телефон показується лише після підтвердження; орендар до того бачить лише ім'я власника й ініціал.
    */
-  private view(r: RentalRequestDocument, as: 'renter' | 'owner', people: Map<string, { firstName: string; lastName: string; phone: string }>) {
+  private view(r: RentalRequestDocument, as: 'renter' | 'owner', people: Map<string, { firstName: string; lastName: string; phone: string }>, deal?: { dealId: string; dealStage: string }) {
     const other = people.get(String(as === 'renter' ? r.ownerId : r.renterId));
-    const accepted = r.status === 'accepted';
+    // Після прийняття (і після завершення оренди) відкриті повне ім'я й телефон
+    const accepted = r.status === 'accepted' || r.status === 'ended';
     const counterpart: Person = other
       ? as === 'owner' || accepted
         ? { name: fullName(other.firstName, other.lastName), ...(accepted && other.phone ? { phone: other.phone } : {}) }
@@ -206,6 +221,9 @@ export class RentalsService {
     return {
       id: String(r._id),
       status: r.status,
+      /** Оренда, що виросла з цього запиту: її етап (upcoming/active/finished/terminated) показується замість «Прийнято» */
+      dealId: deal?.dealId ?? null,
+      dealStage: deal?.dealStage ?? null,
       carId: String(r.carId),
       startDate: r.startDate,
       endDate: r.endDate,

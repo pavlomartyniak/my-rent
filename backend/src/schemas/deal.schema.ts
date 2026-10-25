@@ -61,6 +61,10 @@ export class Deal {
   @Prop({ default: '' })
   terminationNote: string;
 
+  /** Власник відповів «оренда триває» на підказку звільнити авто після закінчення оренди */
+  @Prop({ default: false })
+  releaseDismissed: boolean;
+
   /** Хто прибрав архівну оренду зі свого списку; коли прибрали обидві сторони, запис видаляється */
   @Prop({ type: [String], default: [] })
   hiddenFor: string[];

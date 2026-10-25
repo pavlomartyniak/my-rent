@@ -6,6 +6,7 @@ import type { AuthUser } from '../common/current-user';
 import { fullName, todayUtc } from '../rentals/rentals.math';
 import { Car } from '../schemas/car.schema';
 import { Transaction } from '../schemas/transaction.schema';
+import { Offer } from '../schemas/offer.schema';
 import { RentalRequest } from '../schemas/rental-request.schema';
 import { Deal, type DealDocument } from '../schemas/deal.schema';
 import { User } from '../schemas/user.schema';
@@ -20,6 +21,7 @@ export class DealsService {
     @InjectModel(Car.name) private readonly cars: Model<Car>,
     @InjectModel(Transaction.name) private readonly transactions: Model<Transaction>,
     @InjectModel(RentalRequest.name) private readonly rentals: Model<RentalRequest>,
+    @InjectModel(Offer.name) private readonly offers: Model<Offer>,
     @InjectConnection() private readonly connection: Connection,
   ) {}
 
@@ -62,6 +64,56 @@ export class DealsService {
     }
     if (user.role === 'renter') await this.transactions.deleteMany({ userId: user.id, dealId: deal._id }).exec();
     if (deal.hiddenFor.includes('owner') && deal.hiddenFor.includes('renter')) await this.deals.deleteOne({ _id: deal._id }).exec();
+  }
+
+  /**
+   * Оренди, що закінчились за датою, а авто в обліку власника досі «В оренді»: застосунок пропонує його звільнити.
+   * Автоматично це не робиться, бо власник міг продовжити оренду без застосунку.
+   */
+  async awaitingRelease(ownerId: string) {
+    const today = todayUtc();
+    const ended = await this.deals
+      .find({ ownerId, status: { $ne: 'terminated' }, endDate: { $lt: today }, releaseDismissed: { $ne: true } })
+      .sort({ endDate: -1 })
+      .limit(50)
+      .exec();
+    if (!ended.length) return [];
+    const carIds = [...new Set(ended.map((d) => String(d.carId)))];
+    const [cars, running] = await Promise.all([
+      this.cars.find({ _id: { $in: carIds }, userId: ownerId, status: 'В оренді' }, '_id').lean().exec(),
+      // Якщо на це авто вже є інша діюча оренда, підказувати нічого
+      this.deals.find({ ownerId, carId: { $in: carIds }, status: { $ne: 'terminated' }, endDate: { $gte: today } }, 'carId').lean().exec(),
+    ]);
+    const rented = new Set(cars.map((c) => String(c._id)));
+    const busy = new Set(running.map((d) => String(d.carId)));
+    const seen = new Set<string>();
+    const items = ended.filter((d) => {
+      const car = String(d.carId);
+      if (!rented.has(car) || busy.has(car) || seen.has(car)) return false;
+      seen.add(car);
+      return true;
+    });
+    const people = await this.people(items.map((d) => d.renterId));
+    return items.map((d) => this.view(d, 'owner', people));
+  }
+
+  /** Власник підтверджує: оренда закінчилась, авто знову вільне */
+  async release(ownerId: string, id: string) {
+    const deal = await this.deals.findOne({ _id: id, ownerId }).exec();
+    if (!deal) throw new NotFoundException('Оренду не знайдено');
+    if (deal.status !== 'terminated' && todayUtc() <= deal.endDate) throw new ConflictException('Оренда ще триває');
+    const car = await this.cars.findOne({ _id: deal.carId, userId: ownerId }).exec();
+    if (car && car.status === 'В оренді') {
+      car.status = 'Вільне';
+      car.driver = '';
+      await car.save();
+    }
+  }
+
+  /** «Оренда триває»: більше не питати про цю оренду */
+  async keepRented(ownerId: string, id: string) {
+    const res = await this.deals.updateOne({ _id: id, ownerId }, { $set: { releaseDismissed: true } }, { timestamps: false }).exec();
+    if (!res.matchedCount) throw new NotFoundException('Оренду не знайдено');
   }
 
   /** Оренди, де друга сторона запропонувала розірвати угоду й чекає моєї відповіді */
@@ -143,14 +195,11 @@ export class DealsService {
           car.driver = '';
           await car.save({ session });
         }
-        // Прийнятий запит більше не діє: інакше орендар не зміг би знову звернутись щодо цього авто
-        if (deal.source === 'request') {
-          await this.rentals.updateOne(
-            { _id: deal.sourceId, status: 'accepted' },
-            { $set: { status: 'cancelled', decisionNote: 'Оренду розірвано за згодою сторін' } },
-            { session },
-          );
-        }
+        // Прийнятий запит чи пропозиція завершується разом з орендою: інакше вони б «висіли» як прийняті,
+        // а орендар не зміг би знову звернутись щодо цього авто
+        const ended = { $set: { status: 'ended', decisionNote: 'Оренду розірвано за згодою сторін', respondedAt: new Date() } };
+        if (deal.source === 'request') await this.rentals.updateOne({ _id: deal.sourceId, status: 'accepted' }, ended, { session });
+        else await this.offers.updateOne({ _id: deal.sourceId, status: 'accepted' }, ended, { session });
         result = deal;
       });
     } finally {
@@ -191,6 +240,7 @@ export class DealsService {
     const fallback = as === 'renter' ? 'Власник' : 'Орендар';
     return {
       id: String(d._id),
+      carId: String(d.carId),
       title: d.title,
       photoUri: d.photoUri,
       city: d.city,

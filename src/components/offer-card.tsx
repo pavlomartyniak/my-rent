@@ -42,7 +42,7 @@ export function OfferCard({ offer: o, viewer, children }: Props) {
             {formatKm(o.car.mileage)}
           </ThemedText>
         </View>
-        <StatusBadge status={o.status} />
+        <StatusBadge status={o.dealStage ?? o.status} />
       </View>
 
       <View style={styles.rows}>

@@ -5,6 +5,8 @@ import type { CategoryShare, SeriesPoint, Totals } from '@/lib/reports';
 
 export type DealView = {
   id: string;
+  /** Авто, яке здано (для власника) */
+  carId?: string;
   title: string;
   photoUri?: string;
   city: string;

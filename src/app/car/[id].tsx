@@ -9,6 +9,7 @@ import { ThemedText } from '@/components/themed-text';
 import { CarPhoto } from '@/components/car-photo';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { MessageButton } from '@/components/message-button';
+import { ReleasePrompt } from '@/components/release-prompt';
 import { ArchivedDeals } from '@/components/archived-deals';
 import { DeleteCar } from '@/components/delete-car';
 import { TerminateDeal } from '@/components/terminate-deal';
@@ -93,6 +94,8 @@ export default function CarScreen() {
       ) : (
         <ReportStatus loading={loading} error={error} onRetry={retry} />
       )}
+
+      <ReleasePrompt carId={car.id} />
 
       {deal ? (
         <Card>

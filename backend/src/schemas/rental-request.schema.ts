@@ -52,6 +52,6 @@ export class RentalRequest {
 export type RentalRequestDocument = HydratedDocument<RentalRequest>;
 export const RentalRequestSchema = SchemaFactory.createForClass(RentalRequest);
 RentalRequestSchema.index({ renterId: 1, createdAt: -1 });
-// Скасовані й відхилені запити видаляються самі через 30 днів після останньої зміни
-RentalRequestSchema.index({ updatedAt: 1 }, { expireAfterSeconds: FINISHED_RETENTION_SECONDS, partialFilterExpression: { status: { $in: ['cancelled', 'declined'] } } });
+// Скасовані, відхилені й завершені запити видаляються самі через 30 днів після останньої зміни
+RentalRequestSchema.index({ updatedAt: 1 }, { expireAfterSeconds: FINISHED_RETENTION_SECONDS, partialFilterExpression: { status: { $in: ['cancelled', 'declined', 'ended'] } } });
 RentalRequestSchema.index({ ownerId: 1, status: 1, createdAt: -1 });

@@ -89,7 +89,7 @@ export class WantedService {
   async dealStages(wantedIds: Types.ObjectId[]) {
     const result = new Map<string, string>();
     if (!wantedIds.length) return result;
-    const accepted = await this.offers.find({ wantedId: { $in: wantedIds }, status: 'accepted' }, 'wantedId').lean().exec();
+    const accepted = await this.offers.find({ wantedId: { $in: wantedIds }, status: { $in: ['accepted', 'ended'] } }, 'wantedId').lean().exec();
     const deals = accepted.length ? await this.deals.find({ source: 'offer', sourceId: { $in: accepted.map((o) => o._id) } }).lean().exec() : [];
     const today = todayUtc();
     const wantedOf = new Map(accepted.map((o) => [String(o._id), String(o.wantedId)]));
@@ -170,7 +170,7 @@ export class WantedService {
       if (await this.wanted.exists({ _id: id, renterId })) throw new ConflictException('Заявку вже закрито');
       throw new NotFoundException('Заявку не знайдено');
     }
-    await this.offers.updateMany({ wantedId: w._id, status: 'pending' }, { $set: { status: 'declined', decisionNote: 'Заявку скасовано', respondedAt: new Date() } });
+    await this.offers.updateMany({ wantedId: w._id, status: 'pending' }, { $set: { status: 'declined', decisionNote: 'Заявку скасовано', respondedAt: new Date() }, $addToSet: { hiddenFor: 'renter' } });
     return wantedView(w, { offers: (await this.offerCounts([w._id])).get(String(w._id)) ?? { pending: 0, total: 0 } });
   }
 

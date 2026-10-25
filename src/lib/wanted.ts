@@ -1,7 +1,7 @@
 /** Відповіді ендпоінтів /wanted і /offers */
 
 export type WantedStatus = 'open' | 'fulfilled' | 'cancelled';
-export type OfferStatus = 'pending' | 'accepted' | 'declined' | 'withdrawn';
+export type OfferStatus = 'pending' | 'accepted' | 'declined' | 'withdrawn' | 'ended';
 
 export type WantedView = {
   id: string;
@@ -32,6 +32,9 @@ export type WantedBoard = { page: number; pages: number; total: number; items: W
 export type OfferView = {
   id: string;
   status: OfferStatus;
+  /** Оренда, що виросла з прийнятої пропозиції, і її етап: показується замість «Прийнято» */
+  dealId: string | null;
+  dealStage: string | null;
   wantedId: string;
   carId: string;
   pricePerDay: number;
