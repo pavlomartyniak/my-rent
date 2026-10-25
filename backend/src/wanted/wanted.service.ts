@@ -5,7 +5,9 @@ import type { Model, Types } from 'mongoose';
 import { PlacesService } from '../catalog/places.service';
 import { escapeRegex, normalize } from '../common/normalize';
 import { maskedName, rentalDays, todayUtc, validateRange } from '../rentals/rentals.math';
+import { dealStageOf } from '../deals/deal-stage';
 import { Car } from '../schemas/car.schema';
+import { Deal } from '../schemas/deal.schema';
 import { Offer } from '../schemas/offer.schema';
 import { User } from '../schemas/user.schema';
 import { WantedRequest, type WantedRequestDocument } from '../schemas/wanted-request.schema';
@@ -17,7 +19,7 @@ const MAX_OPEN_PER_RENTER = 5;
 type Counts = { pending: number; total: number };
 
 /** Заявка для клієнта; `renter` — ім'я з ініціалом, повні контакти ніколи не показуються на дошці */
-export function wantedView(w: WantedRequestDocument, extra: { renter?: string; offers?: Counts; myOffer?: boolean; matches?: { id: string; title: string }[] } = {}) {
+export function wantedView(w: WantedRequestDocument, extra: { dealStage?: string | null; renter?: string; offers?: Counts; myOffer?: boolean; matches?: { id: string; title: string }[] } = {}) {
   return {
     id: String(w._id),
     brand: w.brand,
@@ -41,6 +43,7 @@ export class WantedService {
     @InjectModel(Offer.name) private readonly offers: Model<Offer>,
     @InjectModel(User.name) private readonly users: Model<User>,
     @InjectModel(Car.name) private readonly cars: Model<Car>,
+    @InjectModel(Deal.name) private readonly deals: Model<Deal>,
     private readonly places: PlacesService,
   ) {}
 
@@ -78,7 +81,23 @@ export class WantedService {
   async mine(renterId: string) {
     const items = await this.wanted.find({ renterId }).sort({ createdAt: -1 }).limit(100).exec();
     const counts = await this.offerCounts(items.map((w) => w._id));
-    return items.map((w) => wantedView(w, { offers: counts.get(String(w._id)) ?? { pending: 0, total: 0 } }));
+    const stages = await this.dealStages(items.filter((w) => w.status === 'fulfilled').map((w) => w._id));
+    return items.map((w) => wantedView(w, { offers: counts.get(String(w._id)) ?? { pending: 0, total: 0 }, dealStage: stages.get(String(w._id)) ?? null }));
+  }
+
+  /** Етап оренди, що виросла з виконаної заявки (прийнята пропозиція → оренда): за ним видно, чи вона ще діє */
+  async dealStages(wantedIds: Types.ObjectId[]) {
+    const result = new Map<string, string>();
+    if (!wantedIds.length) return result;
+    const accepted = await this.offers.find({ wantedId: { $in: wantedIds }, status: 'accepted' }, 'wantedId').lean().exec();
+    const deals = accepted.length ? await this.deals.find({ source: 'offer', sourceId: { $in: accepted.map((o) => o._id) } }).lean().exec() : [];
+    const today = todayUtc();
+    const wantedOf = new Map(accepted.map((o) => [String(o._id), String(o.wantedId)]));
+    for (const d of deals) {
+      const wid = wantedOf.get(String(d.sourceId));
+      if (wid) result.set(wid, dealStageOf(d, today));
+    }
+    return result;
   }
 
   /** Дошка заявок для власників: відкриті й актуальні, за містом і маркою/моделлю */
@@ -155,13 +174,21 @@ export class WantedService {
     return wantedView(w, { offers: (await this.offerCounts([w._id])).get(String(w._id)) ?? { pending: 0, total: 0 } });
   }
 
-  /** Видалити скасовану заявку разом із пропозиціями на неї; виконані й відкриті видаляти не можна */
+  /**
+   * Видалити заявку разом із пропозиціями на неї: скасовану чи виконану, оренда з якої вже завершилась або
+   * розірвана. Відкриту (її спершу скасовують) і таку, оренда за якою триває, видаляти не можна.
+   */
   async remove(renterId: string, id: string) {
-    const w = await this.wanted.findOneAndDelete({ _id: id, renterId, status: 'cancelled' }).exec();
-    if (!w) {
-      if (await this.wanted.exists({ _id: id, renterId })) throw new ConflictException('Видалити можна лише скасовану заявку');
-      throw new NotFoundException('Заявку не знайдено');
+    const w = await this.wanted.findOne({ _id: id, renterId }).exec();
+    if (!w) throw new NotFoundException('Заявку не знайдено');
+    if (w.status === 'fulfilled') {
+      const stage = (await this.dealStages([w._id])).get(String(w._id));
+      // Оренди може не бути, якщо її вже видалили з архіву
+      if (stage === 'upcoming' || stage === 'active') throw new ConflictException('Оренда за цією заявкою ще діє. Спершу розірвіть її');
+    } else if (w.status !== 'cancelled') {
+      throw new ConflictException('Видалити можна лише скасовану чи завершену заявку');
     }
+    await this.wanted.deleteOne({ _id: w._id }).exec();
     await this.offers.deleteMany({ wantedId: w._id });
   }
 

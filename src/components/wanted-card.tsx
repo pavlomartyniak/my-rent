@@ -37,7 +37,7 @@ export function WantedCard({ wanted: w, viewer, children }: Props) {
             {w.city}
           </ThemedText>
         </View>
-        {viewer === 'renter' ? <StatusBadge status={w.status} /> : null}
+        {viewer === 'renter' ? <StatusBadge status={w.status === 'fulfilled' && (w.dealStage === 'terminated' || w.dealStage === 'finished') ? w.dealStage : w.status} /> : null}
       </View>
 
       <View style={styles.rows}>

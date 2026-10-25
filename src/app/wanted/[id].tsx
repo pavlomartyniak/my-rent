@@ -90,6 +90,9 @@ export default function WantedDetailsScreen() {
   }
 
   const { wanted, offers } = data;
+  // Виконана заявка, оренда з якої розірвана чи завершилась, поводиться як скасована: її можна створити знову або видалити
+  const ended = wanted.status === 'fulfilled' && (wanted.dealStage === 'terminated' || wanted.dealStage === 'finished');
+  const archived = wanted.status === 'cancelled' || ended;
   const open = wanted.status === 'open';
 
   return (
@@ -98,7 +101,7 @@ export default function WantedDetailsScreen() {
 
       <WantedCard wanted={wanted} viewer="renter">
         {open ? <Button title="Скасувати заявку" variant="danger" disabled={busy === 'cancel'} onPress={confirmCancel} /> : null}
-        {wanted.status === 'cancelled' ? (
+        {archived ? (
           <View style={{ gap: Spacing.two }}>
             <Button
               title="Створити знову"
@@ -115,9 +118,9 @@ export default function WantedDetailsScreen() {
         ) : null}
       </WantedCard>
 
-      {wanted.status === 'cancelled' ? (
+      {archived ? (
         <ThemedText type="small" themeColor="textSecondary">
-          Заявку скасовано. Створіть її знову: поля заповняться самі, лишиться вказати нові дати. Або видаліть її зі списку.
+          {ended ? (wanted.dealStage === 'terminated' ? 'Оренду за цією заявкою розірвано.' : 'Оренда за цією заявкою завершилась.') : 'Заявку скасовано.'} Створіть її знову: поля заповняться самі, лишиться вказати нові дати. Або видаліть її зі списку.
         </ThemedText>
       ) : (
         <>
@@ -141,7 +144,7 @@ export default function WantedDetailsScreen() {
       )}
         </>
       )}
-      {wanted.status === 'fulfilled' ? (
+      {wanted.status === 'fulfilled' && !ended ? (
         <ThemedText type="small" themeColor="textSecondary">
           Заявку виконано: ви прийняли пропозицію. Зателефонуйте власнику, щоб домовитись про передачу авто.
         </ThemedText>

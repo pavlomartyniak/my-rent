@@ -3,6 +3,7 @@ import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { type Connection, type Model, Types } from 'mongoose';
 
 import { fullName, maskedName, rentalDays, todayUtc, totalPrice } from '../rentals/rentals.math';
+import { dealStageOf } from '../deals/deal-stage';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
 import { Offer, type OfferDocument } from '../schemas/offer.schema';
@@ -71,8 +72,15 @@ export class OffersService {
     if (!w) throw new NotFoundException('Заявку не знайдено');
     const items = await this.offers.find({ wantedId: w._id, status: { $ne: 'withdrawn' }, hiddenFor: { $ne: 'renter' } }).sort({ createdAt: -1 }).exec();
     const people = await this.people(items.map((o) => o.ownerId));
+    // Етап оренди, що виросла з цієї заявки, якщо вона виконана
+    let dealStage: string | null = null;
+    const accepted = items.find((o) => o.status === 'accepted');
+    if (w.status === 'fulfilled' && accepted) {
+      const deal = await this.deals.findOne({ source: 'offer', sourceId: accepted._id }).lean().exec();
+      if (deal) dealStage = dealStageOf(deal, todayUtc());
+    }
     return {
-      wanted: wantedView(w),
+      wanted: wantedView(w, { dealStage }),
       offers: items.map((o) => this.view(o, 'renter', w, people)),
     };
   }
