@@ -200,7 +200,7 @@ function CatalogList({ request }: { request: Exclude<PickerRequest, { kind: 'yea
               <ThemedText type="small" themeColor="textSecondary" style={styles.footer}>
                 Показано {result.rows.length} з {result.total}. Уточніть пошук.
               </ThemedText>
-            ) : null
+            ) : undefined
           }
           renderItem={({ item }) => <SelectRow title={item.title} subtitle={item.subtitle} selected={item.title === request.selected} onPress={item.select} />}
         />
@@ -306,7 +306,7 @@ function PlaceList({ request }: { request: Extract<PickerRequest, { kind: 'place
               <ThemedText type="small" themeColor="textSecondary" style={styles.footer}>
                 Показано {current.cities.length} з {current.total}. Уточніть пошук.
               </ThemedText>
-            ) : null
+            ) : undefined
           }
           renderItem={({ item }) => (
             <SelectRow title={item.title} subtitle={item.subtitle} selected={item.icon === 'checkmark-circle' && item.title === request.selected} onPress={item.onPress} />

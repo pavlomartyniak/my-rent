@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { PanResponder, Pressable, StyleSheet, View } from 'react-native';
+import { PanResponder, Pressable, StyleSheet, View, type ViewInstance } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -23,7 +23,7 @@ export function BarChart({ data }: { data: Point[] }) {
   const [selected, setSelected] = useState(data.length - 1);
   // Положення графіка на екрані: за ним переводимо дотик пальця в номер місяця
   const [frame, setFrame] = useState({ x: 0, width: 0 });
-  const container = useRef<View>(null);
+  const container = useRef<ViewInstance>(null);
 
   const max = Math.max(1, ...data.flatMap((p) => [p.income, p.expense]));
   const compact = data.length > 8;

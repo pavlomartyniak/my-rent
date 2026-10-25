@@ -263,7 +263,7 @@ export default function ChatScreen() {
                 </ThemedText>
               </View>
             }
-            ListFooterComponent={loadingMore ? <ActivityIndicator color={theme.accent} style={{ margin: Spacing.three }} /> : null}
+            ListFooterComponent={loadingMore ? <ActivityIndicator color={theme.accent} style={{ margin: Spacing.three }} /> : undefined}
             renderItem={({ item, index }) => {
               const older = messages[index + 1];
               const sepBefore = !older || differentDays(item.createdAt, older.createdAt);
