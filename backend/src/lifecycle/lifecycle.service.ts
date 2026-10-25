@@ -62,9 +62,10 @@ export class LifecycleService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /** Оренда закінчилась за датою: прийнятий запит чи пропозиція, з яких вона виросла, стають завершеними */
+  /** Оренда закінчилась за датою чи розірвана: прийнятий запит чи пропозиція, з яких вона виросла, стають завершеними */
   private async endFinishedDeals() {
-    const finished = await this.deals.find({ status: { $ne: 'terminated' }, endDate: { $lt: todayUtc() } }, 'source sourceId').limit(500).lean().exec();
+    // Розірвані оренди теж: так підхоплюються й ті, що були розірвані до появи статусу «завершено»
+    const finished = await this.deals.find({ $or: [{ status: 'terminated' }, { endDate: { $lt: todayUtc() } }] }, 'source sourceId').sort({ updatedAt: -1 }).limit(500).lean().exec();
     if (!finished.length) return 0;
     const update = { $set: { status: 'ended', decisionNote: 'Оренду завершено', respondedAt: new Date() } };
     const ids = (kind: string) => finished.filter((d) => d.source === kind).map((d) => d.sourceId);
