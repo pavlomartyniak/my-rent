@@ -148,7 +148,7 @@ export default function WantedDetailsScreen() {
       )}
       {wanted.status === 'fulfilled' && !ended ? (
         <ThemedText type="small" themeColor="textSecondary">
-          Заявку виконано: ви прийняли пропозицію. Зателефонуйте власнику, щоб домовитись про передачу авто.
+          Заявку виконано: ви прийняли пропозицію. Перегляньте договір на картці вище й підпишіть його під час зустрічі з власником, коли забиратимете авто.
         </ThemedText>
       ) : null}
     </Screen>

@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import { OwnerBoard } from '@/components/requests/owner-board';
 import { OwnerOffers } from '@/components/requests/owner-offers';
+import { ContractsToSign } from '@/components/requests/contracts-to-sign';
 import { TerminationRequests } from '@/components/requests/termination-requests';
 import { OwnerRentals } from '@/components/requests/owner-rentals';
 import { ScreenTitle } from '@/components/screen-title';
@@ -22,6 +23,7 @@ export default function RequestsScreen() {
   return (
     <Screen tabs>
       <ScreenTitle>Оренда</ScreenTitle>
+      <ContractsToSign as="owner" />
       <TerminationRequests as="owner" />
       <Segmented options={SECTIONS} value={section} onChange={setSection} />
 

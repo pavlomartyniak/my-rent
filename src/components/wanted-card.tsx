@@ -64,6 +64,12 @@ export function WantedCard({ wanted: w, viewer, children }: Props) {
         )
       ) : null}
 
+      {viewer === 'renter' && w.status === 'fulfilled' && w.dealStage === 'signing' ? (
+        <ThemedText type="smallBold" themeColor="accent">
+          Наступний крок: договір. Перегляньте його, а підпишіть під час зустрічі з власником
+        </ThemedText>
+      ) : null}
+
       {fresh ? (
         <View style={[styles.fresh, { backgroundColor: theme.accent }]}>
           <Icon name="notifications" size={18} color="#FFFFFF" />

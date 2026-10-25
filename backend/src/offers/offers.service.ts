@@ -81,9 +81,10 @@ export class OffersService {
       const deal = await this.deals.findOne({ source: 'offer', sourceId: accepted._id }).lean().exec();
       if (deal) dealStage = dealStageOf(deal, todayUtc());
     }
+    const info = await this.dealInfo(items);
     return {
       wanted: wantedView(w, { dealStage }),
-      offers: items.map((o) => this.view(o, 'renter', w, people)),
+      offers: items.map((o) => this.view(o, 'renter', w, people, info.get(String(o._id)))),
     };
   }
 

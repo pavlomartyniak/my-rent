@@ -2,6 +2,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { RefreshControl } from 'react-native';
 
+import { ContractsToSign } from '@/components/requests/contracts-to-sign';
 import { TerminationRequests } from '@/components/requests/termination-requests';
 import { RenterRentals } from '@/components/requests/renter-rentals';
 import { RenterWanted } from '@/components/requests/renter-wanted';
@@ -26,6 +27,7 @@ export default function MyRequestsScreen() {
   return (
     <Screen tabs refreshControl={<RefreshControl refreshing={false} onRefresh={invalidate} />}>
       <ScreenTitle>Мої запити</ScreenTitle>
+      <ContractsToSign as="renter" />
       <TerminationRequests as="renter" />
       <Segmented options={SECTIONS} value={section} onChange={(s) => setPick({ param: params.tab, section: s })} badges={{ 'Мої заявки': offers }} />
 
