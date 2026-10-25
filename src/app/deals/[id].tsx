@@ -97,14 +97,13 @@ export default function DealScreen() {
 
       <ContractCard deal={d} as="renter" />
 
-      <PaymentsCard deal={d} as="renter" />
-
       {stage === 'signing' ? null : (
-      <View style={styles.actions}>
-        <Button title="Заробіток" icon="add-circle-outline" variant="positive" style={styles.flex} onPress={() => add('income')} />
-        <Button title="Витрата" icon="remove-circle-outline" variant="secondary" style={styles.flex} onPress={() => add('expense')} />
-      </View>
+        <View style={styles.actions}>
+          <Button title="Заробіток" icon="add-circle-outline" variant="positive" style={styles.flex} onPress={() => add('income')} />
+          <Button title="Витрата" icon="remove-circle-outline" variant="secondary" style={styles.flex} onPress={() => add('expense')} />
+        </View>
       )}
+
 
       {!o ? (
         <ReportStatus loading={report.loading} error={report.error} onRetry={report.retry} />
@@ -133,6 +132,8 @@ export default function DealScreen() {
 
       <SectionHeader title="Історія" />
       <HistoryList dealId={d.id} />
+
+      <PaymentsCard deal={d} as="renter" />
 
       {stage === 'terminated' || stage === 'finished' ? <Button title="Видалити оренду" icon="trash-outline" variant="danger" onPress={confirmDelete} /> : null}
     </Screen>

@@ -20,7 +20,7 @@ const MAX_OPEN_PER_RENTER = 5;
 type Counts = { pending: number; total: number };
 
 /** Заявка для клієнта; `renter` — ім'я з ініціалом, повні контакти ніколи не показуються на дошці */
-export function wantedView(w: WantedRequestDocument, extra: { dealStage?: string | null; renter?: string; offers?: Counts; myOffer?: boolean; matches?: { id: string; title: string }[] } = {}) {
+export function wantedView(w: WantedRequestDocument, extra: { dealStage?: string | null; dealId?: string | null; renter?: string; offers?: Counts; myOffer?: boolean; matches?: { id: string; title: string }[] } = {}) {
   return {
     id: String(w._id),
     brand: w.brand,
@@ -84,12 +84,12 @@ export class WantedService {
     const items = await this.wanted.find({ renterId }).sort({ createdAt: -1 }).limit(100).exec();
     const counts = await this.offerCounts(items.map((w) => w._id));
     const stages = await this.dealStages(items.filter((w) => w.status === 'fulfilled').map((w) => w._id));
-    return items.map((w) => wantedView(w, { offers: counts.get(String(w._id)) ?? { pending: 0, total: 0 }, dealStage: stages.get(String(w._id)) ?? null }));
+    return items.map((w) => wantedView(w, { offers: counts.get(String(w._id)) ?? { pending: 0, total: 0 }, dealStage: stages.get(String(w._id))?.stage ?? null, dealId: stages.get(String(w._id))?.dealId ?? null }));
   }
 
   /** Етап оренди, що виросла з виконаної заявки (прийнята пропозиція → оренда): за ним видно, чи вона ще діє */
   async dealStages(wantedIds: Types.ObjectId[]) {
-    const result = new Map<string, string>();
+    const result = new Map<string, { stage: string; dealId: string }>();
     if (!wantedIds.length) return result;
     const accepted = await this.offers.find({ wantedId: { $in: wantedIds }, status: { $in: ['accepted', 'ended'] } }, 'wantedId').lean().exec();
     const deals = accepted.length ? await this.deals.find({ source: 'offer', sourceId: { $in: accepted.map((o) => o._id) } }).lean().exec() : [];
@@ -97,7 +97,7 @@ export class WantedService {
     const wantedOf = new Map(accepted.map((o) => [String(o._id), String(o.wantedId)]));
     for (const d of deals) {
       const wid = wantedOf.get(String(d.sourceId));
-      if (wid) result.set(wid, dealStageOf(d, today));
+      if (wid) result.set(wid, { stage: dealStageOf(d, today), dealId: String(d._id) });
     }
     return result;
   }
@@ -186,7 +186,7 @@ export class WantedService {
     const w = await this.wanted.findOne({ _id: id, renterId }).exec();
     if (!w) throw new NotFoundException('Заявку не знайдено');
     if (w.status === 'fulfilled') {
-      const stage = (await this.dealStages([w._id])).get(String(w._id));
+      const stage = (await this.dealStages([w._id])).get(String(w._id))?.stage;
       // Оренди може не бути, якщо її вже видалили з архіву
       if (stage === 'signing' || stage === 'upcoming' || stage === 'active') throw new ConflictException('Оренда за цією заявкою ще діє. Спершу розірвіть її');
     } else if (w.status !== 'cancelled') {

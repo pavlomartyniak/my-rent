@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
+import { MovedNote } from '@/components/moved-note';
 import { RemoveFinished } from '@/components/remove-finished';
 import { RentalCard } from '@/components/rental-card';
 import { ReportStatus } from '@/components/report-status';
@@ -41,9 +42,14 @@ export function RenterRentals() {
 
   if (!data) return <ReportStatus loading={loading} error={error} onRetry={retry} />;
 
+  // Прийнятий запит уже оренда: вона на «Головній», а тут лише те, що ще вирішується
+  const open = data.filter((r) => !(r.dealId && r.status === 'accepted'));
+  const rented = data.length - open.length;
+
   return (
     <>
-      {data.length === 0 ? (
+      {rented > 0 ? <MovedNote text={rented === 1 ? 'Прийнятий запит тепер оренда: дивіться на «Головній»' : `${rented} прийнято: оренди на «Головній»`} onPress={() => router.navigate('/renter')} /> : null}
+      {open.length === 0 ? (
         <EmptyState
           icon="paper-plane-outline"
           title="Запитів ще немає"
@@ -53,7 +59,7 @@ export function RenterRentals() {
         />
       ) : (
         <View style={{ gap: Spacing.two }}>
-          {data.map((r) => (
+          {open.map((r) => (
             <RentalCard key={r.id} rental={r} viewer="renter">
               {r.status === 'pending' ? <Button title="Скасувати запит" variant="danger" disabled={busy === r.id} onPress={() => confirmCancel(r)} /> : null}
               {r.status === 'declined' || r.status === 'cancelled' || r.status === 'ended' ? <RemoveFinished path={`/rentals/${r.id}`} what="запит" onDone={retry} /> : null}

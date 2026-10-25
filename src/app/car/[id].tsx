@@ -97,6 +97,11 @@ export default function CarScreen() {
         <ReportStatus loading={loading} error={error} onRetry={retry} />
       )}
 
+      <View style={styles.buttons}>
+        <Button title="Дохід" icon="add" variant="positive" style={styles.flex} onPress={() => add('income')} />
+        <Button title="Витрата" icon="remove" variant="danger" style={styles.flex} onPress={() => add('expense')} />
+      </View>
+
       <ReleasePrompt carId={car.id} />
 
       {deal ? (
@@ -114,12 +119,6 @@ export default function CarScreen() {
           {deal.status === 'awaiting' ? null : <TerminateDeal deal={deal} as="owner" />}
         </Card>
       ) : null}
-
-      {deal ? <PaymentsCard deal={deal} as="owner" /> : null}
-      <View style={styles.buttons}>
-        <Button title="Дохід" icon="add" variant="positive" style={styles.flex} onPress={() => add('income')} />
-        <Button title="Витрата" icon="remove" variant="danger" style={styles.flex} onPress={() => add('expense')} />
-      </View>
 
       <Button
         title="Аналітика й окупність"
@@ -172,6 +171,8 @@ export default function CarScreen() {
         <InfoRow label="В оренді з" value={formatDate(car.rentStart)} />
         <InfoRow label="Вартість" value={formatMoney(car.price)} />
       </Card>
+
+      {deal ? <PaymentsCard deal={deal} as="owner" /> : null}
 
       <DeleteCar carId={car.id} name={`${car.brand} ${car.model}`} />
     </Screen>

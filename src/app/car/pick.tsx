@@ -1,10 +1,11 @@
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
+import { IconButton } from '@/components/ui/icon-button';
 import { SearchInput } from '@/components/ui/search-input';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -29,12 +30,25 @@ export default function PickerScreen() {
   if (!request) {
     return (
       <View style={[styles.root, { backgroundColor: theme.background }]}>
-        <Stack.Screen options={{ title: 'Вибір' }} />
+        <PickerHeader title="Вибір" />
         <EmptyState icon="alert-circle-outline" title="Список недоступний" text="Відкрийте вибір із форми авто." action="Назад" onAction={() => router.back()} />
       </View>
     );
   }
   return request.kind === 'year' ? <YearList request={request} /> : request.kind === 'place' ? <PlaceList request={request} /> : <CatalogList request={request} />;
+}
+
+/** Власна шапка модального вікна вибору: системний заголовок у новій версії накладається на вміст і заважає вводити текст */
+function PickerHeader({ title }: { title: string }) {
+  const router = useRouter();
+  return (
+    <View style={styles.header}>
+      <ThemedText type="subtitle" style={styles.headerTitle} numberOfLines={1}>
+        {title}
+      </ThemedText>
+      <IconButton icon="close" label="Закрити" tone="neutral" onPress={() => router.back()} />
+    </View>
+  );
 }
 
 function SelectRow({ title, subtitle, selected, onPress }: { title: string; subtitle?: string; selected: boolean; onPress: () => void }) {
@@ -70,7 +84,7 @@ function YearList({ request }: { request: Extract<PickerRequest, { kind: 'year' 
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <Stack.Screen options={{ title: 'Рік випуску' }} />
+      <PickerHeader title="Рік випуску" />
       {request.hint ? (
         <ThemedText type="small" themeColor="textSecondary" style={styles.hint}>
           {request.hint}
@@ -161,7 +175,7 @@ function CatalogList({ request }: { request: Exclude<PickerRequest, { kind: 'yea
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <Stack.Screen options={{ title }} />
+      <PickerHeader title={title} />
 
       <View style={styles.search}>
         <SearchInput
@@ -272,7 +286,7 @@ function PlaceList({ request }: { request: Extract<PickerRequest, { kind: 'place
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <Stack.Screen options={{ title: region ? region.name : request.allowRegion ? 'Місто або область' : 'Оберіть місто' }} />
+      <PickerHeader title={region ? region.name : request.allowRegion ? 'Місто або область' : 'Оберіть місто'} />
 
       <View style={styles.search}>
         <SearchInput value={query} onChangeText={setQuery} placeholder={region ? `Пошук у ${region.name}` : 'Пошук міста: Львів, Біла Церква…'} />
@@ -319,6 +333,8 @@ function PlaceList({ request }: { request: Extract<PickerRequest, { kind: 'place
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.three, paddingHorizontal: Spacing.three, paddingTop: Spacing.three, paddingBottom: Spacing.one },
+  headerTitle: { flex: 1 },
   search: { padding: Spacing.three, paddingBottom: Spacing.two },
   hint: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },

@@ -95,6 +95,8 @@ export default function WantedDetailsScreen() {
   // Виконана заявка, оренда з якої розірвана чи завершилась, поводиться як скасована: її можна створити знову або видалити
   const ended = wanted.status === 'fulfilled' && (wanted.dealStage === 'terminated' || wanted.dealStage === 'finished');
   const archived = wanted.status === 'cancelled' || ended;
+  // Заявку виконано, оренда триває: усе про неї (договір, платежі, облік) на екрані оренди, а не тут
+  const rentedNow = wanted.status === 'fulfilled' && !ended && !!wanted.dealId;
   const open = wanted.status === 'open';
 
   return (
@@ -124,6 +126,16 @@ export default function WantedDetailsScreen() {
         <ThemedText type="small" themeColor="textSecondary">
           {ended ? (wanted.dealStage === 'terminated' ? 'Оренду за цією заявкою розірвано.' : 'Оренда за цією заявкою завершилась.') : 'Заявку скасовано.'} Створіть її знову: поля заповняться самі, лишиться вказати нові дати. Або видаліть її зі списку.
         </ThemedText>
+      ) : rentedNow ? (
+        <>
+          <ThemedText type="default" style={{ fontWeight: 700 }}>
+            Ви знайшли авто
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            Ви прийняли пропозицію, тож заявку виконано. Договір, платежі й облік тепер на екрані оренди.
+          </ThemedText>
+          <Button title="Відкрити оренду" icon="car-sport" onPress={() => router.push({ pathname: '/deals/[id]', params: { id: wanted.dealId! } })} />
+        </>
       ) : (
         <>
       <SectionHeader title={`Пропозиції власників · ${offers.length}`} />
@@ -146,11 +158,6 @@ export default function WantedDetailsScreen() {
       )}
         </>
       )}
-      {wanted.status === 'fulfilled' && !ended ? (
-        <ThemedText type="small" themeColor="textSecondary">
-          Заявку виконано: ви прийняли пропозицію. Перегляньте договір на картці вище й підпишіть його під час зустрічі з власником, коли забиратимете авто.
-        </ThemedText>
-      ) : null}
     </Screen>
   );
 }

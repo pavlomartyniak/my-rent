@@ -94,14 +94,18 @@ export class OffersService {
     const people = await this.people(items.map((o) => o.ownerId));
     // Етап оренди, що виросла з цієї заявки, якщо вона виконана
     let dealStage: string | null = null;
+    let dealId: string | null = null;
     const accepted = items.find((o) => o.status === 'accepted' || o.status === 'ended');
     if (w.status === 'fulfilled' && accepted) {
       const deal = await this.deals.findOne({ source: 'offer', sourceId: accepted._id }).lean().exec();
-      if (deal) dealStage = dealStageOf(deal, todayUtc());
+      if (deal) {
+        dealStage = dealStageOf(deal, todayUtc());
+        dealId = String(deal._id);
+      }
     }
     const info = await this.dealInfo(items);
     return {
-      wanted: wantedView(w, { dealStage }),
+      wanted: wantedView(w, { dealStage, dealId }),
       offers: items.map((o) => this.view(o, 'renter', w, people, info.get(String(o._id)))),
     };
   }

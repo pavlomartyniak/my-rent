@@ -18,6 +18,8 @@ export type WantedView = {
   createdAt: string;
   /** Для виконаної заявки: етап оренди, що з неї виросла (upcoming/active/finished/terminated) */
   dealStage?: string | null;
+  /** Оренда, що виросла з виконаної заявки */
+  dealId?: string | null;
   /** Для орендаря: скільки пропозицій отримано */
   offers?: { pending: number; total: number };
   /** Для власника: орендар як «Ім'я П.» і чи є вже моя пропозиція */
