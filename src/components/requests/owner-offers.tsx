@@ -1,9 +1,7 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
 import { RemoveFinished } from '@/components/remove-finished';
-import { MovedNote } from '@/components/moved-note';
 import { OfferCard } from '@/components/offer-card';
 import { ReportStatus } from '@/components/report-status';
 import { Button } from '@/components/ui/button';
@@ -16,7 +14,6 @@ import { useFleet } from '@/store/fleet';
 
 /** Мої пропозиції на заявки орендарів і їхні статуси */
 export function OwnerOffers() {
-  const router = useRouter();
   const { invalidate } = useFleet();
   const { data, loading, error, retry } = useReport<OfferView[]>('/offers/mine', { refetchOnFocus: true });
   const [busy, setBusy] = useState<string | null>(null);
@@ -45,11 +42,9 @@ export function OwnerOffers() {
 
   // Прийнята пропозиція вже оренда: вона на екрані авто («Зараз в оренді»)
   const open = data.filter((o) => !(o.dealId && o.status === 'accepted'));
-  const rented = data.length - open.length;
 
   return (
     <>
-      {rented > 0 ? <MovedNote text={rented === 1 ? 'Пропозицію прийнято: оренда на екрані авто' : `${rented} прийнято: оренди на екрані авто`} onPress={() => router.navigate('/')} /> : null}
       {open.length === 0 ? (
         <EmptyState icon="paper-plane-outline" title="Пропозицій ще немає" text="Відкрийте «Заявки орендарів» і запропонуйте своє вільне авто." />
       ) : (

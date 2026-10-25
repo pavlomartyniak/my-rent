@@ -136,6 +136,17 @@ export class DealsService {
     return items.map((d) => this.view(d, as, people));
   }
 
+  /** Усі поточні оренди власника: чекають підписання, ще не почались чи тривають (для секції «Оренди» на головній) */
+  async currentForOwner(ownerId: string) {
+    const items = await this.deals
+      .find({ ownerId, hiddenFor: { $ne: 'owner' }, status: { $ne: 'terminated' }, endDate: { $gte: todayUtc() } })
+      .sort({ startDate: 1 })
+      .limit(100)
+      .exec();
+    const people = await this.people(items.map((d) => d.renterId));
+    return items.map((d) => this.view(d, 'owner', people));
+  }
+
   /** Поточна оренда авто власника (діє чи ще не почалась); null — авто не здано через застосунок */
   async activeForCar(ownerId: string, carId: string) {
     const deal = await this.deals.findOne({ ownerId, carId, hiddenFor: { $ne: 'owner' }, status: { $ne: 'terminated' }, endDate: { $gte: todayUtc() } }).sort({ createdAt: -1 }).exec();

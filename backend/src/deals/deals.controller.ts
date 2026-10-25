@@ -91,6 +91,14 @@ export class DealsController {
     return this.deals.cancelAgreement(user, id);
   }
 
+  /** Власник: усі поточні оренди (для секції «Оренди» на головній) */
+  @Roles('owner')
+  @Header('Cache-Control', 'no-store')
+  @Get('current')
+  current(@CurrentUser() user: AuthUser) {
+    return this.deals.currentForOwner(user.id);
+  }
+
   /** Власник: оренди, що закінчились, а авто досі «В оренді»; застосунок пропонує звільнити його */
   @Roles('owner')
   @Header('Cache-Control', 'no-store')

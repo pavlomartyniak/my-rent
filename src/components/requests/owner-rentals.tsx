@@ -1,8 +1,6 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
-import { MovedNote } from '@/components/moved-note';
 import { RemoveFinished } from '@/components/remove-finished';
 import { RentalCard } from '@/components/rental-card';
 import { ReportStatus } from '@/components/report-status';
@@ -20,13 +18,11 @@ const ORDER = { pending: 0, accepted: 1, ended: 2, declined: 3, cancelled: 4 } a
 
 /** Запити орендарів на мої опубліковані авто: прийняти або відхилити */
 export function OwnerRentals() {
-  const router = useRouter();
   const { reload, invalidate } = useFleet();
   const { data, loading, error, retry } = useReport<RentalView[]>('/rentals/incoming', { refetchOnFocus: true });
   const [busy, setBusy] = useState<string | null>(null);
 
   // Прийнятий запит уже оренда: вона на екрані авто («Зараз в оренді»), а тут лише те, що ще вирішується
-  const rented = (data ?? []).filter((r) => r.dealId && r.status === 'accepted').length;
   const sorted = [...(data ?? [])].filter((r) => !(r.dealId && r.status === 'accepted')).sort((a, b) => ORDER[a.status] - ORDER[b.status] || b.createdAt.localeCompare(a.createdAt));
   const pending = sorted.filter((r) => r.status === 'pending').length;
 
@@ -67,7 +63,6 @@ export function OwnerRentals() {
 
   return (
     <>
-      {rented > 0 ? <MovedNote text={rented === 1 ? 'Прийнятий запит тепер оренда: дивіться на екрані авто' : `${rented} прийнято: оренди на екрані авто`} onPress={() => router.navigate('/')} /> : null}
       {sorted.length === 0 ? (
         <EmptyState
           icon="mail-open-outline"

@@ -2,7 +2,6 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
-import { MovedNote } from '@/components/moved-note';
 import { RemoveFinished } from '@/components/remove-finished';
 import { RentalCard } from '@/components/rental-card';
 import { ReportStatus } from '@/components/report-status';
@@ -44,11 +43,9 @@ export function RenterRentals() {
 
   // Прийнятий запит уже оренда: вона на «Головній», а тут лише те, що ще вирішується
   const open = data.filter((r) => !(r.dealId && r.status === 'accepted'));
-  const rented = data.length - open.length;
 
   return (
     <>
-      {rented > 0 ? <MovedNote text={rented === 1 ? 'Прийнятий запит тепер оренда: дивіться на «Головній»' : `${rented} прийнято: оренди на «Головній»`} onPress={() => router.navigate('/renter')} /> : null}
       {open.length === 0 ? (
         <EmptyState
           icon="paper-plane-outline"

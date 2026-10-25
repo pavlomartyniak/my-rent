@@ -4,6 +4,7 @@ import { View } from 'react-native';
 
 import { AttentionList } from '@/components/attention-list';
 import { CarCard } from '@/components/car-card';
+import { CurrentRentals } from '@/components/current-rentals';
 import { ReportStatus } from '@/components/report-status';
 import { SummaryCard } from '@/components/summary-card';
 import { ScreenTitle } from '@/components/screen-title';
@@ -61,6 +62,8 @@ export default function HomeScreen() {
       )}
 
       <Button title="Додати дохід або витрату" icon="add" onPress={() => router.push('/transaction/new')} />
+
+      <CurrentRentals />
 
       <SectionHeader title="Авто" action="+ Додати" onAction={addCar} />
       {cars.length > 1 ? <Segmented options={SORTS} value={sort} onChange={setSort} /> : null}
