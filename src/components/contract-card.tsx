@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { formatDate } from '@/lib/date';
 import type { DealView } from '@/lib/deals';
 import { dealStage } from '@/lib/deals';
 
@@ -24,15 +25,20 @@ export function ContractCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
   const open = () => router.push({ pathname: '/contracts/[id]', params: { id: deal.id } });
 
   if (awaiting) {
+    const ready = c.signing.state === 'open' && !c.mySigned;
     return (
-      <View style={[styles.box, { backgroundColor: theme.warningSoft, borderColor: theme.warning }]}>
-        <ThemedText type="smallBold" themeColor="warning">
-          {c.mySigned ? `Чекаємо підпису: ${other}` : 'Договір чекає вашого підпису'}
+      <View style={[styles.box, ready ? { backgroundColor: theme.positiveSoft, borderColor: theme.positive } : { backgroundColor: theme.accentSoft, borderColor: theme.accent }]}>
+        <ThemedText type="smallBold" themeColor={ready ? 'positive' : 'accent'}>
+          {c.mySigned ? `Ви підписали. Чекаємо підпису: ${other}` : ready ? 'Час підписати договір' : 'Договір сформовано'}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          Договір № {c.number}. Оренда почнеться, коли його підпишуть обидві сторони.
+          {c.mySigned
+            ? `Договір № ${c.number}. Оренда почнеться, коли його підпишуть обидві сторони.`
+            : ready
+              ? `Договір № ${c.number}. Підписуйте його під час зустрічі, коли передаєте авто, ключі й гроші.`
+              : `Договір № ${c.number}. Перегляньте його зараз, а підписуйте під час зустрічі: підписання відкриється ${formatDate(c.signing.opensAt)}.`}
         </ThemedText>
-        <Button title={c.mySigned ? 'Переглянути договір' : 'Переглянути й підписати'} icon="document-text-outline" variant={c.mySigned ? 'secondary' : 'primary'} onPress={open} />
+        <Button title={ready ? 'Переглянути й підписати' : 'Переглянути договір'} icon="document-text-outline" variant={ready ? 'primary' : 'secondary'} onPress={open} />
       </View>
     );
   }

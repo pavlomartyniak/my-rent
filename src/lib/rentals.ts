@@ -28,6 +28,8 @@ export type RentalView = {
   /** Оренда, що виросла з прийнятого запиту, і її етап (upcoming/active/finished/terminated): показується замість «Прийнято» */
   dealId: string | null;
   dealStage: string | null;
+  /** Чи є в оренди договір */
+  hasContract: boolean;
   carId: string;
   startDate: string;
   endDate: string;

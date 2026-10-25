@@ -6,6 +6,7 @@ import type { AuthUser } from '../common/current-user';
 import { renderContractPdf } from '../contract/contract.pdf';
 import { signContract } from '../contract/contract.signing';
 import { buildSections } from '../contract/contract.terms';
+import { SIGN_DAYS_AFTER, signingState, signingWindow } from '../contract/contract.window';
 import { fullName, todayUtc } from '../rentals/rentals.math';
 import { Car } from '../schemas/car.schema';
 import { Transaction } from '../schemas/transaction.schema';
@@ -237,6 +238,7 @@ export class DealsService {
       status: deal.status,
       signedAt: c.signedAt ?? null,
       mySigned: !!c.signatures?.[user.role],
+      signing: this.signingView(deal.startDate),
     };
   }
 
@@ -261,7 +263,11 @@ export class DealsService {
         if (!deal) throw new NotFoundException('Оренду не знайдено');
         const c = this.requireContract(deal);
         if (deal.status !== 'awaiting') throw new ConflictException(deal.status === 'terminated' ? 'Домовленість скасована' : 'Договір уже підписано обома сторонами');
-        if (todayUtc() > deal.startDate) throw new ConflictException('Дата початку оренди минула, а договір не підписано. Домовтесь про нову оренду');
+        const state = signingState(todayUtc(), deal.startDate);
+        if (state === 'early') {
+          throw new ConflictException(`Підписання відкриється ${signingWindow(deal.startDate).opensAt.split('-').reverse().join('.')}: підписуйте договір під час зустрічі, коли передаєте авто, ключі й гроші`);
+        }
+        if (state === 'late') throw new ConflictException('Час на підписання минув. Домовтесь про нову оренду');
         // Порожній об'єкт Mongoose не зберігає, тож створюємо його, коли підписує перший
         c.signatures ??= {};
         if (c.signatures[user.role]) throw new ConflictException('Ви вже підписали цей договір');
@@ -307,7 +313,7 @@ export class DealsService {
   /** Договори, які чекають підпису цього користувача (для банера й лічильника) */
   async awaitingSignature(user: AuthUser) {
     const items = await this.deals
-      .find({ ...this.side(user), status: 'awaiting', [`contract.signatures.${user.role}`]: { $exists: false }, endDate: { $gte: todayUtc() } })
+      .find({ ...this.side(user), status: 'awaiting', [`contract.signatures.${user.role}`]: { $exists: false } })
       .sort({ createdAt: -1 })
       .limit(50)
       .exec();
@@ -318,7 +324,9 @@ export class DealsService {
 
   /** Непідписані договори, у яких оренда мала початись, скасовуються: авто знову вільне */
   async expireUnsigned() {
-    const stale = await this.deals.find({ status: 'awaiting', startDate: { $lt: todayUtc() } }).limit(200).exec();
+    // Підписання відкрите ще SIGN_DAYS_AFTER діб після початку оренди; далі договір скасовується
+    const cutoff = new Date(Date.now() - SIGN_DAYS_AFTER * 86_400_000).toISOString().slice(0, 10);
+    const stale = await this.deals.find({ status: 'awaiting', startDate: { $lt: cutoff } }).limit(200).exec();
     for (const deal of stale) await this.close(deal, 'system', '', 'Договір не підписано до початку оренди');
     return stale.length;
   }
@@ -333,6 +341,12 @@ export class DealsService {
       n += res.modifiedCount;
     }
     return n;
+  }
+
+  /** Коли можна підписувати: за добу до початку оренди й кілька діб після; `open` — прямо зараз */
+  private signingView(startDate: string) {
+    const w = signingWindow(startDate);
+    return { opensAt: w.opensAt, closesAt: w.closesAt, state: signingState(todayUtc(), startDate) };
   }
 
   private requireContract(deal: DealDocument) {
@@ -389,7 +403,7 @@ export class DealsService {
       status: d.status ?? 'active',
       /** Договір: номер і хто підписав (null — оренда без договору, створена до його появи) */
       contract: d.contract
-        ? { number: d.contract.terms.number, signed: { owner: !!d.contract.signatures?.owner, renter: !!d.contract.signatures?.renter }, mySigned: !!d.contract.signatures?.[as], signedAt: d.contract.signedAt ?? null }
+        ? { number: d.contract.terms.number, signed: { owner: !!d.contract.signatures?.owner, renter: !!d.contract.signatures?.renter }, mySigned: !!d.contract.signatures?.[as], signedAt: d.contract.signedAt ?? null, signing: this.signingView(d.startDate) }
         : null,
       // Пропозиція про розірвання, що чекає відповіді; `mine` — чи її подав автор запиту
       terminationRequest: d.terminationRequest ? { by: d.terminationRequest.by, at: d.terminationRequest.at, note: d.terminationRequest.note ?? '', mine: d.terminationRequest.by === as } : null,

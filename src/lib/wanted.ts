@@ -35,6 +35,7 @@ export type OfferView = {
   /** Оренда, що виросла з прийнятої пропозиції, і її етап: показується замість «Прийнято» */
   dealId: string | null;
   dealStage: string | null;
+  hasContract: boolean;
   wantedId: string;
   carId: string;
   pricePerDay: number;

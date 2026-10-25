@@ -36,7 +36,8 @@ export default function ContractScreen() {
   }
 
   const awaiting = data.status === 'awaiting';
-  const canSign = awaiting && !data.mySigned;
+  const state = data.signing.state;
+  const canSign = awaiting && !data.mySigned && state === 'open';
 
   async function run(kind: 'sign' | 'cancel', fn: () => Promise<unknown>, failTitle: string) {
     setBusy(kind);
@@ -56,7 +57,7 @@ export default function ContractScreen() {
   const confirmSign = () =>
     Alert.alert(
       'Підписати договір?',
-      'Підписуючи, ви підтверджуєте, що ознайомились із текстом договору й погоджуєтесь з його умовами. Оренда почнеться, коли договір підпишуть обидві сторони.',
+      'Підписуйте договір під час зустрічі, коли власник передає авто й ключі, а орендар — гроші. Підписуючи, ви підтверджуєте, що ознайомились із текстом і погоджуєтесь з умовами. Оренда почнеться, коли договір підпишуть обидві сторони.',
       [
         { text: 'Скасувати', style: 'cancel' },
         { text: 'Підписати', onPress: () => void run('sign', () => api('POST', `/deals/${id}/sign`), 'Не вдалося підписати') },
@@ -114,7 +115,28 @@ export default function ContractScreen() {
       <SignatureRow label="Орендар" name={data.terms.renter.name} signature={data.signatures.renter} you={role === 'renter'} />
 
       {canSign ? (
-        <Button title="Підписати договір" icon="create-outline" disabled={busy !== null} onPress={confirmSign} />
+        <>
+          <Card style={{ backgroundColor: theme.positiveSoft }}>
+            <ThemedText type="smallBold" themeColor="positive">
+              Час підписати договір
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Підписуйте, коли зустрінетесь: власник передає авто й ключі, орендар — гроші. Кожна сторона підписує зі свого телефону.
+            </ThemedText>
+          </Card>
+          <Button title="Підписати договір" icon="create-outline" disabled={busy !== null} onPress={confirmSign} />
+        </>
+      ) : awaiting && !data.mySigned ? (
+        <Card style={{ backgroundColor: theme.warningSoft }}>
+          <ThemedText type="smallBold" themeColor="warning">
+            {state === 'early' ? `Підписання відкриється ${formatDate(data.signing.opensAt)}` : 'Час на підписання минув'}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {state === 'early'
+              ? 'Спершу уважно прочитайте договір. Підписувати його потрібно під час зустрічі, коли ви передаєте авто, ключі й гроші, за добу до початку оренди й пізніше.'
+              : 'Договір не підписано вчасно, тому домовленість буде скасовано. Домовтесь про нову оренду.'}
+          </ThemedText>
+        </Card>
       ) : awaiting ? (
         <Card style={{ backgroundColor: theme.warningSoft }}>
           <ThemedText type="smallBold" themeColor="warning">

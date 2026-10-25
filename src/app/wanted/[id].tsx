@@ -14,6 +14,7 @@ import { WantedCard } from '@/components/wanted-card';
 import { Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { api, ApiError } from '@/lib/api';
+import { promptContract } from '@/lib/contract-prompt';
 import { wantedTitle, type OfferView, type WantedOffers } from '@/lib/wanted';
 import { useFleet } from '@/store/fleet';
 
@@ -25,12 +26,13 @@ export default function WantedDetailsScreen() {
   const { data, loading, error, retry } = useReport<WantedOffers>(`/wanted/${id}/offers`, { refetchOnFocus: true });
   const [busy, setBusy] = useState<string | null>(null);
 
-  async function run(key: string, action: () => Promise<unknown>, failTitle: string) {
+  async function run(key: string, action: () => Promise<unknown>, failTitle: string, after?: (result: unknown) => void) {
     setBusy(key);
     try {
-      await action();
+      const result = await action();
       invalidate();
       retry();
+      after?.(result);
     } catch (e) {
       Alert.alert(failTitle, e instanceof ApiError ? e.message : 'Спробуйте ще раз');
       retry();
@@ -45,7 +47,7 @@ export default function WantedDetailsScreen() {
       `Ви домовитесь із власником (${o.counterpart.name}) про авто «${o.car.title}». Заявку буде закрито, а інші пропозиції відхилено. Після цього ви побачите номер власника.`,
       [
         { text: 'Скасувати', style: 'cancel' },
-        { text: 'Прийняти', onPress: () => void run(o.id, () => api('POST', `/offers/${o.id}/accept`), 'Не вдалося прийняти') },
+        { text: 'Прийняти', onPress: () => void run(o.id, () => api<OfferView>('POST', `/offers/${o.id}/accept`), 'Не вдалося прийняти', (res) => promptContract((res as OfferView).dealId)) },
       ],
     );
 

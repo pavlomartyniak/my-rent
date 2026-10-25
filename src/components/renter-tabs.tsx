@@ -2,14 +2,14 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useColorScheme } from 'react-native';
 
 import { Colors } from '@/constants/theme';
-import { useAwaitingSignature, usePendingOffers, useTerminationRequests } from '@/hooks/use-pending-requests';
+import { usePendingOffers, useSigningNow, useTerminationRequests } from '@/hooks/use-pending-requests';
 
 /** Вкладки орендаря: головна з моїми орендами, пошук авто, запити, звіт, профіль */
 export default function RenterTabs() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
   // Пропозиції власників і пропозиції розірвати оренду, що чекають відповіді
-  const offers = usePendingOffers() + useTerminationRequests().length + useAwaitingSignature().length;
+  const offers = usePendingOffers() + useTerminationRequests().length + useSigningNow().length;
 
   return (
     <NativeTabs backgroundColor={colors.background} indicatorColor={colors.backgroundElement} // П'ять вкладок: дрібніший підпис, щоб назви не налазили одна на одну

@@ -28,6 +28,8 @@ export type ContractView = {
   status: 'awaiting' | 'active' | 'terminated';
   signedAt: string | null;
   mySigned: boolean;
+  /** Вікно підписання: договір підписують під час зустрічі, тож воно відкривається за добу до початку оренди */
+  signing: { opensAt: string; closesAt: string; state: 'early' | 'open' | 'late' };
 };
 
 export const METHOD_LABEL = (method: string) => (method === 'demo' ? 'підтвердження в застосунку (демо)' : method);

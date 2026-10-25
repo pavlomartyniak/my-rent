@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { api, ApiError } from '@/lib/api';
+import { promptContract } from '@/lib/contract-prompt';
 import type { RentalView } from '@/lib/rentals';
 import { useFleet } from '@/store/fleet';
 
@@ -28,11 +29,12 @@ export function OwnerRentals() {
   async function respond(r: RentalView, action: 'accept' | 'decline') {
     setBusy(r.id);
     try {
-      await api('POST', `/rentals/${r.id}/${action}`);
+      const res = await api<RentalView>('POST', `/rentals/${r.id}/${action}`);
       // Після прийняття змінюється авто (статус, водій), тож оновлюємо й автопарк
       if (action === 'accept') reload();
       invalidate();
       retry();
+      if (action === 'accept') promptContract(res.dealId);
     } catch (e) {
       Alert.alert('Не вдалося', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
       retry();

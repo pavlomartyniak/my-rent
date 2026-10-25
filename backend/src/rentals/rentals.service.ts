@@ -120,6 +120,7 @@ export class RentalsService {
   async accept(ownerId: string, id: string) {
     const session = await this.connection.startSession();
     let accepted: RentalRequestDocument | null = null;
+    let createdDeal = '';
     try {
       await session.withTransaction(async () => {
         const request = await this.rentals.findOne({ _id: id, ownerId, status: 'pending' }, null, { session }).exec();
@@ -158,9 +159,7 @@ export class RentalsService {
           { session },
         );
         // Орендар отримує оренду з договором, який обидві сторони мають підписати
-        await this.deals.create(
-          [
-            newDealData({
+        const dealData = newDealData({
               owner,
               renter,
               ownerId: request.ownerId,
@@ -175,16 +174,16 @@ export class RentalsService {
               endDate: request.endDate,
               source: 'request',
               sourceId: request._id,
-            }),
-          ],
-          { session },
-        );
+        });
+        await this.deals.create([dealData], { session });
+        createdDeal = String(dealData._id);
         accepted = request;
       });
     } finally {
       await session.endSession();
     }
-    return this.view(accepted!, 'owner', await this.people([accepted!.renterId]));
+    // Відповідь одразу містить оренду з договором: застосунок пропонує його переглянути
+    return this.view(accepted!, 'owner', await this.people([accepted!.renterId]), { dealId: createdDeal, dealStage: 'signing', contract: true });
   }
 
   // ---- допоміжне ----
@@ -192,11 +191,11 @@ export class RentalsService {
   /** Етап оренди, що виросла з прийнятого запиту: замість «Прийнято» люди бачать «Триває», «Розірвано» тощо */
   private async dealInfo(items: RentalRequestDocument[]) {
     const ids = items.filter((r) => r.status === 'accepted' || r.status === 'ended').map((r) => r._id);
-    const result = new Map<string, { dealId: string; dealStage: string }>();
+    const result = new Map<string, { dealId: string; dealStage: string; contract: boolean }>();
     if (!ids.length) return result;
     const deals = await this.deals.find({ source: 'request', sourceId: { $in: ids } }).lean().exec();
     const today = todayUtc();
-    for (const d of deals) result.set(String(d.sourceId), { dealId: String(d._id), dealStage: dealStageOf(d, today) });
+    for (const d of deals) result.set(String(d.sourceId), { dealId: String(d._id), dealStage: dealStageOf(d, today), contract: !!d.contract });
     return result;
   }
 
@@ -216,7 +215,7 @@ export class RentalsService {
    * Подання запиту для клієнта. Співрозмовник: для орендаря — власник, для власника — орендар.
    * Телефон показується лише після підтвердження; орендар до того бачить лише ім'я власника й ініціал.
    */
-  private view(r: RentalRequestDocument, as: 'renter' | 'owner', people: Map<string, { firstName: string; lastName: string; phone: string }>, deal?: { dealId: string; dealStage: string }) {
+  private view(r: RentalRequestDocument, as: 'renter' | 'owner', people: Map<string, { firstName: string; lastName: string; phone: string }>, deal?: { dealId: string; dealStage: string; contract: boolean }) {
     const other = people.get(String(as === 'renter' ? r.ownerId : r.renterId));
     // Після прийняття (і після завершення оренди) відкриті повне ім'я й телефон
     const accepted = r.status === 'accepted' || r.status === 'ended';
@@ -232,6 +231,8 @@ export class RentalsService {
       /** Оренда, що виросла з цього запиту: її етап (upcoming/active/finished/terminated) показується замість «Прийнято» */
       dealId: deal?.dealId ?? null,
       dealStage: deal?.dealStage ?? null,
+      /** Чи є в оренди договір (оренди до появи договорів його не мають) */
+      hasContract: deal?.contract ?? false,
       carId: String(r.carId),
       startDate: r.startDate,
       endDate: r.endDate,

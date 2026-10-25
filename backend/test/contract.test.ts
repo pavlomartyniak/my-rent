@@ -64,3 +64,15 @@ describe('PDF договору', () => {
     assert.ok(pdf.length > 5000, `розмір ${pdf.length}`);
   });
 });
+
+import { signingState, signingWindow } from '../src/contract/contract.window';
+
+describe('вікно підписання', () => {
+  it('відкривається за добу до початку й триває 2 доби після', () => assert.deepEqual(signingWindow('2026-11-10'), { opensAt: '2026-11-09', closesAt: '2026-11-12' }));
+  it('рано: більше ніж за добу до початку', () => assert.equal(signingState('2026-11-07', '2026-11-10'), 'early'));
+  it('відкрито: напередодні, у день початку й ще 2 доби', () => {
+    for (const day of ['2026-11-09', '2026-11-10', '2026-11-12']) assert.equal(signingState(day, '2026-11-10'), 'open', day);
+  });
+  it('пізно: після закриття', () => assert.equal(signingState('2026-11-13', '2026-11-10'), 'late'));
+  it('межа місяця й року', () => assert.deepEqual(signingWindow('2027-01-01'), { opensAt: '2026-12-31', closesAt: '2027-01-03' }));
+});

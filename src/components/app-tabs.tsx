@@ -2,13 +2,13 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useColorScheme } from 'react-native';
 
 import { Colors } from '@/constants/theme';
-import { useAwaitingSignature, usePendingRequests, useTerminationRequests } from '@/hooks/use-pending-requests';
+import { usePendingRequests, useSigningNow, useTerminationRequests } from '@/hooks/use-pending-requests';
 
 export default function AppTabs() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
   // Нові запити орендарів і пропозиції розірвати оренду, що чекають відповіді
-  const pending = usePendingRequests() + useTerminationRequests().length + useAwaitingSignature().length;
+  const pending = usePendingRequests() + useTerminationRequests().length + useSigningNow().length;
 
   return (
     <NativeTabs

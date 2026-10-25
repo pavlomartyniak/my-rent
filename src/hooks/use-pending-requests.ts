@@ -21,8 +21,13 @@ export function useTerminationRequests() {
   return data ?? [];
 }
 
-/** Договори, які чекають мого підпису (і для власника, і для орендаря) */
+/** Договори, які ще не підписані мною (і для власника, і для орендаря): від сформованих до тих, що вже пора підписувати */
 export function useAwaitingSignature() {
   const { data } = useReport<DealView[]>('/deals/awaiting-signature', { refetchOnFocus: true, pollMs: 60_000 });
   return data ?? [];
+}
+
+/** Лише ті, що пора підписувати прямо зараз (відкрите вікно підписання): вони потрапляють у лічильники */
+export function useSigningNow() {
+  return useAwaitingSignature().filter((d) => d.contract?.signing.state === 'open');
 }
