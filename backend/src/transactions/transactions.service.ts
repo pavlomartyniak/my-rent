@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { type Model, Types } from 'mongoose';
 
@@ -71,6 +71,7 @@ export class TransactionsService {
       if (!dealId) throw new BadRequestException('Вкажіть оренду');
       const deal = await this.deals.findOne({ _id: dealId, renterId: user.id }).exec();
       if (!deal) throw new NotFoundException('Оренду не знайдено');
+      if (deal.status === 'awaiting') throw new ConflictException('Договір ще не підписано обома сторонами. Записи можна вести після підписання');
       return this.transactions.create({ ...rest, userId: user.id, carId: deal.carId, dealId: deal._id });
     }
     if (!carId) throw new BadRequestException('Вкажіть авто');

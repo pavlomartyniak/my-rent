@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Header, HttpCode, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, HttpCode, Param, Post, StreamableFile } from '@nestjs/common';
 
 import { type AuthUser, CurrentUser, Roles } from '../common/current-user';
 import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
@@ -31,6 +31,43 @@ export class DealsController {
   async forCar(@CurrentUser() user: AuthUser, @Param('carId', ParseObjectIdPipe) carId: string) {
     // Порожня відповідь віддається як null у тілі, щоб клієнт відрізняв її від помилки
     return (await this.deals.activeForCar(user.id, carId)) ?? { none: true };
+  }
+
+  /** Договори, які чекають мого підпису (власнику й орендарю) */
+  @Header('Cache-Control', 'no-store')
+  @Get('awaiting-signature')
+  awaitingSignature(@CurrentUser() user: AuthUser) {
+    return this.deals.awaitingSignature(user);
+  }
+
+  /** Текст договору, підписи сторін і відбиток умов */
+  @Header('Cache-Control', 'no-store')
+  @Get(':id/contract')
+  contract(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
+    return this.deals.contract(user, id);
+  }
+
+  /** Договір у форматі PDF для завантаження */
+  @Header('Cache-Control', 'no-store')
+  @Header('Content-Type', 'application/pdf')
+  @Get(':id/contract.pdf')
+  async contractPdf(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
+    const { pdf, filename } = await this.deals.contractPdf(user, id);
+    return new StreamableFile(pdf, { type: 'application/pdf', disposition: `attachment; filename="${filename}"` });
+  }
+
+  /** Підписати договір (поки підтвердженням у застосунку; далі BankID чи Дія.Підпис) */
+  @HttpCode(200)
+  @Post(':id/sign')
+  sign(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
+    return this.deals.sign(user, id);
+  }
+
+  /** Скасувати домовленість до підписання договору */
+  @HttpCode(200)
+  @Post(':id/cancel-agreement')
+  cancelAgreement(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
+    return this.deals.cancelAgreement(user, id);
   }
 
   /** Власник: оренди, що закінчились, а авто досі «В оренді»; застосунок пропонує звільнити його */

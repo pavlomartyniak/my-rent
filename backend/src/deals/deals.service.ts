@@ -1,8 +1,11 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import type { Connection, Model } from 'mongoose';
+import type { ClientSession, Connection, Model } from 'mongoose';
 
 import type { AuthUser } from '../common/current-user';
+import { renderContractPdf } from '../contract/contract.pdf';
+import { signContract } from '../contract/contract.signing';
+import { buildSections } from '../contract/contract.terms';
 import { fullName, todayUtc } from '../rentals/rentals.math';
 import { Car } from '../schemas/car.schema';
 import { Transaction } from '../schemas/transaction.schema';
@@ -144,6 +147,7 @@ export class DealsService {
   async proposeTermination(user: AuthUser, id: string, note = '') {
     const deal = await this.mine(user, id);
     this.assertOpen(deal);
+    if (deal.status === 'awaiting') throw new ConflictException('Договір ще не підписано: скасуйте домовленість замість розірвання');
     if (deal.terminationRequest) throw new ConflictException('Пропозицію про розірвання вже надіслано');
     deal.terminationRequest = { by: user.role, at: new Date(), note: note.trim() };
     await deal.save();
@@ -179,33 +183,167 @@ export class DealsService {
         this.assertOpen(deal);
         const proposal = deal.terminationRequest;
         if (!proposal || proposal.by === user.role) throw new ConflictException('Немає пропозиції для відповіді');
-        const today = todayUtc();
-
-        deal.status = 'terminated';
-        deal.terminatedBy = proposal.by;
-        deal.terminatedAt = new Date();
-        deal.terminationNote = proposal.note ?? '';
         deal.terminationRequest = undefined;
-        deal.endDate = today > deal.startDate ? today : deal.startDate;
-        await deal.save({ session });
-
-        const car = await this.cars.findOne({ _id: deal.carId, userId: deal.ownerId }, null, { session }).exec();
-        if (car && car.status === 'В оренді') {
-          car.status = 'Вільне';
-          car.driver = '';
-          await car.save({ session });
-        }
-        // Прийнятий запит чи пропозиція завершується разом з орендою: інакше вони б «висіли» як прийняті,
-        // а орендар не зміг би знову звернутись щодо цього авто
-        const ended = { $set: { status: 'ended', decisionNote: 'Оренду розірвано за згодою сторін', respondedAt: new Date() } };
-        if (deal.source === 'request') await this.rentals.updateOne({ _id: deal.sourceId, status: 'accepted' }, ended, { session });
-        else await this.offers.updateOne({ _id: deal.sourceId, status: 'accepted' }, ended, { session });
+        await this.close(deal, proposal.by as 'owner' | 'renter', proposal.note ?? '', 'Оренду розірвано за згодою сторін', session);
         result = deal;
       });
     } finally {
       await session.endSession();
     }
     return this.viewFor(user, result as unknown as DealDocument);
+  }
+
+  /**
+   * Закриває оренду: статус «розірвано», кінець — сьогодні (чи день початку, якщо ще не почалась), авто знову вільне,
+   * прийнятий запит чи пропозиція завершуються. Те саме для розірвання за згодою, скасування до підписання й
+   * автоматичного скасування непідписаного договору.
+   */
+  private async close(deal: DealDocument, by: 'owner' | 'renter' | 'system', note: string, reason: string, session?: ClientSession) {
+    const today = todayUtc();
+    deal.status = 'terminated';
+    deal.terminatedBy = by;
+    deal.terminatedAt = new Date();
+    deal.terminationNote = note;
+    deal.endDate = today > deal.startDate ? today : deal.startDate;
+    await deal.save({ session });
+
+    const car = await this.cars.findOne({ _id: deal.carId, userId: deal.ownerId }, null, { session }).exec();
+    if (car && (car.status === 'В оренді' || car.status === 'Заброньоване')) {
+      car.status = 'Вільне';
+      car.driver = '';
+      await car.save({ session });
+    }
+    // Прийнятий запит чи пропозиція завершується разом з орендою: інакше вони б «висіли» як прийняті,
+    // а орендар не зміг би знову звернутись щодо цього авто
+    const ended = { $set: { status: 'ended', decisionNote: reason, respondedAt: new Date() } };
+    if (deal.source === 'request') await this.rentals.updateOne({ _id: deal.sourceId, status: 'accepted' }, ended, { session });
+    else await this.offers.updateOne({ _id: deal.sourceId, status: 'accepted' }, ended, { session });
+  }
+
+  // ---- договір ----
+
+  /** Текст договору, підписи й відбиток умов для екрана */
+  async contract(user: AuthUser, id: string) {
+    const deal = await this.mine(user, id);
+    const c = this.requireContract(deal);
+    return {
+      dealId: String(deal._id),
+      number: c.terms.number,
+      createdAt: c.terms.createdAt,
+      hash: c.hash,
+      terms: c.terms,
+      sections: buildSections(c.terms),
+      signatures: this.signaturesView(deal),
+      status: deal.status,
+      signedAt: c.signedAt ?? null,
+      mySigned: !!c.signatures?.[user.role],
+    };
+  }
+
+  /** PDF договору: ті самі умови й підписи, що в застосунку */
+  async contractPdf(user: AuthUser, id: string) {
+    const deal = await this.mine(user, id);
+    const c = this.requireContract(deal);
+    const pdf = await renderContractPdf(c.terms, c.hash, { owner: c.signatures?.owner ?? null, renter: c.signatures?.renter ?? null });
+    return { pdf, filename: `${c.terms.number}.pdf` };
+  }
+
+  /**
+   * Підпис договору стороною. Зараз це підтвердження в застосунку; пізніше тут підключається BankID чи Дія.Підпис.
+   * Коли підписали обидві сторони, оренда активується: авто стає «В оренді» (чи лишається «Заброньованим» до дати початку).
+   */
+  async sign(user: AuthUser, id: string) {
+    const session = await this.connection.startSession();
+    let result: DealDocument | null = null;
+    try {
+      await session.withTransaction(async () => {
+        const deal = await this.deals.findOne({ _id: id, ...this.side(user) }, null, { session }).exec();
+        if (!deal) throw new NotFoundException('Оренду не знайдено');
+        const c = this.requireContract(deal);
+        if (deal.status !== 'awaiting') throw new ConflictException(deal.status === 'terminated' ? 'Домовленість скасована' : 'Договір уже підписано обома сторонами');
+        if (todayUtc() > deal.startDate) throw new ConflictException('Дата початку оренди минула, а договір не підписано. Домовтесь про нову оренду');
+        // Порожній об'єкт Mongoose не зберігає, тож створюємо його, коли підписує перший
+        c.signatures ??= {};
+        if (c.signatures[user.role]) throw new ConflictException('Ви вже підписали цей договір');
+
+        c.signatures[user.role] = signContract({ contractHash: c.hash, userId: user.id, role: user.role });
+        if (c.signatures.owner && c.signatures.renter) {
+          deal.status = 'active';
+          c.signedAt = new Date();
+          const car = await this.cars.findOne({ _id: deal.carId, userId: deal.ownerId }, null, { session }).exec();
+          if (car && car.status === 'Заброньоване') {
+            if (todayUtc() >= deal.startDate) car.status = 'В оренді';
+            await car.save({ session });
+          }
+        }
+        deal.markModified('contract');
+        await deal.save({ session });
+        result = deal;
+      });
+    } finally {
+      await session.endSession();
+    }
+    return this.viewFor(user, result as unknown as DealDocument);
+  }
+
+  /** До підписання кожна сторона може скасувати домовленість: авто знову вільне, запит завершується */
+  async cancelAgreement(user: AuthUser, id: string) {
+    const session = await this.connection.startSession();
+    let result: DealDocument | null = null;
+    try {
+      await session.withTransaction(async () => {
+        const deal = await this.deals.findOne({ _id: id, ...this.side(user) }, null, { session }).exec();
+        if (!deal) throw new NotFoundException('Оренду не знайдено');
+        if (deal.status !== 'awaiting') throw new ConflictException('Договір уже підписано: оренду можна лише розірвати за згодою сторін');
+        await this.close(deal, user.role, '', 'Домовленість скасовано до підписання договору', session);
+        result = deal;
+      });
+    } finally {
+      await session.endSession();
+    }
+    return this.viewFor(user, result as unknown as DealDocument);
+  }
+
+  /** Договори, які чекають підпису цього користувача (для банера й лічильника) */
+  async awaitingSignature(user: AuthUser) {
+    const items = await this.deals
+      .find({ ...this.side(user), status: 'awaiting', [`contract.signatures.${user.role}`]: { $exists: false }, endDate: { $gte: todayUtc() } })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .exec();
+    const as = user.role === 'renter' ? 'renter' : 'owner';
+    const people = await this.people(items.map((d) => (as === 'renter' ? d.ownerId : d.renterId)));
+    return items.map((d) => this.view(d, as, people));
+  }
+
+  /** Непідписані договори, у яких оренда мала початись, скасовуються: авто знову вільне */
+  async expireUnsigned() {
+    const stale = await this.deals.find({ status: 'awaiting', startDate: { $lt: todayUtc() } }).limit(200).exec();
+    for (const deal of stale) await this.close(deal, 'system', '', 'Договір не підписано до початку оренди');
+    return stale.length;
+  }
+
+  /** Авто, чия оренда з підписаним договором уже почалась, стають «В оренді» (до того вони «Заброньовані») */
+  async startReserved() {
+    const started = await this.deals.find({ status: 'active', startDate: { $lte: todayUtc() }, endDate: { $gte: todayUtc() } }, 'carId ownerId').limit(500).lean().exec();
+    if (!started.length) return 0;
+    let n = 0;
+    for (const d of started) {
+      const res = await this.cars.updateOne({ _id: d.carId, userId: d.ownerId, status: 'Заброньоване' }, { $set: { status: 'В оренді' } });
+      n += res.modifiedCount;
+    }
+    return n;
+  }
+
+  private requireContract(deal: DealDocument) {
+    if (!deal.contract) throw new NotFoundException('Для цієї оренди договір не створювався: її укладено до появи договорів');
+    return deal.contract;
+  }
+
+  private signaturesView(deal: DealDocument) {
+    const s = deal.contract?.signatures ?? {};
+    const one = (v?: { at: Date; method: string; signatureId: string }) => (v ? { at: v.at, method: v.method, signatureId: v.signatureId } : null);
+    return { owner: one(s.owner), renter: one(s.renter) };
   }
 
   private side(user: AuthUser) {
@@ -249,6 +387,10 @@ export class DealsService {
       endDate: d.endDate,
       source: d.source,
       status: d.status ?? 'active',
+      /** Договір: номер і хто підписав (null — оренда без договору, створена до його появи) */
+      contract: d.contract
+        ? { number: d.contract.terms.number, signed: { owner: !!d.contract.signatures?.owner, renter: !!d.contract.signatures?.renter }, mySigned: !!d.contract.signatures?.[as], signedAt: d.contract.signedAt ?? null }
+        : null,
       // Пропозиція про розірвання, що чекає відповіді; `mine` — чи її подав автор запиту
       terminationRequest: d.terminationRequest ? { by: d.terminationRequest.by, at: d.terminationRequest.at, note: d.terminationRequest.note ?? '', mine: d.terminationRequest.by === as } : null,
       terminatedBy: d.terminatedBy,

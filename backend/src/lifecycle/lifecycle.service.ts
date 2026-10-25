@@ -4,6 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 
 import { ChatService } from '../chat/chat.service';
+import { DealsService } from '../deals/deals.service';
 import { FINISHED_RETENTION_DAYS } from '../common/constants';
 import { todayUtc } from '../rentals/rentals.math';
 import { Deal } from '../schemas/deal.schema';
@@ -32,6 +33,7 @@ export class LifecycleService implements OnModuleInit, OnModuleDestroy {
     @InjectModel(Offer.name) private readonly offers: Model<Offer>,
     @InjectModel(WantedRequest.name) private readonly wanted: Model<WantedRequest>,
     private readonly chat: ChatService,
+    private readonly dealsService: DealsService,
     private readonly config: ConfigService,
   ) {}
 
@@ -51,10 +53,15 @@ export class LifecycleService implements OnModuleInit, OnModuleDestroy {
     if (this.running) return;
     this.running = true;
     try {
+      // Спершу скасовуємо непідписані договори й запускаємо оренди, що почались, а вже тоді завершуємо ті, що закінчились
+      const expired = await this.dealsService.expireUnsigned();
+      const started = await this.dealsService.startReserved();
       const ended = await this.endFinishedDeals();
       const wanted = await this.purgeOldWanted();
       const chats = await this.chat.purgeInactive(new Date(Date.now() - FINISHED_RETENTION_DAYS * DAY_MS));
-      if (ended || wanted || chats) this.log.log(`Прибирання: завершено запитів/пропозицій ${ended}, видалено заявок ${wanted}, розмов ${chats}`);
+      if (expired || started || ended || wanted || chats) {
+        this.log.log(`Прибирання: скасовано непідписаних ${expired}, оренд розпочато ${started}, завершено запитів/пропозицій ${ended}, видалено заявок ${wanted}, розмов ${chats}`);
+      }
     } catch (e) {
       this.log.warn(`Прибирання не вдалось: ${String(e)}`);
     } finally {

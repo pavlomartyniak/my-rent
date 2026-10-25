@@ -8,6 +8,7 @@ import { formatMoney, plural } from '@/lib/format';
 import type { Totals } from '@/lib/reports';
 
 import { CarPhoto } from './car-photo';
+import { ContractCard } from './contract-card';
 import { MessageButton } from './message-button';
 import { StatusBadge } from './status-badge';
 import { ThemedText } from './themed-text';
@@ -58,6 +59,13 @@ export function ActiveDealCard({ deal, month, overview }: Props) {
         </Pressable>
       </Link>
 
+      {stage === 'signing' ? (
+        <>
+          <ContractCard deal={deal} as="renter" />
+          <MessageButton context={{ dealId: deal.id }} title={`Написати: ${deal.counterpart.name}`} />
+        </>
+      ) : (
+        <>
       <View style={styles.stats}>
         <View style={styles.stat}>
           <ThemedText type="small" themeColor="textSecondary">
@@ -82,6 +90,8 @@ export function ActiveDealCard({ deal, month, overview }: Props) {
         <Button title="Витрата" icon="remove-circle-outline" variant="secondary" style={styles.flex} onPress={() => add('expense')} />
       </View>
       <MessageButton context={{ dealId: deal.id }} title={`Написати: ${deal.counterpart.name}`} />
+        </>
+      )}
     </Card>
   );
 }

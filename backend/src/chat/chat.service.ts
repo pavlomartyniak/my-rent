@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { type Model, Types } from 'mongoose';
 
 import type { AuthUser } from '../common/current-user';
+import { dealStageOf } from '../deals/deal-stage';
 import { fullName, maskedName, todayUtc } from '../rentals/rentals.math';
 import { Conversation, type ChatContext, type ConversationDocument } from '../schemas/conversation.schema';
 import { Deal } from '../schemas/deal.schema';
@@ -271,7 +272,7 @@ export class ChatService implements OnModuleInit {
       .exec();
     if (!idle.length) return 0;
     const info = await this.infoFor(idle);
-    const dead = idle.filter((c) => !c.lastMessage || !['pending', 'accepted', 'upcoming', 'active'].includes(info.get(String(c._id))?.stage ?? 'closed'));
+    const dead = idle.filter((c) => !c.lastMessage || !['pending', 'accepted', 'signing', 'upcoming', 'active'].includes(info.get(String(c._id))?.stage ?? 'closed'));
     if (!dead.length) return 0;
     const ids = dead.map((c) => c._id);
     await this.messages.deleteMany({ conversationId: { $in: ids } });
@@ -320,7 +321,7 @@ export class ChatService implements OnModuleInit {
       const deal = dealBy.get(k);
       const status = statusBy.get(k);
       let stage = 'closed';
-      if (deal) stage = deal.status === 'terminated' ? 'terminated' : today > deal.endDate ? 'finished' : today < deal.startDate ? 'upcoming' : 'active';
+      if (deal) stage = dealStageOf(deal, today);
       else if (status) stage = status;
       result.set(String(c._id), { stage, dealId: deal ? String(deal._id) : null, wantedId: wantedBy.get(k) ?? null, canSend: !!deal || status === 'pending' || status === 'accepted', full: !!deal || status === 'accepted' });
     }

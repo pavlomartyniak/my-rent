@@ -7,7 +7,7 @@ import { lookupBrandId } from '@/lib/catalog';
 import { openCatalogPicker } from '@/lib/catalog-picker';
 import { isValidISODate, todayISO } from '@/lib/date';
 import { useFleet } from '@/store/fleet';
-import { CAR_STATUSES, type Car } from '@/types';
+import { CAR_STATUSES, MANUAL_CAR_STATUSES, type Car } from '@/types';
 
 import { DeleteCar } from './delete-car';
 import { Hint } from './hint';
@@ -170,7 +170,7 @@ export function CarForm({ car }: { car?: Car }) {
         <ThemedText type="small" themeColor="textSecondary">
           Статус
         </ThemedText>
-        <Segmented options={CAR_STATUSES} value={status} onChange={setStatus} />
+        <Segmented options={status === 'Заброньоване' ? CAR_STATUSES : MANUAL_CAR_STATUSES} value={status} onChange={setStatus} />
       </View>
 
       {/* Водій і початок оренди потрібні лише для авто, яке зараз здане */}

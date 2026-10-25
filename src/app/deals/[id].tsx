@@ -2,6 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Alert, Linking, StyleSheet, View } from 'react-native';
 
 import { CarPhoto } from '@/components/car-photo';
+import { ContractCard } from '@/components/contract-card';
 import { MessageButton } from '@/components/message-button';
 import { TerminateDeal } from '@/components/terminate-deal';
 import { HistoryList } from '@/components/history-list';
@@ -93,10 +94,14 @@ export default function DealScreen() {
         {stage === 'upcoming' || stage === 'active' ? <TerminateDeal deal={d} as="renter" /> : null}
       </Card>
 
+      <ContractCard deal={d} as="renter" />
+
+      {stage === 'signing' ? null : (
       <View style={styles.actions}>
         <Button title="Заробіток" icon="add-circle-outline" variant="positive" style={styles.flex} onPress={() => add('income')} />
         <Button title="Витрата" icon="remove-circle-outline" variant="secondary" style={styles.flex} onPress={() => add('expense')} />
       </View>
+      )}
 
       {!o ? (
         <ReportStatus loading={report.loading} error={report.error} onRetry={report.retry} />

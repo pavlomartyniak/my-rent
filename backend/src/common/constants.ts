@@ -1,4 +1,5 @@
-export const CAR_STATUSES = ['В оренді', 'Вільне', 'На сервісі'] as const;
+/** Заброньоване — домовленість прийнята, чекаємо підписання договору чи початку оренди */
+export const CAR_STATUSES = ['В оренді', 'Вільне', 'На сервісі', 'Заброньоване'] as const;
 export const EXPENSE_CATEGORIES = ['Ремонт', 'ТО', 'Страховка', 'Шини', 'Паливо', 'Інше'] as const;
 export const INCOME_CATEGORY = 'Оренда';
 export const TRANSACTION_TYPES = ['income', 'expense'] as const;

@@ -1,4 +1,7 @@
-export const CAR_STATUSES = ['В оренді', 'Вільне', 'На сервісі'] as const;
+/** Заброньоване — домовленість прийнята, чекаємо підписання договору чи початку оренди; задається автоматично */
+export const CAR_STATUSES = ['В оренді', 'Вільне', 'На сервісі', 'Заброньоване'] as const;
+/** Статуси, які власник може вибрати вручну */
+export const MANUAL_CAR_STATUSES = ['В оренді', 'Вільне', 'На сервісі'] as const;
 export type CarStatus = (typeof CAR_STATUSES)[number];
 
 export type Car = {

@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { CarCard } from '@/components/car-card';
 import { Hint } from '@/components/hint';
+import { SigningBanner } from '@/components/signing-banner';
 import { ReleasePrompt } from '@/components/release-prompt';
 import { TerminationBanner } from '@/components/termination-banner';
 import { dueLabel } from '@/components/reminder-row';
@@ -69,6 +70,8 @@ export default function HomeScreen() {
   return (
     <Screen tabs>
       <ScreenTitle>Мої авто</ScreenTitle>
+
+      <SigningBanner />
 
       <ReleasePrompt />
 

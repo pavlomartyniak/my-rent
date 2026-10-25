@@ -18,6 +18,8 @@ export const setApiToken = (value: string | null) => {
   token = value;
 };
 
+export const getApiToken = () => token;
+
 /** Викликається, коли сервер відхилив токен (сесія завершилась) */
 export const setUnauthorizedHandler = (handler: (() => void) | null) => {
   onUnauthorized = handler;

@@ -3,6 +3,7 @@ import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { type Connection, type Model, Types } from 'mongoose';
 
 import { FINISHED_RENTAL_STATUSES, RENTAL_STATUSES, type RentalStatus } from '../common/constants';
+import { newDealData } from '../deals/deal-factory';
 import { dealStageOf } from '../deals/deal-stage';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
@@ -131,7 +132,11 @@ export class RentalsService {
         const renter = await this.users.findById(request.renterId, null, { session }).exec();
         if (!renter) throw new NotFoundException('Орендаря не знайдено');
 
-        car.status = 'В оренді';
+        const owner = await this.users.findById(ownerId, null, { session }).exec();
+        if (!owner) throw new NotFoundException('Власника не знайдено');
+
+        // Авто бронюється; «В оренді» воно стане після підписання договору й настання дати початку
+        car.status = 'Заброньоване';
         car.driver = fullName(renter.firstName, renter.lastName);
         car.rentStart = request.startDate;
         if (car.listing) car.listing.published = false;
@@ -152,13 +157,16 @@ export class RentalsService {
           { $set: { status: 'declined', decisionNote: 'Авто вже здано', respondedAt: new Date() }, $addToSet: { hiddenFor: 'owner' } },
           { session },
         );
-        // Орендар отримує оренду, по якій веде свій облік
+        // Орендар отримує оренду з договором, який обидві сторони мають підписати
         await this.deals.create(
           [
-            {
-              renterId: request.renterId,
+            newDealData({
+              owner,
+              renter,
               ownerId: request.ownerId,
+              renterId: request.renterId,
               carId: request.carId,
+              car,
               title: request.car.title,
               photoUri: request.car.photoUri,
               city: request.car.city,
@@ -167,7 +175,7 @@ export class RentalsService {
               endDate: request.endDate,
               source: 'request',
               sourceId: request._id,
-            },
+            }),
           ],
           { session },
         );

@@ -4,6 +4,7 @@ import { type Connection, type Model, Types } from 'mongoose';
 
 import { fullName, maskedName, rentalDays, todayUtc, totalPrice } from '../rentals/rentals.math';
 import { FINISHED_OFFER_STATUSES } from '../common/constants';
+import { newDealData } from '../deals/deal-factory';
 import { dealStageOf } from '../deals/deal-stage';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
@@ -150,7 +151,11 @@ export class OffersService {
         const renter = await this.users.findById(renterId, null, { session }).exec();
         if (!renter) throw new NotFoundException('Користувача не знайдено');
 
-        car.status = 'В оренді';
+        const owner = await this.users.findById(offer.ownerId, null, { session }).exec();
+        if (!owner) throw new NotFoundException('Власника не знайдено');
+
+        // Авто бронюється; «В оренді» воно стане після підписання договору й настання дати початку
+        car.status = 'Заброньоване';
         car.driver = fullName(renter.firstName, renter.lastName);
         car.rentStart = w.startDate;
         if (car.listing) car.listing.published = false;
@@ -182,10 +187,13 @@ export class OffersService {
         );
         await this.deals.create(
           [
-            {
-              renterId: offer.renterId,
+            newDealData({
+              owner,
+              renter,
               ownerId: offer.ownerId,
+              renterId: offer.renterId,
               carId: offer.carId,
+              car,
               title: offer.car.title,
               photoUri: offer.car.photoUri,
               city: w.city,
@@ -194,7 +202,7 @@ export class OffersService {
               endDate: w.endDate,
               source: 'offer',
               sourceId: offer._id,
-            },
+            }),
           ],
           { session },
         );

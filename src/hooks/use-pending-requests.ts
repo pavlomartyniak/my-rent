@@ -20,3 +20,9 @@ export function useTerminationRequests() {
   const { data } = useReport<DealView[]>('/deals/termination-requests', { refetchOnFocus: true, pollMs: 60_000 });
   return data ?? [];
 }
+
+/** Договори, які чекають мого підпису (і для власника, і для орендаря) */
+export function useAwaitingSignature() {
+  const { data } = useReport<DealView[]>('/deals/awaiting-signature', { refetchOnFocus: true, pollMs: 60_000 });
+  return data ?? [];
+}

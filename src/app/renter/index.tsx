@@ -5,6 +5,7 @@ import { ActiveDealCard } from '@/components/active-deal-card';
 import { Hint } from '@/components/hint';
 import { ReportStatus } from '@/components/report-status';
 import { ScreenTitle } from '@/components/screen-title';
+import { SigningBanner } from '@/components/signing-banner';
 import { TerminationBanner } from '@/components/termination-banner';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,8 @@ export default function RenterHomeScreen() {
   return (
     <Screen tabs refreshControl={<RefreshControl refreshing={false} onRefresh={invalidate} />}>
       <ScreenTitle>Мої авто</ScreenTitle>
+
+      <SigningBanner />
 
       <TerminationBanner onPress={() => router.navigate('/renter/requests')} />
 

@@ -8,6 +8,7 @@ import { SummaryCard } from '@/components/summary-card';
 import { ThemedText } from '@/components/themed-text';
 import { CarPhoto } from '@/components/car-photo';
 import { PhotoGallery } from '@/components/photo-gallery';
+import { ContractCard } from '@/components/contract-card';
 import { MessageButton } from '@/components/message-button';
 import { ReleasePrompt } from '@/components/release-prompt';
 import { ArchivedDeals } from '@/components/archived-deals';
@@ -100,7 +101,7 @@ export default function CarScreen() {
       {deal ? (
         <Card>
           <ThemedText type="default" style={styles.bold}>
-            Зараз в оренді
+            {deal.status === 'awaiting' ? 'Домовленість: чекаємо підписання договору' : 'Зараз в оренді'}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
             {deal.counterpart.name} · {formatDate(deal.startDate)} – {formatDate(deal.endDate)} · {formatMoney(deal.pricePerDay)} за добу
@@ -109,7 +110,8 @@ export default function CarScreen() {
             <Button title={`Зателефонувати: ${deal.counterpart.phone}`} icon="call-outline" variant="positive" onPress={() => void Linking.openURL(`tel:${deal.counterpart.phone!.replace(/[^\d+]/g, '')}`)} />
           ) : null}
           <MessageButton context={{ dealId: deal.id }} title={`Написати: ${deal.counterpart.name}`} />
-          <TerminateDeal deal={deal} as="owner" />
+          <ContractCard deal={deal} as="owner" />
+          {deal.status === 'awaiting' ? null : <TerminateDeal deal={deal} as="owner" />}
         </Card>
       ) : null}
 

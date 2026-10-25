@@ -16,6 +16,7 @@ const STATUSES: Record<string, { label: string; tone: Tone }> = {
   withdrawn: { label: 'Відкликано', tone: 'neutral' },
   open: { label: 'Відкрита', tone: 'accent' },
   fulfilled: { label: 'Виконана', tone: 'positive' },
+  signing: { label: 'Підписання', tone: 'warning' },
   upcoming: { label: 'Незабаром', tone: 'warning' },
   active: { label: 'Триває', tone: 'positive' },
   finished: { label: 'Завершена', tone: 'neutral' },

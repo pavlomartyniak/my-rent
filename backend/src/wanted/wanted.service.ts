@@ -184,7 +184,7 @@ export class WantedService {
     if (w.status === 'fulfilled') {
       const stage = (await this.dealStages([w._id])).get(String(w._id));
       // Оренди може не бути, якщо її вже видалили з архіву
-      if (stage === 'upcoming' || stage === 'active') throw new ConflictException('Оренда за цією заявкою ще діє. Спершу розірвіть її');
+      if (stage === 'signing' || stage === 'upcoming' || stage === 'active') throw new ConflictException('Оренда за цією заявкою ще діє. Спершу розірвіть її');
     } else if (w.status !== 'cancelled') {
       throw new ConflictException('Видалити можна лише скасовану чи завершену заявку');
     }
