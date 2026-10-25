@@ -1,3 +1,4 @@
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
 import { OwnerBoard } from '@/components/requests/owner-board';
@@ -12,7 +13,11 @@ const SECTIONS = ['Запити', 'Заявки орендарів', 'Мої п�
 
 /** Усе, що стосується орендарів: запити на мої авто, їхні заявки «шукаю авто» й мої пропозиції */
 export default function RequestsScreen() {
-  const [section, setSection] = useState<(typeof SECTIONS)[number]>('Запити');
+  const params = useLocalSearchParams<{ section?: string }>();
+  // `?section=offers` відкриває «Мої пропозиції» (перехід з чату); власний вибір діє, доки параметр той самий
+  const [pick, setPick] = useState<{ param?: string; section: (typeof SECTIONS)[number] }>();
+  const section = pick && pick.param === params.section ? pick.section : params.section === 'offers' ? SECTIONS[2] : SECTIONS[0];
+  const setSection = (s: (typeof SECTIONS)[number]) => setPick({ param: params.section, section: s });
 
   return (
     <Screen tabs>

@@ -172,12 +172,22 @@ export default function ChatScreen() {
       },
     ]);
 
-  // Тап по картці авто: орендар відкриває свою оренду, власник — авто
+  // Тап по картці веде туди, звідки розмова: оренда → оренда, пропозиція → пропозиція, запит → запит
   function openContext() {
-    if (role === 'renter' && chat?.dealId) router.push({ pathname: '/deals/[id]', params: { id: chat.dealId } });
-    else if (role === 'owner' && chat?.context?.carId) router.push({ pathname: '/car/[id]', params: { id: chat.context.carId } });
+    if (!chat) return;
+    if (chat.dealId) {
+      if (role === 'renter') router.push({ pathname: '/deals/[id]', params: { id: chat.dealId } });
+      else if (chat.context?.carId) router.push({ pathname: '/car/[id]', params: { id: chat.context.carId } });
+      return;
+    }
+    if (chat.source?.kind === 'offer') {
+      if (role === 'renter' && chat.source.wantedId) router.push({ pathname: '/wanted/[id]', params: { id: chat.source.wantedId } });
+      else if (role === 'owner') router.navigate({ pathname: '/requests', params: { section: 'offers' } });
+    } else if (chat.source?.kind === 'request') {
+      router.navigate(role === 'renter' ? '/renter/requests' : '/requests');
+    }
   }
-  const contextTappable = (role === 'renter' && !!chat?.dealId) || (role === 'owner' && !!chat?.context?.carId);
+  const contextTappable = !!chat && (!!chat.dealId || !!chat.source);
 
   const lastMineId = messages.find((m) => m.mine && !m.status)?.id;
   const readUntil = chat?.otherReadAt ? new Date(chat.otherReadAt).getTime() : 0;

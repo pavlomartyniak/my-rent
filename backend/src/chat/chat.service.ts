@@ -19,7 +19,7 @@ type Side = 'owner' | 'renter';
 type Person = { firstName: string; lastName: string };
 type Source = { kind: 'request' | 'offer'; id: Types.ObjectId };
 /** Стан розмови: чи можна писати, чи відкрито повне ім'я й на якому етапі домовленість */
-type Info = { stage: string; dealId: string | null; canSend: boolean; full: boolean };
+type Info = { stage: string; dealId: string | null; wantedId: string | null; canSend: boolean; full: boolean };
 
 const key = (kind: string | undefined, id: unknown) => `${kind}:${String(id)}`;
 
@@ -307,9 +307,10 @@ export class ChatService implements OnModuleInit {
     const [deals, rentals, offers] = await Promise.all([
       withSource.length ? this.deals.find({ $or: withSource.map((c) => ({ source: c.sourceKind, sourceId: c.sourceId })) }).lean().exec() : [],
       ids('request').length ? this.rentals.find({ _id: { $in: ids('request') } }, 'status').lean().exec() : [],
-      ids('offer').length ? this.offers.find({ _id: { $in: ids('offer') } }, 'status').lean().exec() : [],
+      ids('offer').length ? this.offers.find({ _id: { $in: ids('offer') } }, 'status wantedId').lean().exec() : [],
     ]);
     const dealBy = new Map(deals.map((d) => [key(d.source, d.sourceId), d]));
+    const wantedBy = new Map(offers.map((o) => [key('offer', o._id), String(o.wantedId)]));
     const statusBy = new Map<string, string>([...rentals.map((r) => [key('request', r._id), r.status] as const), ...offers.map((o) => [key('offer', o._id), o.status] as const)]);
     const today = todayUtc();
 
@@ -321,7 +322,7 @@ export class ChatService implements OnModuleInit {
       let stage = 'closed';
       if (deal) stage = deal.status === 'terminated' ? 'terminated' : today > deal.endDate ? 'finished' : today < deal.startDate ? 'upcoming' : 'active';
       else if (status) stage = status;
-      result.set(String(c._id), { stage, dealId: deal ? String(deal._id) : null, canSend: !!deal || status === 'pending' || status === 'accepted', full: !!deal || status === 'accepted' });
+      result.set(String(c._id), { stage, dealId: deal ? String(deal._id) : null, wantedId: wantedBy.get(k) ?? null, canSend: !!deal || status === 'pending' || status === 'accepted', full: !!deal || status === 'accepted' });
     }
     return result;
   }
@@ -362,6 +363,8 @@ export class ChatService implements OnModuleInit {
         /** Етап: pending/accepted/declined/…, а після оренди upcoming/active/finished/terminated */
         stage: i.stage,
         dealId: i.dealId,
+        /** Звідки розмова: запит на оголошення чи пропозиція на заявку (для переходу з чату) */
+        source: c.sourceKind ? { kind: c.sourceKind, wantedId: i.wantedId } : null,
         lastMessage: last ? { text: last.text, mine: String(last.senderId) !== String(otherId), at: last.at } : null,
         unread: c.unread?.[role] ?? 0,
         /** Коли співрозмовник востаннє читав чат: за цим застосунок показує «прочитано» */

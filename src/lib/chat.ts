@@ -14,6 +14,8 @@ export type ChatSummary = {
   stage: string;
   /** Оренда, що виросла з цієї розмови (якщо вже є) */
   dealId: string | null;
+  /** Звідки розмова: запит на оголошення (request) чи пропозиція на заявку (offer; wantedId — її заявка) */
+  source: { kind: 'request' | 'offer'; wantedId: string | null } | null;
   lastMessage: { text: string; mine: boolean; at: string } | null;
   unread: number;
   /** Коли співрозмовник востаннє читав чат */
