@@ -25,8 +25,10 @@ export default function SearchScreen() {
   const theme = useTheme();
   const offers = usePendingOffers();
   const [place, setPlace] = useState<Place | null>(null);
+  const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
-  const { items, total, error, loading, hasMore, loadMore, refresh } = useMarketSearch(place?.city, place?.regionId, maxPrice);
+  const rangeError = Number(minPrice) > 0 && Number(maxPrice) > 0 && Number(minPrice) > Number(maxPrice) ? 'Верхня межа менша за нижню' : undefined;
+  const { items, total, error, loading, hasMore, loadMore, refresh } = useMarketSearch(place?.city, place?.regionId, minPrice, maxPrice);
 
   return (
     <Screen tabs refreshControl={<RefreshControl refreshing={loading && items.length > 0} onRefresh={refresh} />}>
@@ -59,7 +61,14 @@ export default function SearchScreen() {
       <Hint id="search">Введіть місто, щоб побачити вільні авто. Відкрийте оголошення й надішліть власнику запит на потрібні дати: він відповість прийняттям або відмовою.</Hint>
 
       <PlaceFilter value={place} onChange={setPlace} />
-      <NumberField label="Ціна до, ₴ за добу (необов’язково)" value={maxPrice} onChangeValue={setMaxPrice} maxDigits={7} placeholder="2 000" />
+      <View style={{ flexDirection: 'row', gap: Spacing.two }}>
+        <View style={{ flex: 1 }}>
+          <NumberField label="Ціна від, ₴/доба" value={minPrice} onChangeValue={setMinPrice} maxDigits={7} placeholder="500" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <NumberField label="до, ₴/доба" value={maxPrice} onChangeValue={setMaxPrice} maxDigits={7} placeholder="2 000" error={rangeError} />
+        </View>
+      </View>
 
       <Button title="Не знайшли? Створити заявку" icon="document-text-outline" variant="secondary" onPress={() => router.push('/wanted/new')} />
 
@@ -69,7 +78,7 @@ export default function SearchScreen() {
         <EmptyState
           icon="car-outline"
           title="Нічого не знайдено"
-          text={place || maxPrice ? 'Спробуйте змінити місто чи ціну.' : 'Поки що немає вільних авто в оголошеннях. Зазирніть пізніше.'}
+          text={place || minPrice || maxPrice ? 'Спробуйте змінити місто чи ціну.' : 'Поки що немає вільних авто в оголошеннях. Зазирніть пізніше.'}
         />
       ) : (
         <>

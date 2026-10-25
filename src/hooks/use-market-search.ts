@@ -9,18 +9,18 @@ type Loaded = { key: string; page: number; pages: number; total: number; items: 
  * Пошук оголошень із відкладеним запитом (300 мс після останнього символу) і підвантаженням сторінок.
  * Зміна фільтрів скидає список на першу сторінку.
  */
-export function useMarketSearch(city: string | undefined, regionId: number | undefined, maxPrice: string) {
-  const [debounced, setDebounced] = useState({ maxPrice: '' });
+export function useMarketSearch(city: string | undefined, regionId: number | undefined, minPrice: string, maxPrice: string) {
+  const [debounced, setDebounced] = useState({ minPrice: '', maxPrice: '' });
   const [attempt, setAttempt] = useState(0);
   const [want, setWant] = useState({ key: '', page: 1 });
   const [loaded, setLoaded] = useState<Loaded | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebounced({ maxPrice }), 300);
+    const timer = setTimeout(() => setDebounced({ minPrice, maxPrice }), 300);
     return () => clearTimeout(timer);
-  }, [maxPrice]);
+  }, [minPrice, maxPrice]);
 
-  const key = `${city ?? ''}|${regionId ?? ''}|${debounced.maxPrice}|${attempt}`;
+  const key = `${city ?? ''}|${regionId ?? ''}|${debounced.minPrice}|${debounced.maxPrice}|${attempt}`;
   const page = want.key === key ? want.page : 1;
 
   useEffect(() => {
@@ -28,6 +28,7 @@ export function useMarketSearch(city: string | undefined, regionId: number | und
     const params = new URLSearchParams({ page: String(page), limit: '10' });
     if (city) params.set('city', city);
     else if (regionId !== undefined) params.set('regionId', String(regionId));
+    if (Number(debounced.minPrice) > 0) params.set('minPrice', debounced.minPrice);
     if (Number(debounced.maxPrice) > 0) params.set('maxPrice', debounced.maxPrice);
 
     api<MarketPage>('GET', `/market/cars?${params}`)
