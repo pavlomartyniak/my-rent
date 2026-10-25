@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
-import { Hint } from '@/components/hint';
 import { ReportStatus } from '@/components/report-status';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -19,10 +18,9 @@ export function RenterWanted() {
 
   return (
     <>
-      <Hint id="my-wanted">Опишіть, яке авто вам потрібно, і власники запропонують свої. Торкніться заявки, щоб переглянути пропозиції й прийняти найкращу.</Hint>
-      <Button title="Створити заявку" icon="add" onPress={() => router.push('/wanted/new')} />
+      <Button title="Шукаю авто" icon="add" onPress={() => router.push('/wanted/new')} />
       {data.length === 0 ? (
-        <EmptyState icon="document-text-outline" title="Заявок ще немає" text="Не знайшли потрібне авто серед оголошень? Створіть заявку, і власники самі запропонують варіанти." />
+        <EmptyState icon="document-text-outline" title="Ви ще нічого не шукаєте" text="Не знайшли потрібне авто серед оголошень? Створіть заявку, і власники самі запропонують варіанти." />
       ) : (
         <View style={{ gap: Spacing.two }}>
           {[...data].sort((a, b) => (b.offers?.pending ?? 0) - (a.offers?.pending ?? 0)).map((w) => (

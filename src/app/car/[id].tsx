@@ -1,7 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
-import { Hint } from '@/components/hint';
 import { PaybackCard } from '@/components/payback-card';
 import { ReportStatus } from '@/components/report-status';
 import { SummaryCard } from '@/components/summary-card';
@@ -9,7 +8,8 @@ import { ThemedText } from '@/components/themed-text';
 import { CarPhoto } from '@/components/car-photo';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { ContractCard } from '@/components/contract-card';
-import { MessageButton } from '@/components/message-button';
+import { ContactChips } from '@/components/contact-chips';
+import { contactActions } from '@/lib/contact-actions';
 import { ReleasePrompt } from '@/components/release-prompt';
 import { ArchivedDeals } from '@/components/archived-deals';
 import { DeleteCar } from '@/components/delete-car';
@@ -100,16 +100,15 @@ export default function CarScreen() {
 
       {deal ? (
         <Card>
-          <ThemedText type="default" style={styles.bold}>
-            {deal.status === 'awaiting' ? 'Домовленість: чекаємо підписання договору' : 'Зараз в оренді'}
-          </ThemedText>
+          <View style={styles.rentHead}>
+            <ThemedText type="default" style={[styles.bold, styles.flex]}>
+              {deal.status === 'awaiting' ? 'Домовленість: чекаємо підписання договору' : 'Зараз в оренді'}
+            </ThemedText>
+          </View>
           <ThemedText type="small" themeColor="textSecondary">
             {deal.counterpart.name} · {formatDate(deal.startDate)} – {formatDate(deal.endDate)} · {formatMoney(deal.pricePerDay)} за добу
           </ThemedText>
-          {deal.counterpart.phone ? (
-            <Button title={`Зателефонувати: ${deal.counterpart.phone}`} icon="call-outline" variant="positive" onPress={() => void Linking.openURL(`tel:${deal.counterpart.phone!.replace(/[^\d+]/g, '')}`)} />
-          ) : null}
-          <MessageButton context={{ dealId: deal.id }} title={`Написати: ${deal.counterpart.name}`} />
+          <ContactChips actions={contactActions({ chat: { dealId: deal.id }, phone: deal.counterpart.phone, contract: deal.contract ? () => router.push({ pathname: '/contracts/[id]', params: { id: deal.id } }) : undefined })} />
           <ContractCard deal={deal} as="owner" />
           {deal.status === 'awaiting' ? null : <TerminateDeal deal={deal} as="owner" />}
         </Card>
@@ -156,8 +155,6 @@ export default function CarScreen() {
         )}
       </Card>
 
-      <Hint id="car">Окупність (ROI) — це прибуток, поділений на вартість авто. Тапніть на запис в історії, щоб змінити або видалити його.</Hint>
-
       <SectionHeader title="Історія" />
       <HistoryList carId={car.id} />
 
@@ -193,6 +190,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
+  rentHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   bold: { fontWeight: 700 },
   photo: { width: '100%', aspectRatio: 16 / 9, borderRadius: Radius.lg },
   buttons: { flexDirection: 'row', gap: Spacing.two },

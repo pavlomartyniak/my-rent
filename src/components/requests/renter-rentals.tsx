@@ -2,7 +2,6 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
-import { Hint } from '@/components/hint';
 import { RemoveFinished } from '@/components/remove-finished';
 import { RentalCard } from '@/components/rental-card';
 import { ReportStatus } from '@/components/report-status';
@@ -44,7 +43,6 @@ export function RenterRentals() {
 
   return (
     <>
-      <Hint id="my-requests">Після того як власник прийме запит, тут з’явиться його номер телефону, щоб домовитись про передачу авто. Скасований вами запит одразу зникає зі списку, а відхилений і завершені лишаються на 30 днів: їх можна видалити раніше.</Hint>
       {data.length === 0 ? (
         <EmptyState
           icon="paper-plane-outline"

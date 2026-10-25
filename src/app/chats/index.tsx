@@ -2,7 +2,6 @@ import { useRouter, Stack } from 'expo-router';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { CarPhoto } from '@/components/car-photo';
-import { Hint } from '@/components/hint';
 import { ReportStatus } from '@/components/report-status';
 import { StatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
@@ -44,7 +43,6 @@ export default function ChatsScreen() {
   return (
     <Screen>
       <Stack.Screen options={{ title: 'Повідомлення', headerBackTitle: 'Назад' }} />
-      {data?.length ? <Hint id="chats-delete">Утримуйте розмову пальцем, щоб видалити її зі свого списку. Під кожне авто чи запит створюється окрема розмова.</Hint> : null}
       {!data ? (
         <ReportStatus loading={loading} error={error} onRetry={retry} />
       ) : data.length === 0 ? (

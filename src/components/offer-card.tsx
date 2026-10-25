@@ -1,18 +1,18 @@
+import { useRouter } from 'expo-router';
 import type { ReactNode } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
+import { contactActions } from '@/lib/contact-actions';
 import { formatDate } from '@/lib/date';
 import { formatKm, formatMoney, plural } from '@/lib/format';
 import { wantedTitle, type OfferView } from '@/lib/wanted';
 
 import { CarPhoto } from './car-photo';
 import { PhotoGallery } from './photo-gallery';
-import { ContractButton } from './contract-button';
-import { MessageButton } from './message-button';
+import { ContactChips } from './contact-chips';
 import { StatusBadge } from './status-badge';
 import { ThemedText } from './themed-text';
-import { Button } from './ui/button';
 import { Card } from './ui/card';
 
 type Props = {
@@ -24,6 +24,7 @@ type Props = {
 
 /** Пропозиція власника на заявку: авто, ціна за добу, сума, повідомлення й контакти після прийняття */
 export function OfferCard({ offer: o, viewer, children }: Props) {
+  const router = useRouter();
   const photos = o.car.photos?.length ? o.car.photos : o.car.photoUri ? [o.car.photoUri] : [];
   const who = viewer === 'renter' ? 'Власник' : 'Орендар';
 
@@ -49,8 +50,7 @@ export function OfferCard({ offer: o, viewer, children }: Props) {
       <View style={styles.rows}>
         {viewer === 'owner' ? <Row label="Заявка" value={`${wantedTitle(o.wanted)} · ${o.wanted.city}`} /> : null}
         <Row label="Дати" value={`${formatDate(o.wanted.startDate)} – ${formatDate(o.wanted.endDate)}`} />
-        <Row label="Ціна" value={`${formatMoney(o.pricePerDay)} за добу`} />
-        <Row label={`Разом за ${o.days} ${plural(o.days, 'добу', 'доби', 'діб')}`} value={formatMoney(o.totalPrice)} bold />
+        <Row label={`${o.days} ${plural(o.days, 'доба', 'доби', 'діб')} × ${formatMoney(o.pricePerDay)}`} value={formatMoney(o.totalPrice)} bold />
         <Row label={who} value={o.counterpart.name} />
       </View>
 
@@ -65,15 +65,15 @@ export function OfferCard({ offer: o, viewer, children }: Props) {
         </ThemedText>
       ) : null}
 
-      {o.status === 'accepted' && o.counterpart.phone ? (
-        <Button title={`Зателефонувати: ${o.counterpart.phone}`} icon="call-outline" variant="positive" onPress={() => void Linking.openURL(`tel:${o.counterpart.phone!.replace(/[^\d+]/g, '')}`)} />
-      ) : null}
-
-      {o.hasContract && o.dealId && (o.status === 'accepted' || o.status === 'ended') ? <ContractButton dealId={o.dealId} /> : null}
-
-      {o.status === 'pending' || o.status === 'accepted' ? <MessageButton context={{ offerId: o.id }} title={`Написати: ${o.counterpart.name}`} /> : null}
-
       {children}
+
+      <ContactChips
+        actions={contactActions({
+            chat: (o.status === 'pending' || o.status === 'accepted') && { offerId: o.id },
+            phone: o.status === 'accepted' ? o.counterpart.phone : undefined,
+            contract: o.hasContract && o.dealId && (o.status === 'accepted' || o.status === 'ended') ? () => router.push({ pathname: '/contracts/[id]', params: { id: o.dealId! } }) : undefined,
+          })}
+      />
     </Card>
   );
 }

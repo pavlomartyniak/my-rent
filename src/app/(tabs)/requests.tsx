@@ -3,14 +3,12 @@ import { useState } from 'react';
 
 import { OwnerBoard } from '@/components/requests/owner-board';
 import { OwnerOffers } from '@/components/requests/owner-offers';
-import { ContractsToSign } from '@/components/requests/contracts-to-sign';
-import { TerminationRequests } from '@/components/requests/termination-requests';
 import { OwnerRentals } from '@/components/requests/owner-rentals';
 import { ScreenTitle } from '@/components/screen-title';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 
-const SECTIONS = ['Запити', 'Заявки орендарів', 'Мої пропозиції'] as const;
+const SECTIONS = ['Запити', 'Шукають авто', 'Мої пропозиції'] as const;
 
 /** Усе, що стосується орендарів: запити на мої авто, їхні заявки «шукаю авто» й мої пропозиції */
 export default function RequestsScreen() {
@@ -22,12 +20,10 @@ export default function RequestsScreen() {
 
   return (
     <Screen tabs>
-      <ScreenTitle>Оренда</ScreenTitle>
-      <ContractsToSign as="owner" />
-      <TerminationRequests as="owner" />
+      <ScreenTitle>Запити</ScreenTitle>
       <Segmented options={SECTIONS} value={section} onChange={setSection} />
 
-      {section === 'Запити' ? <OwnerRentals /> : section === 'Заявки орендарів' ? <OwnerBoard /> : <OwnerOffers />}
+      {section === 'Запити' ? <OwnerRentals /> : section === 'Шукають авто' ? <OwnerBoard /> : <OwnerOffers />}
     </Screen>
   );
 }

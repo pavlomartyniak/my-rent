@@ -133,7 +133,7 @@ export default function NewWantedScreen() {
       />
 
       <View style={styles.actions}>
-        <Button title={sending ? 'Створюємо…' : 'Створити заявку'} icon="paper-plane-outline" disabled={sending} onPress={send} />
+        <Button title={sending ? 'Створюємо…' : 'Шукаю авто'} icon="paper-plane-outline" disabled={sending} onPress={send} />
       </View>
     </Screen>
   );

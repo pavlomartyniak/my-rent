@@ -68,10 +68,12 @@ export default function OfferScreen() {
     if (priceError) return;
     setSending(true);
     try {
-      await api('POST', `/wanted/${wanted!.id}/offers`, { carId: car.id, pricePerDay: Number(price), message: message.trim() });
+      const res = await api<{ chatId: string | null }>('POST', `/wanted/${wanted!.id}/offers`, { carId: car.id, pricePerDay: Number(price), message: message.trim() });
       invalidate();
       router.back();
-      Alert.alert('Пропозицію надіслано', 'Орендар побачить її й відповість. Статус видно в «Моїх пропозиціях».');
+      // Пропозиція вже лежить у чаті з орендарем: відкриваємо його, щоб можна було одразу домовитись
+      if (res.chatId) router.push({ pathname: '/chats/[id]', params: { id: res.chatId } });
+      else Alert.alert('Пропозицію надіслано', 'Орендар побачить її й відповість. Статус видно в «Моїх пропозиціях».');
     } catch (e) {
       Alert.alert('Не вдалося надіслати', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
     } finally {

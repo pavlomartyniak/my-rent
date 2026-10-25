@@ -2,7 +2,6 @@ import { Stack, useRouter } from 'expo-router';
 import { View } from 'react-native';
 
 import { DealCard } from '@/components/deal-card';
-import { Hint } from '@/components/hint';
 import { ReportStatus } from '@/components/report-status';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
@@ -33,7 +32,6 @@ export default function AllRentalsScreen() {
         />
       ) : (
         <>
-          <Hint id="my-rentals">Відкрийте оренду, щоб записувати заробіток і витрати: прибуток і баланс платежів власнику порахуються самі.</Hint>
           <View style={{ gap: Spacing.three }}>
             {deals.data.map((d) => (
               <DealCard key={d.id} deal={d} overview={report.data?.deals.find((x) => x.dealId === d.id)?.overview} />

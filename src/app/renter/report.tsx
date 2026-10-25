@@ -5,7 +5,6 @@ import { BarChart } from '@/components/bar-chart';
 import { CarPhoto } from '@/components/car-photo';
 import { CategoryBreakdown } from '@/components/category-breakdown';
 import { ComparisonCard } from '@/components/comparison-card';
-import { Hint } from '@/components/hint';
 import { PeriodSwitcher, usePeriod } from '@/components/period-switcher';
 import { ReportStatus } from '@/components/report-status';
 import { SummaryCard } from '@/components/summary-card';
@@ -40,8 +39,6 @@ export default function RenterReportScreen() {
   return (
     <Screen tabs>
       <ScreenTitle>Звіт</ScreenTitle>
-
-      <Hint id="renter-report">Тут видно, скільки ви заробили з орендованими авто й скільки віддали: власникам за оренду та на паливо, мийку тощо. Торкніться оренди в рейтингу, щоб побачити її окремо.</Hint>
 
       <PeriodSwitcher state={p} />
 

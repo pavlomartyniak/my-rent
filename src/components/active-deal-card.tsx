@@ -3,18 +3,18 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { formatDate } from '@/lib/date';
+import { contactActions } from '@/lib/contact-actions';
 import { dealStage, type DealOverview, type DealView } from '@/lib/deals';
 import { formatMoney, plural } from '@/lib/format';
 import type { Totals } from '@/lib/reports';
 
 import { CarPhoto } from './car-photo';
 import { ContractCard } from './contract-card';
-import { MessageButton } from './message-button';
+import { ContactChips } from './contact-chips';
 import { StatusBadge } from './status-badge';
 import { ThemedText } from './themed-text';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
-import { Icon } from './ui/icon';
 
 type Props = {
   deal: DealView;
@@ -55,14 +55,13 @@ export function ActiveDealCard({ deal, month, overview }: Props) {
             ) : null}
           </View>
           <StatusBadge status={stage} />
-          <Icon name="chevron-forward" size={18} color="textSecondary" />
         </Pressable>
       </Link>
 
       {stage === 'signing' ? (
         <>
           <ContractCard deal={deal} as="renter" />
-          <MessageButton context={{ dealId: deal.id }} title={`Написати: ${deal.counterpart.name}`} />
+          <ContactChips actions={contactActions({ chat: { dealId: deal.id }, phone: deal.counterpart.phone })} />
         </>
       ) : (
         <>
@@ -89,7 +88,7 @@ export function ActiveDealCard({ deal, month, overview }: Props) {
         <Button title="Заробіток" icon="add-circle-outline" variant="positive" style={styles.flex} onPress={() => add('income')} />
         <Button title="Витрата" icon="remove-circle-outline" variant="secondary" style={styles.flex} onPress={() => add('expense')} />
       </View>
-      <MessageButton context={{ dealId: deal.id }} title={`Написати: ${deal.counterpart.name}`} />
+          <ContactChips actions={contactActions({ chat: { dealId: deal.id }, phone: deal.counterpart.phone })} />
         </>
       )}
     </Card>

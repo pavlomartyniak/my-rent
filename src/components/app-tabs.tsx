@@ -2,13 +2,13 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useColorScheme } from 'react-native';
 
 import { Colors } from '@/constants/theme';
-import { usePendingRequests, useSigningNow, useTerminationRequests } from '@/hooks/use-pending-requests';
+import { useAttention } from '@/hooks/use-attention';
 
 export default function AppTabs() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
-  // Нові запити орендарів і пропозиції розірвати оренду, що чекають відповіді
-  const pending = usePendingRequests() + useTerminationRequests().length + useSigningNow().length;
+  // Число на «Головній» збігається з числом у блоці «Потрібна ваша увага», на «Запитах» — нові запити чи пропозиції
+  const { urgent: home, requests } = useAttention('owner');
 
   return (
     <NativeTabs
@@ -19,6 +19,7 @@ export default function AppTabs() {
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Авто</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'car', selected: 'car.fill' }} md="directions_car" />
+        {home > 0 ? <NativeTabs.Trigger.Badge>{home > 99 ? '99+' : String(home)}</NativeTabs.Trigger.Badge> : null}
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="analytics">
@@ -30,7 +31,7 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Label>Запити</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'tray', selected: 'tray.fill' }} md="inbox" />
         {/* Без запитів бейдж не рендериться взагалі: порожній текст або hidden на частині платформ лишає кружечок */}
-        {pending > 0 ? <NativeTabs.Trigger.Badge>{pending > 99 ? '99+' : String(pending)}</NativeTabs.Trigger.Badge> : null}
+        {requests > 0 ? <NativeTabs.Trigger.Badge>{requests > 99 ? '99+' : String(requests)}</NativeTabs.Trigger.Badge> : null}
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="reminders">

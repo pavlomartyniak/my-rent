@@ -3,6 +3,8 @@ import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { type Connection, type Model, Types } from 'mongoose';
 
 import { FINISHED_RENTAL_STATUSES, RENTAL_STATUSES, type RentalStatus } from '../common/constants';
+import { acceptedMessage, requestMessage } from '../chat/auto-messages';
+import { ChatService } from '../chat/chat.service';
 import { newDealData } from '../deals/deal-factory';
 import { dealStageOf } from '../deals/deal-stage';
 import { Car } from '../schemas/car.schema';
@@ -26,6 +28,7 @@ export class RentalsService {
     @InjectModel(Offer.name) private readonly offers: Model<Offer>,
     @InjectModel(Deal.name) private readonly deals: Model<Deal>,
     @InjectConnection() private readonly connection: Connection,
+    private readonly chat: ChatService,
   ) {}
 
   async create(renterId: string, dto: CreateRentalDto) {
@@ -57,7 +60,14 @@ export class RentalsService {
       message: dto.message ?? '',
       car: { title: `${car.brand} ${car.model} ${car.year}`, city: car.listing.city, pricePerDay: car.listing.pricePerDay, photoUri: car.photoUri },
     });
-    return this.view(created, 'renter', await this.people([car.userId]));
+    // Одразу відкриваємо чат із власником і кидаємо в нього повідомлення, щоб вони могли зв'язатись
+    const chatId = await this.chat.autoStart(
+      { id: renterId, role: 'renter' },
+      { rentalId: String(created._id) },
+      requestMessage({ title: created.car.title, startDate: dto.startDate, endDate: dto.endDate, days: rentalDays(dto.startDate, dto.endDate), total: totalPrice(created.car.pricePerDay, dto.startDate, dto.endDate), note: dto.message }),
+      `auto-${created._id}`,
+    );
+    return { ...this.view(created, 'renter', await this.people([car.userId])), chatId };
   }
 
   /** Мої запити (орендар) */
@@ -182,6 +192,8 @@ export class RentalsService {
     } finally {
       await session.endSession();
     }
+    // Повідомлення в чат: домовленість прийнято, договір сформовано
+    await this.chat.autoStart({ id: ownerId, role: 'owner' }, { rentalId: String(accepted!._id) }, acceptedMessage({ startDate: accepted!.startDate }), `auto-accept-${accepted!._id}`).catch(() => null);
     // Відповідь одразу містить оренду з договором: застосунок пропонує його переглянути
     return this.view(accepted!, 'owner', await this.people([accepted!.renterId]), { dealId: createdDeal, dealStage: 'signing', contract: true });
   }

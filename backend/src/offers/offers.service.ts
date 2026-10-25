@@ -4,6 +4,8 @@ import { type Connection, type Model, Types } from 'mongoose';
 
 import { fullName, maskedName, rentalDays, todayUtc, totalPrice } from '../rentals/rentals.math';
 import { FINISHED_OFFER_STATUSES } from '../common/constants';
+import { acceptedMessage, offerMessage } from '../chat/auto-messages';
+import { ChatService } from '../chat/chat.service';
 import { newDealData } from '../deals/deal-factory';
 import { dealStageOf } from '../deals/deal-stage';
 import { Car } from '../schemas/car.schema';
@@ -29,6 +31,7 @@ export class OffersService {
     @InjectModel(User.name) private readonly users: Model<User>,
     @InjectModel(Deal.name) private readonly deals: Model<Deal>,
     @InjectConnection() private readonly connection: Connection,
+    private readonly chat: ChatService,
   ) {}
 
   /** Власник пропонує своє вільне авто на заявку орендаря */
@@ -65,7 +68,14 @@ export class OffersService {
         photos: (car.photos ?? []).filter((u) => u.startsWith('https://')),
       },
     });
-    return this.view(created, 'owner', w, await this.people([w.renterId]));
+    // Одразу відкриваємо чат з орендарем і кидаємо в нього пропозицію, щоб вони могли зв'язатись
+    const chatId = await this.chat.autoStart(
+      { id: ownerId, role: 'owner' },
+      { offerId: String(created._id) },
+      offerMessage({ title: created.car.title, startDate: w.startDate, endDate: w.endDate, days: rentalDays(w.startDate, w.endDate), pricePerDay: dto.pricePerDay, total: totalPrice(dto.pricePerDay, w.startDate, w.endDate), note: dto.message }),
+      `auto-${created._id}`,
+    );
+    return { ...this.view(created, 'owner', w, await this.people([w.renterId])), chatId };
   }
 
   /** Пропозиції на мою заявку (орендар) */
@@ -211,6 +221,8 @@ export class OffersService {
     } finally {
       await session.endSession();
     }
+    // Повідомлення в чат: домовленість прийнято, договір сформовано
+    await this.chat.autoStart({ id: renterId, role: 'renter' }, { offerId: String(accepted!._id) }, acceptedMessage({ startDate: wantedDoc!.startDate }), `auto-accept-${accepted!._id}`).catch(() => null);
     // Відповідь одразу містить оренду з договором: застосунок пропонує його переглянути
     return this.view(accepted!, 'renter', wantedDoc!, await this.people([accepted!.ownerId]), { dealId: createdDeal, dealStage: 'signing', contract: true });
   }

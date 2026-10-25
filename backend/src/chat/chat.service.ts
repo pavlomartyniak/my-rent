@@ -139,6 +139,21 @@ export class ChatService implements OnModuleInit {
     return (await this.summaries(user, [c]))[0];
   }
 
+  /**
+   * Починає розмову автоматично: відкриває чат у контексті щойно створеного запиту чи пропозиції й кидає перше
+   * повідомлення від імені автора, щоб сторони одразу могли спілкуватись. Збій чату не повинен ламати сам запит.
+   */
+  async autoStart(user: AuthUser, context: OpenChatDto, text: string, clientId: string): Promise<string | null> {
+    try {
+      const chat = await this.open(user, context);
+      await this.send(user, chat.id, text, clientId);
+      return chat.id;
+    } catch (e) {
+      this.log.warn(`Авто-повідомлення не надіслано: ${String(e)}`);
+      return null;
+    }
+  }
+
   // ---- список й історія ----
 
   async list(user: AuthUser) {

@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
 import { RefreshControl, View } from 'react-native';
 
-import { Hint } from '@/components/hint';
 import { MarketCard } from '@/components/market-card';
 import { ScreenTitle } from '@/components/screen-title';
 import { ThemedText } from '@/components/themed-text';
@@ -29,8 +28,6 @@ export default function SearchScreen() {
     <Screen tabs refreshControl={<RefreshControl refreshing={loading && items.length > 0} onRefresh={refresh} />}>
       <ScreenTitle>Авто в оренду</ScreenTitle>
 
-      <Hint id="search">Введіть місто, щоб побачити вільні авто. Відкрийте оголошення й надішліть власнику запит на потрібні дати: він відповість прийняттям або відмовою.</Hint>
-
       <PlaceFilter value={place} onChange={setPlace} />
       <View style={{ flexDirection: 'row', gap: Spacing.two }}>
         <View style={{ flex: 1 }}>
@@ -41,7 +38,7 @@ export default function SearchScreen() {
         </View>
       </View>
 
-      <Button title="Не знайшли? Створити заявку" icon="document-text-outline" variant="secondary" onPress={() => router.push('/wanted/new')} />
+      <Button title="Не знайшли? Опишіть, що шукаєте" icon="document-text-outline" variant="secondary" onPress={() => router.push('/wanted/new')} />
 
       {error ? (
         <EmptyState icon="cloud-offline-outline" title="Не вдалося завантажити" text={error} action="Спробувати ще раз" onAction={refresh} />

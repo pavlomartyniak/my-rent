@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
-import { Hint } from '@/components/hint';
 import { RemoveFinished } from '@/components/remove-finished';
 import { OfferCard } from '@/components/offer-card';
 import { ReportStatus } from '@/components/report-status';
@@ -43,7 +42,6 @@ export function OwnerOffers() {
 
   return (
     <>
-      <Hint id="my-offers">Тут видно ваші пропозиції орендарям. Коли орендар прийме пропозицію, авто автоматично потрапить в облік як «В оренді», а ви побачите його телефон. Відкликана вами пропозиція одразу зникає, а відхилена чи завершена лишається на 30 днів: її можна видалити раніше.</Hint>
       {data.length === 0 ? (
         <EmptyState icon="paper-plane-outline" title="Пропозицій ще немає" text="Відкрийте «Заявки орендарів» і запропонуйте своє вільне авто." />
       ) : (

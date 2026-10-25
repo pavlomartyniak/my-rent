@@ -2,7 +2,6 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
-import { Hint } from '@/components/hint';
 import { ReportStatus } from '@/components/report-status';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
@@ -17,7 +16,7 @@ import { plural } from '@/lib/format';
 import type { WantedBoard } from '@/lib/wanted';
 import { useFleet } from '@/store/fleet';
 
-const SCOPES = ['Підходять мені', 'Усі заявки'] as const;
+const SCOPES = ['Підходять мені', 'Усі'] as const;
 
 /** Дошка заявок орендарів «шукаю авто»: власник пропонує своє вільне авто */
 export function OwnerBoard() {
@@ -35,12 +34,7 @@ export function OwnerBoard() {
 
   return (
     <>
-      <Hint id="wanted-board">Орендарі публікують заявки: яке авто, де й на які дати їм потрібно. Запропонуйте своє вільне авто, а орендар вибере найкращу пропозицію.</Hint>
-
       <Segmented options={SCOPES} value={scope} onChange={setScope} />
-      <ThemedText type="small" themeColor="textSecondary">
-        {scope === SCOPES[0] ? 'Лише заявки, на які у вас є вільне авто потрібної марки й моделі.' : 'Усі відкриті заявки, щоб бачити попит. Пропонувати можна лише своє вільне авто.'}
-      </ThemedText>
       <PlaceFilter value={place} onChange={setPlace} />
 
       {!data ? (

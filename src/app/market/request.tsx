@@ -56,11 +56,13 @@ export default function RentalRequestScreen() {
     if (sending || !car) return;
     setSending(true);
     try {
-      await api('POST', '/rentals', { carId: car.id, startDate: start, endDate: end, message: message.trim() });
+      const res = await api<{ chatId: string | null }>('POST', '/rentals', { carId: car.id, startDate: start, endDate: end, message: message.trim() });
       invalidate();
       router.dismissAll();
       router.navigate('/renter/requests');
-      Alert.alert('Запит надіслано', 'Власник отримає його й відповість. Відповідь з’явиться у «Моїх запитах».');
+      // Запит уже лежить у чаті з власником: відкриваємо його, щоб можна було одразу домовитись
+      if (res.chatId) router.push({ pathname: '/chats/[id]', params: { id: res.chatId } });
+      else Alert.alert('Запит надіслано', 'Власник отримає його й відповість. Відповідь з’явиться у «Моїх запитах».');
     } catch (e) {
       Alert.alert('Не вдалося надіслати', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
     } finally {

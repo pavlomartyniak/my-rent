@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
-import { Hint } from '@/components/hint';
 import { RemoveFinished } from '@/components/remove-finished';
 import { RentalCard } from '@/components/rental-card';
 import { ReportStatus } from '@/components/report-status';
@@ -63,9 +62,6 @@ export function OwnerRentals() {
 
   return (
     <>
-      <Hint id="requests">
-        Тут з’являються запити орендарів на ваші опубліковані авто. Прийнявши запит, ви автоматично додаєте оренду в облік: статус авто, водій і дата початку оновляться самі. Запит, який ви відхилили, одразу зникає зі списку, а відхилені системою й завершені лишаються на 30 днів.
-      </Hint>
       {sorted.length === 0 ? (
         <EmptyState
           icon="mail-open-outline"

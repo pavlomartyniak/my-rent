@@ -40,3 +40,25 @@ describe('preview', () => {
     assert.ok(p.endsWith('…'));
   });
 });
+
+import { acceptedMessage, offerMessage, requestMessage } from '../src/chat/auto-messages';
+
+describe('автоповідомлення', () => {
+  const base = { title: 'Skoda Octavia 2020', startDate: '2026-11-01', endDate: '2026-11-11', days: 10 };
+  it('запит: авто, дати, строк і сума', () => {
+    const t = requestMessage({ ...base, total: 12000 });
+    for (const p of ['Skoda Octavia 2020', '01.11.2026', '11.11.2026', '10 діб', '12 000 грн']) assert.ok(t.includes(p), p);
+  });
+  it('запит: власне повідомлення орендаря додається окремим абзацом', () => assert.ok(requestMessage({ ...base, total: 1, note: '  Потрібен автомат  ' }).endsWith('\n\nПотрібен автомат')));
+  it('запит: порожня примітка нічого не додає', () => assert.ok(!requestMessage({ ...base, total: 1, note: '   ' }).includes('\n\n')));
+  it('пропозиція: ціна за добу й підсумок', () => {
+    const t = offerMessage({ ...base, pricePerDay: 1200, total: 12000 });
+    assert.ok(t.includes('1 200 грн за добу') && t.includes('разом 12 000 грн'));
+  });
+  it('прийняття: коли відкривається підписання (за добу до початку)', () => assert.ok(acceptedMessage({ startDate: '2026-11-01' }).includes('31.10.2026')));
+  it('відмінювання діб', () => {
+    assert.ok(requestMessage({ ...base, days: 1, total: 1 }).includes('1 доба'));
+    assert.ok(requestMessage({ ...base, days: 3, total: 1 }).includes('3 доби'));
+    assert.ok(requestMessage({ ...base, days: 12, total: 1 }).includes('12 діб'));
+  });
+});

@@ -1,17 +1,17 @@
+import { useRouter } from 'expo-router';
 import type { ReactNode } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { formatDate } from '@/lib/date';
 import { formatMoney, plural } from '@/lib/format';
+import { contactActions } from '@/lib/contact-actions';
 import type { RentalView } from '@/lib/rentals';
 
 import { CarPhoto } from './car-photo';
-import { ContractButton } from './contract-button';
-import { MessageButton } from './message-button';
+import { ContactChips } from './contact-chips';
 import { StatusBadge } from './status-badge';
 import { ThemedText } from './themed-text';
-import { Button } from './ui/button';
 import { Card } from './ui/card';
 
 type Props = {
@@ -24,6 +24,7 @@ type Props = {
 
 /** Картка запиту на оренду: авто, дати, сума, повідомлення, статус і контакти */
 export function RentalCard({ rental: r, viewer, children }: Props) {
+  const router = useRouter();
   const who = viewer === 'owner' ? 'Орендар' : 'Власник';
 
   return (
@@ -43,8 +44,7 @@ export function RentalCard({ rental: r, viewer, children }: Props) {
 
       <View style={styles.rows}>
         <Row label="Дати" value={`${formatDate(r.startDate)} – ${formatDate(r.endDate)}`} />
-        <Row label="Тривалість" value={`${r.days} ${plural(r.days, 'доба', 'доби', 'діб')} × ${formatMoney(r.car.pricePerDay)}`} />
-        <Row label="Орієнтовно" value={formatMoney(r.totalPrice)} bold />
+        <Row label={`${r.days} ${plural(r.days, 'доба', 'доби', 'діб')} × ${formatMoney(r.car.pricePerDay)}`} value={formatMoney(r.totalPrice)} bold />
         <Row label={who} value={r.counterpart.name} />
       </View>
 
@@ -60,15 +60,15 @@ export function RentalCard({ rental: r, viewer, children }: Props) {
         </ThemedText>
       ) : null}
 
-      {r.status === 'accepted' && r.counterpart.phone ? (
-        <Button title={`Зателефонувати: ${r.counterpart.phone}`} icon="call-outline" variant="positive" onPress={() => void Linking.openURL(`tel:${r.counterpart.phone!.replace(/[^\d+]/g, '')}`)} />
-      ) : null}
-
-      {r.hasContract && r.dealId && (r.status === 'accepted' || r.status === 'ended') ? <ContractButton dealId={r.dealId} /> : null}
-
-      {r.status === 'pending' || r.status === 'accepted' ? <MessageButton context={{ rentalId: r.id }} title={`Написати: ${r.counterpart.name}`} /> : null}
-
       {children}
+
+      <ContactChips
+        actions={contactActions({
+            chat: (r.status === 'pending' || r.status === 'accepted') && { rentalId: r.id },
+            phone: r.status === 'accepted' ? r.counterpart.phone : undefined,
+            contract: r.hasContract && r.dealId && (r.status === 'accepted' || r.status === 'ended') ? () => router.push({ pathname: '/contracts/[id]', params: { id: r.dealId! } }) : undefined,
+          })}
+      />
     </Card>
   );
 }
