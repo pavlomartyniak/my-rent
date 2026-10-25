@@ -1,7 +1,10 @@
 import { useRouter, Stack } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
+import { CarPhoto } from '@/components/car-photo';
+import { Hint } from '@/components/hint';
 import { ReportStatus } from '@/components/report-status';
+import { StatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -10,6 +13,7 @@ import { Screen } from '@/components/ui/screen';
 import { Radius, Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
+import { api, ApiError } from '@/lib/api';
 import { listTime, type ChatSummary } from '@/lib/chat';
 import { useChatEvents } from '@/store/chat';
 
@@ -24,9 +28,23 @@ export default function ChatsScreen() {
     if (e.type === 'message' || e.type === 'read' || e.type === 'resume') retry();
   });
 
+  const confirmDelete = (c: ChatSummary) =>
+    Alert.alert('Видалити розмову?', `Розмова з ${c.counterpart.name}${c.context ? ` про ${c.context.title}` : ''} зникне лише у вас. Якщо співрозмовник напише знову, вона повернеться, але без старих повідомлень.`, [
+      { text: 'Залишити', style: 'cancel' },
+      {
+        text: 'Видалити',
+        style: 'destructive',
+        onPress: () =>
+          api('DELETE', `/chats/${c.id}`)
+            .then(retry)
+            .catch((e) => Alert.alert('Не вдалося видалити', e instanceof ApiError ? e.message : 'Спробуйте ще раз')),
+      },
+    ]);
+
   return (
     <Screen>
       <Stack.Screen options={{ title: 'Повідомлення', headerBackTitle: 'Назад' }} />
+      {data?.length ? <Hint id="chats-delete">Утримуйте розмову пальцем, щоб видалити її зі свого списку. Під кожне авто чи запит створюється окрема розмова.</Hint> : null}
       {!data ? (
         <ReportStatus loading={loading} error={error} onRetry={retry} />
       ) : data.length === 0 ? (
@@ -38,13 +56,9 @@ export default function ChatsScreen() {
       ) : (
         <Card style={styles.list}>
           {data.map((c, i) => (
-            <Pressable key={c.id} accessibilityRole="button" onPress={() => router.push({ pathname: '/chats/[id]', params: { id: c.id } })}>
+            <Pressable key={c.id} accessibilityRole="button" onLongPress={() => confirmDelete(c)} onPress={() => router.push({ pathname: '/chats/[id]', params: { id: c.id } })}>
               <View style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }]}>
-                <View style={[styles.avatar, { backgroundColor: theme.accentSoft }]}>
-                  <ThemedText type="default" themeColor="accent" style={styles.initial}>
-                    {c.counterpart.name.charAt(0).toUpperCase()}
-                  </ThemedText>
-                </View>
+                <CarPhoto uri={c.context?.photoUri ?? undefined} style={styles.avatar} iconSize={22} />
                 <View style={styles.flex}>
                   <View style={styles.top}>
                     <ThemedText type="default" style={styles.bold} numberOfLines={1}>
@@ -56,10 +70,13 @@ export default function ChatsScreen() {
                       </ThemedText>
                     ) : null}
                   </View>
-                  {c.contextTitle ? (
-                    <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                      {c.contextTitle}
-                    </ThemedText>
+                  {c.context ? (
+                    <View style={styles.top}>
+                      <ThemedText type="small" themeColor="textSecondary" style={styles.flex} numberOfLines={1}>
+                        {c.context.title}
+                      </ThemedText>
+                      <StatusBadge status={c.stage} />
+                    </View>
                   ) : null}
                   <View style={styles.top}>
                     <ThemedText type="small" themeColor={c.unread > 0 ? 'text' : 'textSecondary'} style={[styles.flex, c.unread > 0 && styles.bold]} numberOfLines={1}>
@@ -85,8 +102,7 @@ export default function ChatsScreen() {
 const styles = StyleSheet.create({
   list: { paddingVertical: 0, gap: 0 },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.three },
-  avatar: { width: 48, height: 48, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  initial: { fontWeight: 700, fontSize: 20 },
+  avatar: { width: 52, height: 52, borderRadius: Radius.md },
   flex: { flex: 1 },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
   bold: { fontWeight: 700 },

@@ -8,8 +8,12 @@ import { api, ApiError } from './api';
 export type ChatSummary = {
   id: string;
   counterpart: { id: string; name: string };
-  /** Про яке авто мова: підпис у списку */
-  contextTitle: string;
+  /** Авто й умови, про які розмова (знімок на момент початку): показуються в шапці чату */
+  context: { title: string; photoUri: string | null; city: string; pricePerDay: number; startDate: string; endDate: string; carId: string | null } | null;
+  /** Етап домовленості: pending/accepted/declined/…, а після оренди upcoming/active/finished/terminated; closed — запит уже видалено */
+  stage: string;
+  /** Оренда, що виросла з цієї розмови (якщо вже є) */
+  dealId: string | null;
   lastMessage: { text: string; mine: boolean; at: string } | null;
   unread: number;
   /** Коли співрозмовник востаннє читав чат */
@@ -35,6 +39,7 @@ export type ChatEvent =
   | { type: 'message'; conversationId: string; senderId: string; message: ChatMessage }
   | { type: 'read'; conversationId: string; by: 'owner' | 'renter'; at: string }
   | { type: 'typing'; conversationId: string; userId: string }
+  | { type: 'removed'; conversationId: string }
   | { type: 'resume' };
 
 /** Контекст, з якого відкривається чат: запит, пропозиція або оренда */

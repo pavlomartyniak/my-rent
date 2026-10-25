@@ -1,8 +1,10 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CarPhoto } from '@/components/car-photo';
+import { StatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
@@ -10,6 +12,8 @@ import { IconButton } from '@/components/ui/icon-button';
 import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
+import { formatDate } from '@/lib/date';
+import { formatMoney } from '@/lib/format';
 import { clock, dayLabel, differentDays, newClientId, type ChatMessage, type ChatSummary, type MessagesPage } from '@/lib/chat';
 import { useChat, useChatEvents } from '@/store/chat';
 import { useFleet } from '@/store/fleet';
@@ -74,6 +78,10 @@ export default function ChatScreen() {
   }, []);
 
   useChatEvents((e) => {
+    if (e.type === 'removed' && e.conversationId === id) {
+      router.back();
+      return;
+    }
     if (e.type === 'resume') {
       load();
       return;
@@ -154,6 +162,23 @@ export default function ChatScreen() {
     }
   }
 
+  const confirmDelete = () =>
+    Alert.alert('Видалити розмову?', 'Вона зникне лише у вас. Якщо співрозмовник напише знову, розмова повернеться, але без старих повідомлень.', [
+      { text: 'Залишити', style: 'cancel' },
+      {
+        text: 'Видалити',
+        style: 'destructive',
+        onPress: () => api('DELETE', `/chats/${id}`).catch((e) => Alert.alert('Не вдалося видалити', e instanceof ApiError ? e.message : 'Спробуйте ще раз')),
+      },
+    ]);
+
+  // Тап по картці авто: орендар відкриває свою оренду, власник — авто
+  function openContext() {
+    if (role === 'renter' && chat?.dealId) router.push({ pathname: '/deals/[id]', params: { id: chat.dealId } });
+    else if (role === 'owner' && chat?.context?.carId) router.push({ pathname: '/car/[id]', params: { id: chat.context.carId } });
+  }
+  const contextTappable = (role === 'renter' && !!chat?.dealId) || (role === 'owner' && !!chat?.context?.carId);
+
   const lastMineId = messages.find((m) => m.mine && !m.status)?.id;
   const readUntil = chat?.otherReadAt ? new Date(chat.otherReadAt).getTime() : 0;
 
@@ -168,10 +193,38 @@ export default function ChatScreen() {
             {chat?.counterpart.name ?? 'Розмова'}
           </ThemedText>
           <ThemedText type="small" themeColor={typing ? 'accent' : 'textSecondary'} numberOfLines={1}>
-            {typing ? 'друкує…' : chat?.contextTitle || ' '}
+            {typing ? 'друкує…' : chat?.context?.title || ' '}
           </ThemedText>
         </View>
+        <IconButton icon="trash-outline" label="Видалити розмову" tone="neutral" onPress={confirmDelete} />
       </View>
+
+      {chat?.context ? (
+        <Pressable
+          accessibilityRole={contextTappable ? 'button' : undefined}
+          disabled={!contextTappable}
+          onPress={openContext}
+          style={[styles.context, { backgroundColor: theme.backgroundElement, borderBottomColor: theme.border }]}>
+          <CarPhoto uri={chat.context.photoUri ?? undefined} style={styles.contextPhoto} iconSize={20} />
+          <View style={styles.flex}>
+            <ThemedText type="smallBold" numberOfLines={1}>
+              {chat.context.title}
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+              {[chat.context.city, `${formatMoney(chat.context.pricePerDay)}/доба`].filter(Boolean).join(' · ')}
+            </ThemedText>
+            {chat.context.startDate ? (
+              <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                {formatDate(chat.context.startDate)} – {formatDate(chat.context.endDate)}
+              </ThemedText>
+            ) : null}
+          </View>
+          <View style={styles.contextEnd}>
+            <StatusBadge status={chat.stage} />
+            {contextTappable ? <Icon name="chevron-forward" size={16} color="textSecondary" /> : null}
+          </View>
+        </Pressable>
+      ) : null}
 
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {loading ? (
@@ -282,6 +335,9 @@ const styles = StyleSheet.create({
   bold: { fontWeight: 700 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingHorizontal: Spacing.three, paddingBottom: Spacing.two, borderBottomWidth: StyleSheet.hairlineWidth },
+  context: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, borderBottomWidth: StyleSheet.hairlineWidth },
+  contextPhoto: { width: 48, height: 48, borderRadius: Radius.sm },
+  contextEnd: { alignItems: 'flex-end', gap: 4 },
   messages: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.three, gap: 6, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   emptyWrap: { padding: Spacing.five, transform: [{ scaleY: -1 }] },
   emptyText: { textAlign: 'center' },

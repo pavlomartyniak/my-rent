@@ -20,6 +20,7 @@ const STATUSES: Record<string, { label: string; tone: Tone }> = {
   active: { label: 'Триває', tone: 'positive' },
   finished: { label: 'Завершена', tone: 'neutral' },
   terminated: { label: 'Розірвано', tone: 'negative' },
+  closed: { label: 'Закрито', tone: 'neutral' },
 };
 
 export function StatusBadge({ status }: { status: string }) {

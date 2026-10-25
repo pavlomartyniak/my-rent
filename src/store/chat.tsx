@@ -62,6 +62,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       refreshUnread();
     });
     socket.on('typing', (p: { conversationId: string; userId: string }) => emit({ type: 'typing', ...p }));
+    socket.on('removed', (p: { conversationId: string }) => {
+      emit({ type: 'removed', conversationId: p.conversationId });
+      refreshUnread();
+    });
 
     refreshUnread();
     // Повернувшись у застосунок, перепідключаємось і підтягуємо пропущене

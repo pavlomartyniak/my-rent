@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Header, HttpCode, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, HttpCode, Param, Post, Query } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 
 import { type AuthUser, CurrentUser } from '../common/current-user';
@@ -47,6 +47,13 @@ export class ChatController {
   @Post(':id/messages')
   send(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Body() dto: SendMessageDto) {
     return this.chat.send(user, id, dto.text, dto.clientId);
+  }
+
+  /** Видалити розмову зі свого списку (співрозмовник її зберігає) */
+  @HttpCode(204)
+  @Delete(':id')
+  remove(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
+    return this.chat.remove(user, id);
   }
 
   @HttpCode(204)
