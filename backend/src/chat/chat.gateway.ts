@@ -1,6 +1,7 @@
-import { Logger } from '@nestjs/common';
+import { Logger, type OnModuleInit } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { type OnGatewayConnection, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
+import { RealtimeService } from '../realtime/realtime.service';
 import type { Server, Socket } from 'socket.io';
 
 import type { Role } from '../common/constants';
@@ -15,13 +16,20 @@ type Typing = { conversationId?: unknown };
  * події співрозмовнику й іншим пристроям користувача: нове повідомлення, «прочитано», «друкує…».
  */
 @WebSocketGateway({ cors: false, pingInterval: 25_000, pingTimeout: 20_000, maxHttpBufferSize: 10_000 })
-export class ChatGateway implements OnGatewayConnection {
+export class ChatGateway implements OnGatewayConnection, OnModuleInit {
   private readonly log = new Logger(ChatGateway.name);
   @WebSocketServer() private server!: Server;
   /** Підключається ChatService після створення (щоб уникнути циклічної залежності) */
   chat?: ChatService;
 
-  constructor(private readonly jwt: JwtService) {}
+  constructor(
+    private readonly jwt: JwtService,
+    private readonly realtime: RealtimeService,
+  ) {}
+
+  onModuleInit() {
+    this.realtime.attach((ids, event, payload) => this.emitTo(ids, event, payload));
+  }
 
   async handleConnection(client: Socket) {
     const token = client.handshake.auth?.token;

@@ -27,7 +27,7 @@ const ChatContext = createContext<ChatContextValue | null>(null);
  */
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { token } = useAuth();
-  const { ready } = useFleet();
+  const { ready, invalidate, reload } = useFleet();
   const [unread, setUnread] = useState(0);
   const [connected, setConnected] = useState(false);
   const listeners = useRef(new Set<Listener>());
@@ -49,6 +49,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     socket.on('connect', () => {
       setConnected(true);
       refreshUnread();
+      // Після (пере)підключення могли бути пропущені зміни запитів чи оренд: оновлюємо списки
+      invalidate();
       // Після обриву могли прийти повідомлення, яких не було видно: екрани перезавантажать дані
       emit({ type: 'resume' });
     });
@@ -62,6 +64,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       refreshUnread();
     });
     socket.on('typing', (p: { conversationId: string; userId: string }) => emit({ type: 'typing', ...p }));
+    // Сервер повідомляє, що змінились запити, пропозиції, оренди чи авто: короткою паузою збираємо серію подій в одне оновлення
+    let refresh: ReturnType<typeof setTimeout> | null = null;
+    let wantsCars = false;
+    socket.on('changed', (p: { scopes: string[] }) => {
+      if (p.scopes.includes('cars')) wantsCars = true;
+      if (refresh) clearTimeout(refresh);
+      refresh = setTimeout(() => {
+        invalidate();
+        if (wantsCars) reload();
+        wantsCars = false;
+      }, 250);
+    });
     socket.on('removed', (p: { conversationId: string }) => {
       emit({ type: 'removed', conversationId: p.conversationId });
       refreshUnread();
@@ -77,13 +91,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
+      if (refresh) clearTimeout(refresh);
       sub.remove();
       socket.close();
       socketRef.current = null;
       setConnected(false);
       setUnread(0);
     };
-  }, [token, ready, emit, refreshUnread]);
+  }, [token, ready, emit, refreshUnread, invalidate, reload]);
 
   const subscribe = useCallback((listener: Listener) => {
     listeners.current.add(listener);

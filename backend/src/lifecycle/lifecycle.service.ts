@@ -5,6 +5,7 @@ import type { Model } from 'mongoose';
 
 import { ChatService } from '../chat/chat.service';
 import { DealsService } from '../deals/deals.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { FINISHED_RETENTION_DAYS } from '../common/constants';
 import { todayUtc } from '../rentals/rentals.math';
 import { Deal } from '../schemas/deal.schema';
@@ -34,6 +35,7 @@ export class LifecycleService implements OnModuleInit, OnModuleDestroy {
     @InjectModel(WantedRequest.name) private readonly wanted: Model<WantedRequest>,
     private readonly chat: ChatService,
     private readonly dealsService: DealsService,
+    private readonly realtime: RealtimeService,
     private readonly config: ConfigService,
   ) {}
 
@@ -72,7 +74,7 @@ export class LifecycleService implements OnModuleInit, OnModuleDestroy {
   /** Оренда закінчилась за датою чи розірвана: прийнятий запит чи пропозиція, з яких вона виросла, стають завершеними */
   private async endFinishedDeals() {
     // Розірвані оренди теж: так підхоплюються й ті, що були розірвані до появи статусу «завершено»
-    const finished = await this.deals.find({ $or: [{ status: 'terminated' }, { endDate: { $lt: todayUtc() } }] }, 'source sourceId').sort({ updatedAt: -1 }).limit(500).lean().exec();
+    const finished = await this.deals.find({ $or: [{ status: 'terminated' }, { endDate: { $lt: todayUtc() } }] }, 'source sourceId ownerId renterId').sort({ updatedAt: -1 }).limit(500).lean().exec();
     if (!finished.length) return 0;
     const update = { $set: { status: 'ended', decisionNote: 'Оренду завершено', respondedAt: new Date() } };
     const ids = (kind: string) => finished.filter((d) => d.source === kind).map((d) => d.sourceId);
@@ -80,7 +82,10 @@ export class LifecycleService implements OnModuleInit, OnModuleDestroy {
       this.rentals.updateMany({ _id: { $in: ids('request') }, status: 'accepted' }, update),
       this.offers.updateMany({ _id: { $in: ids('offer') }, status: 'accepted' }, update),
     ]);
-    return r.modifiedCount + o.modifiedCount;
+    const changed = r.modifiedCount + o.modifiedCount;
+    // Завершені запити й пропозиції зникають із «Прийнято» в обох сторін одразу
+    if (changed) this.realtime.changed(finished.flatMap((d) => [d.ownerId, d.renterId]), 'rentals', 'offers', 'deals');
+    return changed;
   }
 
   /** Виконана заявка, оренда з якої закінчилась понад 30 днів тому, більше нікому не потрібна */

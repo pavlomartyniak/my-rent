@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { Model, Types } from 'mongoose';
 
 import { PlacesService } from '../catalog/places.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { escapeRegex, normalize } from '../common/normalize';
 import { maskedName, rentalDays, todayUtc, validateRange } from '../rentals/rentals.math';
 import { dealStageOf } from '../deals/deal-stage';
@@ -45,6 +46,7 @@ export class WantedService {
     @InjectModel(Car.name) private readonly cars: Model<Car>,
     @InjectModel(Deal.name) private readonly deals: Model<Deal>,
     private readonly places: PlacesService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   async create(renterId: string, dto: CreateWantedDto) {
@@ -170,6 +172,8 @@ export class WantedService {
       if (await this.wanted.exists({ _id: id, renterId })) throw new ConflictException('Заявку вже закрито');
       throw new NotFoundException('Заявку не знайдено');
     }
+    const affected = await this.offers.find({ wantedId: w._id, status: 'pending' }, 'ownerId').lean().exec();
+    this.realtime.changed(affected.map((o) => o.ownerId), 'offers', 'wanted');
     await this.offers.updateMany({ wantedId: w._id, status: 'pending' }, { $set: { status: 'declined', decisionNote: 'Заявку скасовано', respondedAt: new Date() }, $addToSet: { hiddenFor: 'renter' } });
     return wantedView(w, { offers: (await this.offerCounts([w._id])).get(String(w._id)) ?? { pending: 0, total: 0 } });
   }

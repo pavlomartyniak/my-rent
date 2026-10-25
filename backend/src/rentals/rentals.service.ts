@@ -5,6 +5,7 @@ import { type Connection, type Model, Types } from 'mongoose';
 import { FINISHED_RENTAL_STATUSES, RENTAL_STATUSES, type RentalStatus } from '../common/constants';
 import { acceptedMessage, requestMessage } from '../chat/auto-messages';
 import { ChatService } from '../chat/chat.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { planError, type PaymentPlan } from '../deals/payment-plan';
 import { newDealData } from '../deals/deal-factory';
 import { dealStageOf } from '../deals/deal-stage';
@@ -30,6 +31,7 @@ export class RentalsService {
     @InjectModel(Deal.name) private readonly deals: Model<Deal>,
     @InjectConnection() private readonly connection: Connection,
     private readonly chat: ChatService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   async create(renterId: string, dto: CreateRentalDto) {
@@ -73,6 +75,7 @@ export class RentalsService {
       requestMessage({ title: created.car.title, startDate: dto.startDate, endDate: dto.endDate, days: rentalDays(dto.startDate, dto.endDate), total: totalPrice(created.car.pricePerDay, dto.startDate, dto.endDate), note: dto.message, plan }),
       `auto-${created._id}`,
     );
+    this.realtime.changed([car.userId], 'rentals');
     return { ...this.view(created, 'renter', await this.people([car.userId])), chatId };
   }
 
@@ -118,6 +121,7 @@ export class RentalsService {
       .findOneAndUpdate({ _id: id, renterId, status: 'pending' }, { $set: { status: 'cancelled', respondedAt: new Date() }, $addToSet: { hiddenFor: 'renter' } }, { returnDocument: 'after' })
       .exec();
     if (!updated) throw await this.notPending(id, { renterId });
+    this.realtime.changed([updated.ownerId], 'rentals');
     return this.view(updated, 'renter', await this.people([updated.ownerId]));
   }
 
@@ -126,6 +130,7 @@ export class RentalsService {
       .findOneAndUpdate({ _id: id, ownerId, status: 'pending' }, { $set: { status: 'declined', decisionNote: note, respondedAt: new Date() }, $addToSet: { hiddenFor: 'owner' } }, { returnDocument: 'after' })
       .exec();
     if (!updated) throw await this.notPending(id, { ownerId });
+    this.realtime.changed([updated.renterId], 'rentals');
     return this.view(updated, 'owner', await this.people([updated.renterId]));
   }
 
@@ -137,6 +142,7 @@ export class RentalsService {
     const session = await this.connection.startSession();
     let accepted: RentalRequestDocument | null = null;
     let createdDeal = '';
+    let losers: unknown[] = [];
     try {
       await session.withTransaction(async () => {
         const request = await this.rentals.findOne({ _id: id, ownerId, status: 'pending' }, null, { session }).exec();
@@ -163,6 +169,7 @@ export class RentalsService {
         request.respondedAt = new Date();
         await request.save({ session });
 
+        losers = (await this.rentals.find({ carId: request.carId, status: 'pending', _id: { $ne: request._id } }, 'renterId', { session }).lean().exec()).map((r) => r.renterId);
         await this.rentals.updateMany(
           { carId: request.carId, status: 'pending', _id: { $ne: request._id } },
           { $set: { status: 'declined', decisionNote: 'Авто вже здано іншому орендарю', respondedAt: new Date() }, $addToSet: { hiddenFor: 'owner' } },
@@ -199,6 +206,9 @@ export class RentalsService {
     } finally {
       await session.endSession();
     }
+    // Орендар, чий запит прийнято, і ті, кому відмовлено, одразу бачать зміни; авто змінило статус
+    this.realtime.changed([accepted!.renterId, ...losers], 'rentals', 'deals');
+    this.realtime.changed([ownerId], 'cars', 'deals', 'rentals');
     // Повідомлення в чат: домовленість прийнято, договір сформовано
     await this.chat.autoStart({ id: ownerId, role: 'owner' }, { rentalId: String(accepted!._id) }, acceptedMessage({ startDate: accepted!.startDate }), `auto-accept-${accepted!._id}`).catch(() => null);
     // Відповідь одразу містить оренду з договором: застосунок пропонує його переглянути

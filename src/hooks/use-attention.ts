@@ -32,7 +32,7 @@ export type AttentionItem = {
   target: AttentionTarget;
 };
 
-const POLL = { refetchOnFocus: true, pollMs: 60_000 } as const;
+const POLL = { refetchOnFocus: true, pollMs: 300_000 } as const;
 
 /**
  * Усе, що чекає на користувача, в одному списку: договори, відповіді на розірвання, нові запити чи пропозиції,

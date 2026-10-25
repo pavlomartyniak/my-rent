@@ -6,6 +6,7 @@ import type { AuthUser } from '../common/current-user';
 import { renderContractPdf } from '../contract/contract.pdf';
 import { signContract } from '../contract/contract.signing';
 import { buildSections } from '../contract/contract.terms';
+import { RealtimeService } from '../realtime/realtime.service';
 import { settledAmount } from './deal-payments';
 import { SIGN_DAYS_AFTER, signingState, signingWindow } from '../contract/contract.window';
 import { fullName, todayUtc } from '../rentals/rentals.math';
@@ -28,6 +29,7 @@ export class DealsService {
     @InjectModel(RentalRequest.name) private readonly rentals: Model<RentalRequest>,
     @InjectModel(Offer.name) private readonly offers: Model<Offer>,
     @InjectConnection() private readonly connection: Connection,
+    private readonly realtime: RealtimeService,
   ) {}
 
   /** Усі оренди орендаря, новіші першими */
@@ -153,6 +155,7 @@ export class DealsService {
     if (deal.terminationRequest) throw new ConflictException('Пропозицію про розірвання вже надіслано');
     deal.terminationRequest = { by: user.role, at: new Date(), note: note.trim() };
     await deal.save();
+    this.pingOther(user, deal);
     return this.viewFor(user, deal);
   }
 
@@ -162,6 +165,7 @@ export class DealsService {
     if (deal.terminationRequest?.by !== user.role) throw new ConflictException('Немає вашої пропозиції про розірвання');
     deal.terminationRequest = undefined;
     await deal.save();
+    this.pingOther(user, deal);
     return this.viewFor(user, deal);
   }
 
@@ -171,6 +175,7 @@ export class DealsService {
     if (!deal.terminationRequest || deal.terminationRequest.by === user.role) throw new ConflictException('Немає пропозиції для відповіді');
     deal.terminationRequest = undefined;
     await deal.save();
+    this.pingOther(user, deal);
     return this.viewFor(user, deal);
   }
 
@@ -192,6 +197,7 @@ export class DealsService {
     } finally {
       await session.endSession();
     }
+    this.pingBoth(result as unknown as DealDocument, 'rentals', 'offers', 'wanted');
     return this.viewFor(user, result as unknown as DealDocument);
   }
 
@@ -292,6 +298,8 @@ export class DealsService {
     } finally {
       await session.endSession();
     }
+    this.pingOther(user, result as unknown as DealDocument);
+    if ((result as unknown as DealDocument).status === 'active') this.pingBoth(result as unknown as DealDocument);
     return this.viewFor(user, result as unknown as DealDocument);
   }
 
@@ -359,6 +367,7 @@ export class DealsService {
     } finally {
       await session.endSession();
     }
+    this.pingOther(user, result as unknown as DealDocument);
     return this.viewFor(user, result as unknown as DealDocument);
   }
 
@@ -460,6 +469,7 @@ export class DealsService {
     } finally {
       await session.endSession();
     }
+    this.pingBoth(result as unknown as DealDocument, 'rentals', 'offers', 'wanted');
     return this.viewFor(user, result as unknown as DealDocument);
   }
 
@@ -480,7 +490,10 @@ export class DealsService {
     // Підписання відкрите ще SIGN_DAYS_AFTER діб після початку оренди; далі договір скасовується
     const cutoff = new Date(Date.now() - SIGN_DAYS_AFTER * 86_400_000).toISOString().slice(0, 10);
     const stale = await this.deals.find({ status: 'awaiting', startDate: { $lt: cutoff } }).limit(200).exec();
-    for (const deal of stale) await this.close(deal, 'system', '', 'Договір не підписано до початку оренди');
+    for (const deal of stale) {
+      await this.close(deal, 'system', '', 'Договір не підписано до початку оренди');
+      this.pingBoth(deal, 'rentals', 'offers', 'wanted');
+    }
     return stale.length;
   }
 
@@ -492,6 +505,7 @@ export class DealsService {
     for (const d of started) {
       const res = await this.cars.updateOne({ _id: d.carId, userId: d.ownerId, status: 'Заброньоване' }, { $set: { status: 'В оренді' } });
       n += res.modifiedCount;
+      if (res.modifiedCount) this.realtime.changed([d.ownerId], 'cars', 'deals');
     }
     return n;
   }
@@ -511,6 +525,17 @@ export class DealsService {
     const s = deal.contract?.signatures ?? {};
     const one = (v?: { at: Date; method: string; signatureId: string }) => (v ? { at: v.at, method: v.method, signatureId: v.signatureId } : null);
     return { owner: one(s.owner), renter: one(s.renter) };
+  }
+
+  /** Друга сторона оренди бачить зміну одразу */
+  private pingOther(user: AuthUser, deal: DealDocument, ...extra: ('rentals' | 'offers' | 'wanted' | 'cars')[]) {
+    this.realtime.changed([user.role === 'renter' ? deal.ownerId : deal.renterId], 'deals', ...extra);
+  }
+
+  /** Обидві сторони; авто власника змінило статус */
+  private pingBoth(deal: DealDocument, ...extra: ('rentals' | 'offers' | 'wanted')[]) {
+    this.realtime.changed([deal.ownerId, deal.renterId], 'deals', ...extra);
+    this.realtime.changed([deal.ownerId], 'cars');
   }
 
   private side(user: AuthUser) {

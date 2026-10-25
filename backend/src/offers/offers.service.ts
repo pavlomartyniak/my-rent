@@ -6,6 +6,7 @@ import { fullName, maskedName, rentalDays, todayUtc, totalPrice } from '../renta
 import { FINISHED_OFFER_STATUSES } from '../common/constants';
 import { acceptedMessage, offerMessage } from '../chat/auto-messages';
 import { ChatService } from '../chat/chat.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { planError, type PaymentPlan } from '../deals/payment-plan';
 import { newDealData } from '../deals/deal-factory';
 import { dealStageOf } from '../deals/deal-stage';
@@ -33,6 +34,7 @@ export class OffersService {
     @InjectModel(Deal.name) private readonly deals: Model<Deal>,
     @InjectConnection() private readonly connection: Connection,
     private readonly chat: ChatService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   /** Власник пропонує своє вільне авто на заявку орендаря */
@@ -80,6 +82,7 @@ export class OffersService {
       offerMessage({ title: created.car.title, startDate: w.startDate, endDate: w.endDate, days: rentalDays(w.startDate, w.endDate), pricePerDay: dto.pricePerDay, total: totalPrice(dto.pricePerDay, w.startDate, w.endDate), note: dto.message, plan }),
       `auto-${created._id}`,
     );
+    this.realtime.changed([w.renterId], 'offers', 'wanted');
     return { ...this.view(created, 'owner', w, await this.people([w.renterId])), chatId };
   }
 
@@ -132,6 +135,7 @@ export class OffersService {
   async withdraw(ownerId: string, id: string) {
     const o = await this.offers.findOneAndUpdate({ _id: id, ownerId, status: 'pending' }, { $set: { status: 'withdrawn', respondedAt: new Date() }, $addToSet: { hiddenFor: 'owner' } }, { returnDocument: 'after' }).exec();
     if (!o) throw await this.notPending(id, { ownerId });
+    this.realtime.changed([o.renterId], 'offers', 'wanted');
     return { id: String(o._id), status: o.status };
   }
 
@@ -140,6 +144,7 @@ export class OffersService {
       .findOneAndUpdate({ _id: id, renterId, status: 'pending' }, { $set: { status: 'declined', decisionNote: note, respondedAt: new Date() }, $addToSet: { hiddenFor: 'renter' } }, { returnDocument: 'after' })
       .exec();
     if (!o) throw await this.notPending(id, { renterId });
+    this.realtime.changed([o.ownerId], 'offers');
     return { id: String(o._id), status: o.status };
   }
 
@@ -152,6 +157,7 @@ export class OffersService {
     const session = await this.connection.startSession();
     let accepted: OfferDocument | null = null;
     let createdDeal = '';
+    let losers: unknown[] = [];
     let wantedDoc: WantedRequestDocument | null = null;
     try {
       await session.withTransaction(async () => {
@@ -186,6 +192,9 @@ export class OffersService {
         await w.save({ session });
 
         const now = new Date();
+        const rivals = await this.offers.find({ $or: [{ wantedId: w._id }, { carId: car._id }], status: 'pending', _id: { $ne: offer._id } }, 'ownerId renterId', { session }).lean().exec();
+        const rivalRequests = await this.rentals.find({ carId: car._id, status: 'pending' }, 'renterId', { session }).lean().exec();
+        losers = [...rivals.flatMap((r) => [r.ownerId, r.renterId]), ...rivalRequests.map((r) => r.renterId)];
         await this.offers.updateMany(
           { wantedId: w._id, status: 'pending', _id: { $ne: offer._id } },
           { $set: { status: 'declined', decisionNote: 'Орендар обрав іншу пропозицію', respondedAt: now }, $addToSet: { hiddenFor: 'renter' } },
@@ -227,6 +236,9 @@ export class OffersService {
     } finally {
       await session.endSession();
     }
+    // Власник, чию пропозицію прийнято, і ті, кому відмовлено, одразу бачать зміни; авто змінило статус
+    this.realtime.changed([accepted!.ownerId, ...losers], 'offers', 'rentals', 'deals', 'cars');
+    this.realtime.changed([renterId], 'wanted', 'deals', 'offers');
     // Повідомлення в чат: домовленість прийнято, договір сформовано
     await this.chat.autoStart({ id: renterId, role: 'renter' }, { offerId: String(accepted!._id) }, acceptedMessage({ startDate: wantedDoc!.startDate }), `auto-accept-${accepted!._id}`).catch(() => null);
     // Відповідь одразу містить оренду з договором: застосунок пропонує його переглянути
