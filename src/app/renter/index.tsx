@@ -1,39 +1,40 @@
 import { useRouter } from 'expo-router';
 import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
+import { ActiveDealCard } from '@/components/active-deal-card';
 import { Hint } from '@/components/hint';
-import { TerminationBanner } from '@/components/termination-banner';
-import { MarketCard } from '@/components/market-card';
+import { ReportStatus } from '@/components/report-status';
 import { ScreenTitle } from '@/components/screen-title';
+import { TerminationBanner } from '@/components/termination-banner';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { NumberField } from '@/components/ui/number-field';
-import { Screen } from '@/components/ui/screen';
-import { PlaceFilter } from '@/components/place-field';
-import type { Place } from '@/lib/places';
 import { Icon } from '@/components/ui/icon';
+import { Screen } from '@/components/ui/screen';
 import { Radius, Spacing } from '@/constants/theme';
 import { usePendingOffers } from '@/hooks/use-pending-requests';
+import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
-import { useMarketSearch } from '@/hooks/use-market-search';
-import { plural } from '@/lib/format';
-import { useState } from 'react';
+import { dealStage, type DealView, type RenterSummary } from '@/lib/deals';
+import { todayISO } from '@/lib/date';
+import { useFleet } from '@/store/fleet';
 
-/** Пошук вільних авто в оренду */
-export default function SearchScreen() {
+/** Головна орендаря: авто, які він зараз орендує, з прибутком, платежами й швидкими діями */
+export default function RenterHomeScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const { invalidate } = useFleet();
   const offers = usePendingOffers();
-  const [place, setPlace] = useState<Place | null>(null);
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-  const rangeError = Number(minPrice) > 0 && Number(maxPrice) > 0 && Number(minPrice) > Number(maxPrice) ? 'Верхня межа менша за нижню' : undefined;
-  const { items, total, error, loading, hasMore, loadMore, refresh } = useMarketSearch(place?.city, place?.regionId, minPrice, maxPrice);
+  const deals = useReport<DealView[]>('/deals', { refetchOnFocus: true });
+  // Прибуток за поточний місяць і показники за весь час по кожній оренді
+  const report = useReport<RenterSummary>(`/reports/renter/summary?period=${todayISO().slice(0, 7)}`, { refetchOnFocus: true });
+
+  const current = (deals.data ?? []).filter((d) => dealStage(d) !== 'finished' && dealStage(d) !== 'terminated');
+  const hasPast = (deals.data?.length ?? 0) > current.length;
 
   return (
-    <Screen tabs refreshControl={<RefreshControl refreshing={loading && items.length > 0} onRefresh={refresh} />}>
-      <ScreenTitle>Авто в оренду</ScreenTitle>
+    <Screen tabs refreshControl={<RefreshControl refreshing={false} onRefresh={invalidate} />}>
+      <ScreenTitle>Мої авто</ScreenTitle>
 
       <TerminationBanner onPress={() => router.navigate('/renter/requests')} />
 
@@ -59,41 +60,30 @@ export default function SearchScreen() {
         </Pressable>
       ) : null}
 
-      <Hint id="search">Введіть місто, щоб побачити вільні авто. Відкрийте оголошення й надішліть власнику запит на потрібні дати: він відповість прийняттям або відмовою.</Hint>
-
-      <PlaceFilter value={place} onChange={setPlace} />
-      <View style={{ flexDirection: 'row', gap: Spacing.two }}>
-        <View style={{ flex: 1 }}>
-          <NumberField label="Ціна від, ₴/доба" value={minPrice} onChangeValue={setMinPrice} maxDigits={7} placeholder="500" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <NumberField label="до, ₴/доба" value={maxPrice} onChangeValue={setMaxPrice} maxDigits={7} placeholder="2 000" error={rangeError} />
-        </View>
-      </View>
-
-      <Button title="Не знайшли? Створити заявку" icon="document-text-outline" variant="secondary" onPress={() => router.push('/wanted/new')} />
-
-      {error ? (
-        <EmptyState icon="cloud-offline-outline" title="Не вдалося завантажити" text={error} action="Спробувати ще раз" onAction={refresh} />
-      ) : loading && items.length === 0 ? null : items.length === 0 ? (
+      {!deals.data ? (
+        <ReportStatus loading={deals.loading} error={deals.error} onRetry={deals.retry} />
+      ) : current.length === 0 ? (
         <EmptyState
           icon="car-outline"
-          title="Нічого не знайдено"
-          text={place || minPrice || maxPrice ? 'Спробуйте змінити місто чи ціну.' : 'Поки що немає вільних авто в оголошеннях. Зазирніть пізніше.'}
+          title="Оренди ще немає"
+          text="Знайдіть вільне авто й надішліть запит. Коли власник його прийме, авто з’явиться тут, і ви зможете вести облік: скільки платите й скільки заробляєте."
+          action="Знайти авто"
+          onAction={() => router.navigate('/renter/search')}
         />
       ) : (
         <>
-          <ThemedText type="small" themeColor="textSecondary">
-            Знайдено {total} {plural(total, 'оголошення', 'оголошення', 'оголошень')}
-          </ThemedText>
+          <Hint id="renter-home">Тут усе, що стосується авто, які ви орендуєте: запишіть заробіток чи витрату одним дотиком, а нижче видно, скільки ви заробили й чи є борг перед власником.</Hint>
           <View style={{ gap: Spacing.three }}>
-            {items.map((car) => (
-              <MarketCard key={car.id} car={car} />
-            ))}
+            {current.map((d) => {
+              const row = report.data?.deals.find((x) => x.dealId === d.id);
+              return <ActiveDealCard key={d.id} deal={d} month={row?.period} overview={row?.overview} />;
+            })}
           </View>
-          {hasMore ? <Button title="Показати ще" variant="secondary" disabled={loading} onPress={loadMore} /> : null}
+          <Button title="Знайти ще авто" icon="search" variant="secondary" onPress={() => router.navigate('/renter/search')} />
         </>
       )}
+
+      {hasPast ? <Button title="Усі оренди й архів" icon="albums-outline" variant="secondary" onPress={() => router.push('/rentals/archive')} /> : null}
     </Screen>
   );
 }

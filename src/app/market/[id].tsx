@@ -23,7 +23,7 @@ export default function MarketCarScreen() {
     return (
       <Screen>
         {error?.includes('недоступне') || error?.includes('не знайдено') ? (
-          <EmptyState icon="car-outline" title="Оголошення вже недоступне" text="Власник зняв його з публікації або авто здали." action="До пошуку" onAction={() => router.dismissTo('/renter')} />
+          <EmptyState icon="car-outline" title="Оголошення вже недоступне" text="Власник зняв його з публікації або авто здали." action="До пошуку" onAction={() => router.dismissTo('/renter/search')} />
         ) : (
           <ReportStatus loading={loading} error={error} onRetry={retry} />
         )}

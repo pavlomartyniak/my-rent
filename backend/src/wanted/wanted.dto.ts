@@ -1,5 +1,5 @@
-import { Type } from 'class-transformer';
-import { IsInt, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, Max, MaxLength, Min } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { IsBoolean, IsInt, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, Max, MaxLength, Min } from 'class-validator';
 
 import { IsIsoDay } from '../common/is-iso-day';
 import { Trim } from '../common/profile';
@@ -63,6 +63,11 @@ export class BoardQuery {
   @IsString()
   @MaxLength(60)
   q?: string;
+
+  /** true (за замовчуванням) — лише заявки, під які в автопарку є вільне авто; false — усі */
+  @Transform(({ value }) => (value === undefined ? true : value !== 'false' && value !== false))
+  @IsBoolean()
+  matching = true;
 
   @Type(() => Number)
   @IsInt()

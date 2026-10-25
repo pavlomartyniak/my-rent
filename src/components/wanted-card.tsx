@@ -52,6 +52,18 @@ export function WantedCard({ wanted: w, viewer, children }: Props) {
         </ThemedText>
       ) : null}
 
+      {viewer === 'owner' && w.matches ? (
+        w.matches.length > 0 ? (
+          <ThemedText type="smallBold" themeColor="positive">
+            ✓ Підходить: {w.matches.map((m) => m.title).join(', ')}
+          </ThemedText>
+        ) : (
+          <ThemedText type="small" themeColor="textSecondary">
+            У вас немає вільного авто під цю заявку
+          </ThemedText>
+        )
+      ) : null}
+
       {fresh ? (
         <View style={[styles.fresh, { backgroundColor: theme.accent }]}>
           <Icon name="notifications" size={18} color="#FFFFFF" />

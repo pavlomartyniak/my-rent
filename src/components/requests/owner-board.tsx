@@ -7,6 +7,7 @@ import { ReportStatus } from '@/components/report-status';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Segmented } from '@/components/ui/segmented';
 import { PlaceFilter } from '@/components/place-field';
 import type { Place } from '@/lib/places';
 import { WantedCard } from '@/components/wanted-card';
@@ -16,12 +17,16 @@ import { plural } from '@/lib/format';
 import type { WantedBoard } from '@/lib/wanted';
 import { useFleet } from '@/store/fleet';
 
+const SCOPES = ['Підходять мені', 'Усі заявки'] as const;
+
 /** Дошка заявок орендарів «шукаю авто»: власник пропонує своє вільне авто */
 export function OwnerBoard() {
   const router = useRouter();
   const { cars } = useFleet();
   const [place, setPlace] = useState<Place | null>(null);
+  const [scope, setScope] = useState<(typeof SCOPES)[number]>(SCOPES[0]);
   const params = new URLSearchParams({ limit: '30' });
+  if (scope === SCOPES[1]) params.set('matching', 'false');
   if (place?.city) params.set('city', place.city);
   else if (place?.regionId !== undefined) params.set('regionId', String(place.regionId));
   const { data, loading, error, retry } = useReport<WantedBoard>(`/wanted?${params}`, { refetchOnFocus: true, keepPrevious: true });
@@ -32,12 +37,30 @@ export function OwnerBoard() {
     <>
       <Hint id="wanted-board">Орендарі публікують заявки: яке авто, де й на які дати їм потрібно. Запропонуйте своє вільне авто, а орендар вибере найкращу пропозицію.</Hint>
 
+      <Segmented options={SCOPES} value={scope} onChange={setScope} />
+      <ThemedText type="small" themeColor="textSecondary">
+        {scope === SCOPES[0] ? 'Лише заявки, на які у вас є вільне авто потрібної марки й моделі.' : 'Усі відкриті заявки, щоб бачити попит. Пропонувати можна лише своє вільне авто.'}
+      </ThemedText>
       <PlaceFilter value={place} onChange={setPlace} />
 
       {!data ? (
         <ReportStatus loading={loading} error={error} onRetry={retry} />
       ) : data.items.length === 0 ? (
-        <EmptyState icon="search-outline" title="Заявок немає" text={place ? 'У цьому місці поки немає відкритих заявок.' : 'Відкритих заявок орендарів зараз немає.'} />
+        scope === SCOPES[0] ? (
+          <EmptyState
+            icon="search-outline"
+            title="Немає заявок для ваших авто"
+            text={
+              hasFree
+                ? 'Зараз ніхто не шукає авто, яке у вас вільне. Відкрийте всі заявки, щоб побачити попит.'
+                : 'Щоб бачити заявки, потрібно мати вільне авто (статус «Вільне»). Відкрийте всі заявки, щоб побачити попит.'
+            }
+            action="Показати всі заявки"
+            onAction={() => setScope(SCOPES[1])}
+          />
+        ) : (
+          <EmptyState icon="search-outline" title="Заявок немає" text={place ? 'У цьому місці поки немає відкритих заявок.' : 'Відкритих заявок орендарів зараз немає.'} />
+        )
       ) : (
         <>
           <ThemedText type="small" themeColor="textSecondary">

@@ -21,6 +21,8 @@ export type WantedView = {
   /** Для власника: орендар як «Ім'я П.» і чи є вже моя пропозиція */
   renter?: string;
   myOffer?: boolean;
+  /** Для власника: мої вільні авто, що підходять під заявку */
+  matches?: { id: string; title: string }[];
 };
 
 export type WantedBoard = { page: number; pages: number; total: number; items: WantedView[] };

@@ -5,17 +5,19 @@ import type { Model, Types } from 'mongoose';
 import { PlacesService } from '../catalog/places.service';
 import { escapeRegex, normalize } from '../common/normalize';
 import { maskedName, rentalDays, todayUtc, validateRange } from '../rentals/rentals.math';
+import { Car } from '../schemas/car.schema';
 import { Offer } from '../schemas/offer.schema';
 import { User } from '../schemas/user.schema';
 import { WantedRequest, type WantedRequestDocument } from '../schemas/wanted-request.schema';
 import type { BoardQuery, CreateWantedDto } from './wanted.dto';
+import { carMatches, wantedConditionsFor } from './wanted.match';
 
 const MAX_OPEN_PER_RENTER = 5;
 
 type Counts = { pending: number; total: number };
 
 /** Заявка для клієнта; `renter` — ім'я з ініціалом, повні контакти ніколи не показуються на дошці */
-export function wantedView(w: WantedRequestDocument, extra: { renter?: string; offers?: Counts; myOffer?: boolean } = {}) {
+export function wantedView(w: WantedRequestDocument, extra: { renter?: string; offers?: Counts; myOffer?: boolean; matches?: { id: string; title: string }[] } = {}) {
   return {
     id: String(w._id),
     brand: w.brand,
@@ -38,6 +40,7 @@ export class WantedService {
     @InjectModel(WantedRequest.name) private readonly wanted: Model<WantedRequest>,
     @InjectModel(Offer.name) private readonly offers: Model<Offer>,
     @InjectModel(User.name) private readonly users: Model<User>,
+    @InjectModel(Car.name) private readonly cars: Model<Car>,
     private readonly places: PlacesService,
   ) {}
 
@@ -84,11 +87,21 @@ export class WantedService {
     const cityKey = normalize(query.city ?? '');
     if (cityKey) filter['cityKey'] = { $regex: escapeRegex(cityKey) };
     else if (query.regionId !== undefined) filter['cityKey'] = { $in: this.places.cityKeysOfRegion(query.regionId) };
+    const and: Record<string, unknown>[] = [];
     const q = (query.q ?? '').trim();
     if (q) {
       const rx = { $regex: escapeRegex(q), $options: 'i' };
-      filter['$or'] = [{ brand: rx }, { model: rx }];
+      and.push({ $or: [{ brand: rx }, { model: rx }] });
     }
+
+    // Вільні авто власника: за ними фільтруємо заявки й показуємо, яке авто підходить
+    const free = await this.cars.find({ userId: ownerId, status: 'Вільне' }, 'brand model year').lean().exec();
+    if (query.matching) {
+      // Без вільних авто пропонувати нічого, тож заявок немає
+      if (!free.length) return { page: query.page, pages: 1, total: 0, items: [] };
+      and.push({ $or: wantedConditionsFor(free) });
+    }
+    if (and.length) filter['$and'] = and;
 
     const [total, items] = await Promise.all([
       this.wanted.countDocuments(filter),
@@ -110,8 +123,13 @@ export class WantedService {
       page: query.page,
       pages: Math.max(1, Math.ceil(total / query.limit)),
       total,
-      items: items.map((w) => wantedView(w, { renter: names.get(String(w.renterId)) ?? '', myOffer: offered.has(String(w._id)) })),
+      items: items.map((w) => wantedView(w, { renter: names.get(String(w.renterId)) ?? '', myOffer: offered.has(String(w._id)), matches: this.matchesOf(w, free) })),
     };
+  }
+
+  /** Вільні авто власника, що підходять під заявку */
+  private matchesOf(w: Pick<WantedRequestDocument, 'brand' | 'model'>, free: { _id: Types.ObjectId; brand: string; model: string; year: number }[]) {
+    return free.filter((c) => carMatches(w, c)).map((c) => ({ id: String(c._id), title: `${c.brand} ${c.model} ${c.year}` }));
   }
 
   /** Одна відкрита заявка для власника (екран «Запропонувати авто») */
@@ -122,7 +140,8 @@ export class WantedService {
       this.users.findById(w.renterId, 'firstName lastName').lean().exec(),
       this.offers.exists({ ownerId, wantedId: w._id, status: { $in: ['pending', 'accepted'] } }),
     ]);
-    return wantedView(w, { renter: renter ? maskedName(renter.firstName, renter.lastName) : '', myOffer: !!mine });
+    const free = await this.cars.find({ userId: ownerId, status: 'Вільне' }, 'brand model year').lean().exec();
+    return wantedView(w, { renter: renter ? maskedName(renter.firstName, renter.lastName) : '', myOffer: !!mine, matches: this.matchesOf(w, free) });
   }
 
   /** Скасувати заявку; пропозиції, що очікували, відхиляються */

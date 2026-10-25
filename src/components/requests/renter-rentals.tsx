@@ -51,7 +51,7 @@ export function RenterRentals() {
           title="Запитів ще немає"
           text="Знайдіть вільне авто й надішліть власнику запит на оренду."
           action="Знайти авто"
-          onAction={() => router.navigate('/renter')}
+          onAction={() => router.navigate('/renter/search')}
         />
       ) : (
         <View style={{ gap: Spacing.two }}>

@@ -4,7 +4,7 @@ import { useColorScheme } from 'react-native';
 import { Colors } from '@/constants/theme';
 import { usePendingOffers, useTerminationRequests } from '@/hooks/use-pending-requests';
 
-/** Вкладки орендаря: пошук авто, запити, моя оренда з обліком, звіт, налаштування */
+/** Вкладки орендаря: головна з моїми орендами, пошук авто, запити, звіт, профіль */
 export default function RenterTabs() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
@@ -15,6 +15,11 @@ export default function RenterTabs() {
     <NativeTabs backgroundColor={colors.background} indicatorColor={colors.backgroundElement} // П'ять вкладок: дрібніший підпис, щоб назви не налазили одна на одну
       labelStyle={{ default: { fontSize: 11 }, selected: { fontSize: 11, color: colors.text } }}>
       <NativeTabs.Trigger name="index">
+        <NativeTabs.Trigger.Label>Головна</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="search">
         <NativeTabs.Trigger.Label>Пошук</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="magnifyingglass" md="search" />
       </NativeTabs.Trigger>
@@ -24,11 +29,6 @@ export default function RenterTabs() {
         <NativeTabs.Trigger.Icon sf={{ default: 'tray', selected: 'tray.fill' }} md="inbox" />
         {/* Без пропозицій бейдж не рендериться взагалі */}
         {offers > 0 ? <NativeTabs.Trigger.Badge>{offers > 99 ? '99+' : String(offers)}</NativeTabs.Trigger.Badge> : null}
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="rentals">
-        <NativeTabs.Trigger.Label>Оренда</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'car', selected: 'car.fill' }} md="directions_car" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="report">

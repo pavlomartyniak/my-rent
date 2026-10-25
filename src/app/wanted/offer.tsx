@@ -35,7 +35,9 @@ export default function OfferScreen() {
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
 
-  const car = free.find((c) => c.id === pickedId) ?? free[0];
+  // За замовчуванням — вільне авто, що підходить під заявку, а не просто перше в списку
+  const fit = wanted?.matches?.map((m) => m.id) ?? [];
+  const car = free.find((c) => c.id === pickedId) ?? free.find((c) => fit.includes(c.id)) ?? free[0];
   const suggestion = car?.listing?.pricePerDay ?? wanted?.maxPricePerDay ?? undefined;
 
   if (!wanted) {
@@ -102,6 +104,11 @@ export default function OfferScreen() {
                 <ThemedText type="small" themeColor="textSecondary">
                   {c.listing?.published ? `В оголошеннях: ${formatMoney(c.listing.pricePerDay)}/доба` : 'Вільне'}
                 </ThemedText>
+                {fit.includes(c.id) ? (
+                  <ThemedText type="smallBold" themeColor="positive">
+                    ✓ Підходить під заявку
+                  </ThemedText>
+                ) : null}
               </View>
               <Icon name={selected ? 'radio-button-on' : 'radio-button-off'} size={22} color={selected ? 'accent' : 'textSecondary'} />
             </Pressable>

@@ -91,7 +91,7 @@ npm run start:dev         # http://localhost:4000
 | POST/PATCH/DELETE | `/transactions` (`dealId`) | орендар веде облік оренди: дохід — «Заробіток», витрати — «Оренда авто», «Паливо», «Мийка», «Штраф», «Ремонт», «Інше» |
 | GET | `/transactions/history?dealId=` | орендар: історія оренди по місяцях |
 | GET | `/reports/renter/summary?period=`, `/reports/renter/deals/:id?period=` | орендар: звіт за період (як у власника) + `rentPaid`, `rentDue`, `rentBalance`, прибуток на добу |
-| GET | `/wanted` (`?city=`, `?q=`, `?page=`, `?limit=`) | власник: дошка відкритих заявок орендарів (орендар як «Ім'я П.») |
+| GET | `/wanted` (`?city=`, `?q=`, `?page=`, `?limit=`) | власник: дошка відкритих заявок орендарів (орендар як «Ім'я П.»). За замовчуванням (`matching=true`) лише заявки, під які є вільне авто власника (марка/модель без урахування регістру; порожня марка чи модель — «будь-яка»); `?matching=false` — усі. Кожна заявка має `matches` — підходящі вільні авто. |
 | GET | `/wanted/:id` | власник: одна відкрита заявка |
 | POST | `/wanted/:id/offers` | власник: запропонувати своє вільне авто (`carId`, `pricePerDay`, `message`) |
 | GET | `/offers/mine` | власник: мої пропозиції |
