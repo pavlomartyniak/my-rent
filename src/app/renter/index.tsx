@@ -4,6 +4,7 @@ import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { Hint } from '@/components/hint';
 import { TerminationBanner } from '@/components/termination-banner';
 import { MarketCard } from '@/components/market-card';
+import { ScreenTitle } from '@/components/screen-title';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -32,7 +33,7 @@ export default function SearchScreen() {
 
   return (
     <Screen tabs refreshControl={<RefreshControl refreshing={loading && items.length > 0} onRefresh={refresh} />}>
-      <ThemedText type="subtitle">Авто в оренду</ThemedText>
+      <ScreenTitle>Авто в оренду</ScreenTitle>
 
       <TerminationBanner onPress={() => router.navigate('/renter/requests')} />
 

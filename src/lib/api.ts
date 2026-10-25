@@ -1,4 +1,4 @@
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000';
+export const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000';
 // Безкоштовний хостинг «засинає» без запитів і прокидається до хвилини, тому ліміт великий
 const TIMEOUT_MS = 60_000;
 

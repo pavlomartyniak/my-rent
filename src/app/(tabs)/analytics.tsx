@@ -10,6 +10,7 @@ import { Hint } from '@/components/hint';
 import { PeriodSwitcher, usePeriod } from '@/components/period-switcher';
 import { ReportStatus } from '@/components/report-status';
 import { SummaryCard } from '@/components/summary-card';
+import { ScreenTitle } from '@/components/screen-title';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
@@ -54,7 +55,7 @@ export default function ReportScreen() {
 
   return (
     <Screen tabs>
-      <ThemedText type="subtitle">Звіт</ThemedText>
+      <ScreenTitle>Звіт</ScreenTitle>
 
       <Hint id="report-v2">
         Торкніться місяця на графіку або ведіть по ньому пальцем, щоб побачити суми. Рейтинг можна перемикати: прибуток, ROI, окупність. Тап по авто відкриває його окремий звіт.

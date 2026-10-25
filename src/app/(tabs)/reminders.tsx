@@ -3,7 +3,7 @@ import { View } from 'react-native';
 
 import { Hint } from '@/components/hint';
 import { ReminderRow } from '@/components/reminder-row';
-import { ThemedText } from '@/components/themed-text';
+import { ScreenTitle } from '@/components/screen-title';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
@@ -20,7 +20,7 @@ export default function RemindersScreen() {
 
   return (
     <Screen tabs>
-      <ThemedText type="subtitle">Нагадування</ThemedText>
+      <ScreenTitle>Нагадування</ScreenTitle>
 
       {sorted.length === 0 ? (
         <EmptyState

@@ -22,5 +22,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
   ],
   controllers: [AuthController],
   providers: [AuthService, { provide: APP_GUARD, useClass: JwtAuthGuard }],
+  // JwtService потрібен і живому каналу чатів, щоб перевіряти токен при підключенні
+  exports: [JwtModule],
 })
 export class AuthModule {}

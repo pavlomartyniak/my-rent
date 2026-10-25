@@ -7,6 +7,7 @@ import { formatMoney, plural } from '@/lib/format';
 import type { RentalView } from '@/lib/rentals';
 
 import { CarPhoto } from './car-photo';
+import { MessageButton } from './message-button';
 import { StatusBadge } from './status-badge';
 import { ThemedText } from './themed-text';
 import { Button } from './ui/button';
@@ -61,6 +62,8 @@ export function RentalCard({ rental: r, viewer, children }: Props) {
       {r.status === 'accepted' && r.counterpart.phone ? (
         <Button title={`Зателефонувати: ${r.counterpart.phone}`} icon="call-outline" variant="positive" onPress={() => void Linking.openURL(`tel:${r.counterpart.phone!.replace(/[^\d+]/g, '')}`)} />
       ) : null}
+
+      {r.status === 'pending' || r.status === 'accepted' ? <MessageButton context={{ rentalId: r.id }} title={`Написати: ${r.counterpart.name}`} /> : null}
 
       {children}
     </Card>

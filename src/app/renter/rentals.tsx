@@ -4,7 +4,7 @@ import { RefreshControl, View } from 'react-native';
 import { DealCard } from '@/components/deal-card';
 import { Hint } from '@/components/hint';
 import { ReportStatus } from '@/components/report-status';
-import { ThemedText } from '@/components/themed-text';
+import { ScreenTitle } from '@/components/screen-title';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
 import { Spacing } from '@/constants/theme';
@@ -22,7 +22,7 @@ export default function MyRentalsScreen() {
 
   return (
     <Screen tabs refreshControl={<RefreshControl refreshing={false} onRefresh={invalidate} />}>
-      <ThemedText type="subtitle">Моя оренда</ThemedText>
+      <ScreenTitle>Моя оренда</ScreenTitle>
 
       {!deals.data ? (
         <ReportStatus loading={deals.loading} error={deals.error} onRetry={deals.retry} />

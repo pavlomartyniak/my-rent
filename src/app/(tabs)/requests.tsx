@@ -4,7 +4,7 @@ import { OwnerBoard } from '@/components/requests/owner-board';
 import { OwnerOffers } from '@/components/requests/owner-offers';
 import { TerminationRequests } from '@/components/requests/termination-requests';
 import { OwnerRentals } from '@/components/requests/owner-rentals';
-import { ThemedText } from '@/components/themed-text';
+import { ScreenTitle } from '@/components/screen-title';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 
@@ -16,7 +16,7 @@ export default function RequestsScreen() {
 
   return (
     <Screen tabs>
-      <ThemedText type="subtitle">Оренда</ThemedText>
+      <ScreenTitle>Оренда</ScreenTitle>
       <TerminationRequests as="owner" />
       <Segmented options={SECTIONS} value={section} onChange={setSection} />
 

@@ -2,6 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Alert, Linking, StyleSheet, View } from 'react-native';
 
 import { CarPhoto } from '@/components/car-photo';
+import { MessageButton } from '@/components/message-button';
 import { TerminateDeal } from '@/components/terminate-deal';
 import { HistoryList } from '@/components/history-list';
 import { ReportStatus } from '@/components/report-status';
@@ -82,6 +83,7 @@ export default function DealScreen() {
         <Row label="Ціна за добу" value={formatMoney(d.pricePerDay)} />
         <Row label="Власник" value={d.counterpart.name} />
         {d.counterpart.phone ? <Button title={`Зателефонувати: ${d.counterpart.phone}`} icon="call-outline" variant="positive" onPress={() => void Linking.openURL(`tel:${d.counterpart.phone!.replace(/[^\d+]/g, '')}`)} /> : null}
+        <MessageButton context={{ dealId: d.id }} title={`Написати: ${d.counterpart.name}`} />
         {stage === 'terminated' ? (
           <ThemedText type="small" themeColor="negative">
             Оренду розірвано достроково за згодою сторін (ініціатор: {d.terminatedBy === 'owner' ? 'власник' : 'ви'})

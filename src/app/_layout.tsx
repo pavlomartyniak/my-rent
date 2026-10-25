@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Colors, Spacing } from '@/constants/theme';
 import '@/lib/notifications';
 import { AuthProvider, useAuth } from '@/store/auth';
+import { ChatProvider } from '@/store/chat';
 import { FleetProvider, useFleet } from '@/store/fleet';
 import { ThemePreferenceProvider } from '@/store/theme';
 
@@ -79,6 +80,8 @@ function Routes() {
         </Stack.Protected>
         {/* Спільне для обох ролей; стоїть останнім, щоб не ставати стартовим екраном */}
         <Stack.Protected guard={authed && onboarded}>
+          <Stack.Screen name="chats/index" options={{ title: 'Повідомлення', headerBackTitle: 'Назад' }} />
+          <Stack.Screen name="chats/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="car/pick" options={{ title: 'Вибір', presentation: 'modal' }} />
           <Stack.Screen name="transaction/new" options={{ title: 'Новий запис', presentation: 'modal' }} />
           <Stack.Screen name="transaction/[id]" options={{ title: 'Запис', presentation: 'modal' }} />
@@ -96,7 +99,9 @@ export default function RootLayout() {
       <ThemeProvider value={navTheme(scheme)}>
         <AuthProvider>
           <FleetProvider>
-            <Routes />
+            <ChatProvider>
+              <Routes />
+            </ChatProvider>
           </FleetProvider>
         </AuthProvider>
       </ThemeProvider>

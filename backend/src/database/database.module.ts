@@ -2,6 +2,8 @@ import { Global, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
 import { Car, CarSchema } from '../schemas/car.schema';
+import { Conversation, ConversationSchema } from '../schemas/conversation.schema';
+import { Message, MessageSchema } from '../schemas/message.schema';
 import { Deal, DealSchema } from '../schemas/deal.schema';
 import { Reminder, ReminderSchema } from '../schemas/reminder.schema';
 import { RentalRequest, RentalRequestSchema } from '../schemas/rental-request.schema';
@@ -23,6 +25,8 @@ import { WantedRequest, WantedRequestSchema } from '../schemas/wanted-request.sc
       { name: WantedRequest.name, schema: WantedRequestSchema },
       { name: Offer.name, schema: OfferSchema },
       { name: Deal.name, schema: DealSchema },
+      { name: Conversation.name, schema: ConversationSchema },
+      { name: Message.name, schema: MessageSchema },
     ]),
   ],
   exports: [MongooseModule],

@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { Alert, View } from 'react-native';
 
+import { ScreenTitle } from '@/components/screen-title';
 import { ThemedText } from '@/components/themed-text';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
@@ -44,7 +45,7 @@ export default function SettingsScreen() {
 
   return (
     <Screen tabs gap={Spacing.four}>
-      <ThemedText type="subtitle">Налаштування</ThemedText>
+      <ScreenTitle>Налаштування</ScreenTitle>
 
       <SettingsGroup title="Акаунт">
         <SettingsRow

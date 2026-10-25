@@ -8,6 +8,7 @@ import { SummaryCard } from '@/components/summary-card';
 import { ThemedText } from '@/components/themed-text';
 import { CarPhoto } from '@/components/car-photo';
 import { PhotoGallery } from '@/components/photo-gallery';
+import { MessageButton } from '@/components/message-button';
 import { ArchivedDeals } from '@/components/archived-deals';
 import { DeleteCar } from '@/components/delete-car';
 import { TerminateDeal } from '@/components/terminate-deal';
@@ -104,6 +105,7 @@ export default function CarScreen() {
           {deal.counterpart.phone ? (
             <Button title={`Зателефонувати: ${deal.counterpart.phone}`} icon="call-outline" variant="positive" onPress={() => void Linking.openURL(`tel:${deal.counterpart.phone!.replace(/[^\d+]/g, '')}`)} />
           ) : null}
+          <MessageButton context={{ dealId: deal.id }} title={`Написати: ${deal.counterpart.name}`} />
           <TerminateDeal deal={deal} as="owner" />
         </Card>
       ) : null}

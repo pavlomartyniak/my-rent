@@ -4,7 +4,9 @@ import type { ClientSession, Model } from 'mongoose';
 
 import { Car } from '../schemas/car.schema';
 import { Reminder } from '../schemas/reminder.schema';
+import { Conversation } from '../schemas/conversation.schema';
 import { Deal } from '../schemas/deal.schema';
+import { Message } from '../schemas/message.schema';
 import { Offer } from '../schemas/offer.schema';
 import { RentalRequest } from '../schemas/rental-request.schema';
 import { Transaction } from '../schemas/transaction.schema';
@@ -22,6 +24,8 @@ export class DataService {
     @InjectModel(Offer.name) private readonly offers: Model<Offer>,
     @InjectModel(WantedRequest.name) private readonly wanted: Model<WantedRequest>,
     @InjectModel(Deal.name) private readonly deals: Model<Deal>,
+    @InjectModel(Conversation.name) private readonly conversations: Model<Conversation>,
+    @InjectModel(Message.name) private readonly messages: Model<Message>,
   ) {}
 
   /** Профіль, авто й нагадування одним запитом — для старту застосунку */
@@ -55,6 +59,10 @@ export class DataService {
     await this.wanted.deleteMany({ renterId: userId });
     // Оренди орендаря (його записи вже видалено в clear)
     await this.deals.deleteMany({ renterId: userId });
+    // Чати з усією перепискою: співрозмовник теж їх більше не побачить
+    const chats = await this.conversations.find({ $or: [{ ownerId: userId }, { renterId: userId }] }, '_id').lean().exec();
+    await this.messages.deleteMany({ conversationId: { $in: chats.map((c) => c._id) } });
+    await this.conversations.deleteMany({ _id: { $in: chats.map((c) => c._id) } });
     await this.users.deleteOne({ _id: userId });
   }
 }

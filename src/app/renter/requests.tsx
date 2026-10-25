@@ -5,7 +5,7 @@ import { RefreshControl } from 'react-native';
 import { TerminationRequests } from '@/components/requests/termination-requests';
 import { RenterRentals } from '@/components/requests/renter-rentals';
 import { RenterWanted } from '@/components/requests/renter-wanted';
-import { ThemedText } from '@/components/themed-text';
+import { ScreenTitle } from '@/components/screen-title';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { usePendingOffers } from '@/hooks/use-pending-requests';
@@ -25,7 +25,7 @@ export default function MyRequestsScreen() {
 
   return (
     <Screen tabs refreshControl={<RefreshControl refreshing={false} onRefresh={invalidate} />}>
-      <ThemedText type="subtitle">Мої запити</ThemedText>
+      <ScreenTitle>Мої запити</ScreenTitle>
       <TerminationRequests as="renter" />
       <Segmented options={SECTIONS} value={section} onChange={(s) => setPick({ param: params.tab, section: s })} badges={{ 'Мої заявки': offers }} />
 

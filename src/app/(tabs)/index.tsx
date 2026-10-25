@@ -8,6 +8,7 @@ import { TerminationBanner } from '@/components/termination-banner';
 import { dueLabel } from '@/components/reminder-row';
 import { ReportStatus } from '@/components/report-status';
 import { SummaryCard } from '@/components/summary-card';
+import { ScreenTitle } from '@/components/screen-title';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -52,7 +53,7 @@ export default function HomeScreen() {
   if (cars.length === 0) {
     return (
       <Screen tabs>
-        <ThemedText type="subtitle">Мої авто</ThemedText>
+        <ScreenTitle>Мої авто</ScreenTitle>
         <EmptyState
           icon="car-sport-outline"
           title="Додайте перше авто"
@@ -66,7 +67,7 @@ export default function HomeScreen() {
 
   return (
     <Screen tabs>
-      <ThemedText type="subtitle">Мої авто</ThemedText>
+      <ScreenTitle>Мої авто</ScreenTitle>
 
       <TerminationBanner onPress={() => router.navigate('/requests')} />
 

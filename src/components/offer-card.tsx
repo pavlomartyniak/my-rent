@@ -8,6 +8,7 @@ import { wantedTitle, type OfferView } from '@/lib/wanted';
 
 import { CarPhoto } from './car-photo';
 import { PhotoGallery } from './photo-gallery';
+import { MessageButton } from './message-button';
 import { StatusBadge } from './status-badge';
 import { ThemedText } from './themed-text';
 import { Button } from './ui/button';
@@ -66,6 +67,8 @@ export function OfferCard({ offer: o, viewer, children }: Props) {
       {o.status === 'accepted' && o.counterpart.phone ? (
         <Button title={`Зателефонувати: ${o.counterpart.phone}`} icon="call-outline" variant="positive" onPress={() => void Linking.openURL(`tel:${o.counterpart.phone!.replace(/[^\d+]/g, '')}`)} />
       ) : null}
+
+      {o.status === 'pending' || o.status === 'accepted' ? <MessageButton context={{ offerId: o.id }} title={`Написати: ${o.counterpart.name}`} /> : null}
 
       {children}
     </Card>
