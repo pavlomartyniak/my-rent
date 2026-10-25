@@ -17,7 +17,7 @@ import { fullName, maskedName, rentalDays, todayUtc, totalPrice, validateRange }
 
 const MAX_PENDING_PER_RENTER = 10;
 
-type Person = { name: string; phone?: string };
+type Person = { name: string };
 
 @Injectable()
 export class RentalsService {
@@ -233,7 +233,7 @@ export class RentalsService {
     const accepted = r.status === 'accepted' || r.status === 'ended';
     const counterpart: Person = other
       ? as === 'owner' || accepted
-        ? { name: fullName(other.firstName, other.lastName), ...(accepted && other.phone ? { phone: other.phone } : {}) }
+        ? { name: fullName(other.firstName, other.lastName) }
         : { name: maskedName(other.firstName, other.lastName) }
       : { name: 'Користувач видалений' };
 

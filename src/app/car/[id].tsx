@@ -108,7 +108,7 @@ export default function CarScreen() {
           <ThemedText type="small" themeColor="textSecondary">
             {deal.counterpart.name} · {formatDate(deal.startDate)} – {formatDate(deal.endDate)} · {formatMoney(deal.pricePerDay)} за добу
           </ThemedText>
-          <ContactChips actions={contactActions({ chat: { dealId: deal.id }, phone: deal.counterpart.phone, contract: deal.contract ? () => router.push({ pathname: '/contracts/[id]', params: { id: deal.id } }) : undefined })} />
+          <ContactChips actions={contactActions({ chat: { dealId: deal.id }, contract: deal.contract ? () => router.push({ pathname: '/contracts/[id]', params: { id: deal.id } }) : undefined })} />
           <ContractCard deal={deal} as="owner" />
           {deal.status === 'awaiting' ? null : <TerminateDeal deal={deal} as="owner" />}
         </Card>

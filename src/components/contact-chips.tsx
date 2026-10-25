@@ -8,8 +8,8 @@ import { ThemedText } from './themed-text';
 import { Icon } from './ui/icon';
 
 /**
- * Дії зі співрозмовником прямо на картці: «Написати», «Зателефонувати», «Договір». Компактні кнопки в один ряд,
- * щоб усе було видно одразу, але картка не розросталась.
+ * Дії зі співрозмовником на картці: «Написати» і «Договір». Кнопки на всю ширину картки й однакові між собою:
+ * одна дія займає весь рядок, дві ділять його навпіл. Світла заливка відрізняє їх від головних дій («Прийняти», «Скасувати»).
  */
 export function ContactChips({ actions }: { actions: (MenuAction | false | null | undefined)[] }) {
   const theme = useTheme();
@@ -24,9 +24,9 @@ export function ContactChips({ actions }: { actions: (MenuAction | false | null 
           accessibilityRole="button"
           accessibilityLabel={a.title}
           onPress={a.onPress}
-          style={({ pressed }) => [styles.chip, { backgroundColor: theme.backgroundElement, borderColor: theme.accent }, pressed && { opacity: 0.6 }]}>
-          <Icon name={a.icon} size={18} color="accent" />
-          <ThemedText type="smallBold" themeColor="accent" numberOfLines={1}>
+          style={({ pressed }) => [styles.button, { backgroundColor: theme.accentSoft }, pressed && { opacity: 0.6 }]}>
+          <Icon name={a.icon} size={20} color="accent" />
+          <ThemedText type="default" themeColor="accent" style={styles.label} numberOfLines={1}>
             {a.short ?? a.title}
           </ThemedText>
         </Pressable>
@@ -36,6 +36,7 @@ export function ContactChips({ actions }: { actions: (MenuAction | false | null 
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40, paddingHorizontal: Spacing.three, borderRadius: Radius.pill, borderWidth: 1.5 },
+  row: { flexDirection: 'row', gap: Spacing.two },
+  button: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.two, minHeight: 48, borderRadius: Radius.md },
+  label: { fontWeight: 700 },
 });

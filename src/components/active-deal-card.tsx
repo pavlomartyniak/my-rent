@@ -61,7 +61,7 @@ export function ActiveDealCard({ deal, month, overview }: Props) {
       {stage === 'signing' ? (
         <>
           <ContractCard deal={deal} as="renter" />
-          <ContactChips actions={contactActions({ chat: { dealId: deal.id }, phone: deal.counterpart.phone })} />
+          <ContactChips actions={contactActions({ chat: { dealId: deal.id } })} />
         </>
       ) : (
         <>
@@ -88,7 +88,7 @@ export function ActiveDealCard({ deal, month, overview }: Props) {
         <Button title="Заробіток" icon="add-circle-outline" variant="positive" style={styles.flex} onPress={() => add('income')} />
         <Button title="Витрата" icon="remove-circle-outline" variant="secondary" style={styles.flex} onPress={() => add('expense')} />
       </View>
-          <ContactChips actions={contactActions({ chat: { dealId: deal.id }, phone: deal.counterpart.phone })} />
+          <ContactChips actions={contactActions({ chat: { dealId: deal.id } })} />
         </>
       )}
     </Card>

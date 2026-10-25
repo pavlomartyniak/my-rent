@@ -40,8 +40,8 @@ export type RentalView = {
   createdAt: string;
   respondedAt: string | null;
   car: { title: string; city: string; pricePerDay: number; photoUri?: string };
-  /** Для орендаря — власник, для власника — орендар; телефон з'являється лише після прийняття */
-  counterpart: { name: string; phone?: string };
+  /** Для орендаря — власник, для власника — орендар; телефон віддається лише в чаті */
+  counterpart: { name: string };
 };
 
 export const STATUS_LABEL: Record<RentalStatus, string> = {

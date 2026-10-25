@@ -70,7 +70,6 @@ export function OfferCard({ offer: o, viewer, children }: Props) {
       <ContactChips
         actions={contactActions({
             chat: (o.status === 'pending' || o.status === 'accepted') && { offerId: o.id },
-            phone: o.status === 'accepted' ? o.counterpart.phone : undefined,
             contract: o.hasContract && o.dealId && (o.status === 'accepted' || o.status === 'ended') ? () => router.push({ pathname: '/contracts/[id]', params: { id: o.dealId! } }) : undefined,
           })}
       />

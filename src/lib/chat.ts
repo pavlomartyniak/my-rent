@@ -7,7 +7,8 @@ import { api, ApiError } from './api';
 
 export type ChatSummary = {
   id: string;
-  counterpart: { id: string; name: string };
+  /** phone — лише після домовленості: дзвонити можна тільки зі сторінки чату */
+  counterpart: { id: string; name: string; phone: string | null };
   /** Авто й умови, про які розмова (знімок на момент початку): показуються в шапці чату */
   context: { title: string; photoUri: string | null; city: string; pricePerDay: number; startDate: string; endDate: string; carId: string | null } | null;
   /** Етап домовленості: pending/accepted/declined/…, а після оренди upcoming/active/finished/terminated; closed — запит уже видалено */

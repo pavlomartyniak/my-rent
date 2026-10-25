@@ -25,7 +25,7 @@ export type DealView = {
   terminatedAt?: string;
   terminationNote: string;
   /** Для орендаря — власник, для власника — орендар */
-  counterpart: { name: string; phone?: string };
+  counterpart: { name: string };
 };
 
 export type DealOverview = Totals & {

@@ -411,7 +411,8 @@ export class DealsService {
       terminatedAt: d.terminatedAt,
       terminationNote: d.terminationNote ?? '',
       // Для орендаря це власник, для власника — орендар
-      counterpart: { name: p ? fullName(p.firstName, p.lastName) || fallback : fallback, phone: p?.phone || undefined },
+      // Номер телефону віддається лише в чаті
+      counterpart: { name: p ? fullName(p.firstName, p.lastName) || fallback : fallback },
       createdAt: d.createdAt,
     };
   }

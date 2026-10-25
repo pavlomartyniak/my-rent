@@ -1,6 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Linking, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CarPhoto } from '@/components/car-photo';
@@ -203,9 +203,12 @@ export default function ChatScreen() {
             {chat?.counterpart.name ?? 'Розмова'}
           </ThemedText>
           <ThemedText type="small" themeColor={typing ? 'accent' : 'textSecondary'} numberOfLines={1}>
-            {typing ? 'друкує…' : chat?.context?.title || ' '}
+            {typing ? 'друкує…' : chat?.counterpart.phone ?? (chat?.context?.title || ' ')}
           </ThemedText>
         </View>
+        {chat?.counterpart.phone ? (
+          <IconButton icon="call" label={`Зателефонувати: ${chat.counterpart.phone}`} onPress={() => void Linking.openURL(`tel:${chat.counterpart.phone!.replace(/[^\d+]/g, '')}`)} />
+        ) : null}
         <IconButton icon="trash-outline" label="Видалити розмову" tone="neutral" onPress={confirmDelete} />
       </View>
 

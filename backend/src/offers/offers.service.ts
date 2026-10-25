@@ -259,7 +259,7 @@ export class OffersService {
     const accepted = o.status === 'accepted' || o.status === 'ended';
     const counterpart = other
       ? accepted
-        ? { name: fullName(other.firstName, other.lastName), ...(other.phone ? { phone: other.phone } : {}) }
+        ? { name: fullName(other.firstName, other.lastName) }
         : { name: maskedName(other.firstName, other.lastName) }
       : { name: 'Користувач видалений' };
 

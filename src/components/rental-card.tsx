@@ -65,7 +65,6 @@ export function RentalCard({ rental: r, viewer, children }: Props) {
       <ContactChips
         actions={contactActions({
             chat: (r.status === 'pending' || r.status === 'accepted') && { rentalId: r.id },
-            phone: r.status === 'accepted' ? r.counterpart.phone : undefined,
             contract: r.hasContract && r.dealId && (r.status === 'accepted' || r.status === 'ended') ? () => router.push({ pathname: '/contracts/[id]', params: { id: r.dealId! } }) : undefined,
           })}
       />

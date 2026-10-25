@@ -84,7 +84,7 @@ export default function DealScreen() {
         <Row label="Оренда" value={`${formatDate(d.startDate)} – ${formatDate(d.endDate)}`} />
         <Row label="Ціна за добу" value={formatMoney(d.pricePerDay)} />
         <Row label="Власник" value={d.counterpart.name} />
-        <ContactChips actions={contactActions({ chat: { dealId: d.id }, phone: d.counterpart.phone, contract: d.contract ? () => router.push({ pathname: '/contracts/[id]', params: { id: d.id } }) : undefined })} />
+        <ContactChips actions={contactActions({ chat: { dealId: d.id }, contract: d.contract ? () => router.push({ pathname: '/contracts/[id]', params: { id: d.id } }) : undefined })} />
         {stage === 'terminated' ? (
           <ThemedText type="small" themeColor="negative">
             Оренду розірвано достроково за згодою сторін (ініціатор: {d.terminatedBy === 'owner' ? 'власник' : 'ви'})
