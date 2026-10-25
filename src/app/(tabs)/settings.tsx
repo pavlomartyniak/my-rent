@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Alert, View } from 'react-native';
 
@@ -7,8 +8,7 @@ import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { SettingsGroup, SettingsRow } from '@/components/ui/settings-group';
 import { Spacing } from '@/constants/theme';
-import { ApiError } from '@/lib/api';
-import { exportCsv } from '@/lib/export';
+import { ExportSheet } from '@/components/export-sheet';
 import { fullName } from '@/lib/profile';
 import { ensureNotificationPermission } from '@/lib/notifications';
 import { useAuth } from '@/store/auth';
@@ -28,6 +28,7 @@ export default function SettingsScreen() {
   const { signOut } = useAuth();
   const { preference } = useThemePreference();
   const owner = role === 'owner';
+  const [exportOpen, setExportOpen] = useState(false);
 
   const confirm = (title: string, message: string, action: () => void) =>
     Alert.alert(title, message, [
@@ -93,24 +94,23 @@ export default function SettingsScreen() {
         </SettingsGroup>
       ) : null}
 
-      {owner ? (
-        <SettingsGroup title="Дані та сповіщення">
-          <SettingsRow
-            icon="download-outline"
-            title="Експорт у CSV"
-            subtitle="Поділитися всіма доходами й витратами у вигляді таблиці"
-            onPress={() =>
-              exportCsv().catch((e) => Alert.alert('Не вдалося експортувати', e instanceof ApiError ? e.message : 'Спробуйте ще раз'))
-            }
-          />
+      <SettingsGroup title={owner ? 'Дані та сповіщення' : 'Дані'}>
+        <SettingsRow
+          icon="download-outline"
+          title="Експорт обліку"
+          subtitle="Excel, PDF або CSV з усіма доходами й витратами"
+          onPress={() => setExportOpen(true)}
+        />
+        {owner ? (
           <SettingsRow
             icon="notifications-outline"
             title="Сповіщення"
             subtitle="Дозволити нагадування про ТО й страховку"
             onPress={enableNotifications}
           />
-        </SettingsGroup>
-      ) : null}
+        ) : null}
+      </SettingsGroup>
+      <ExportSheet visible={exportOpen} onClose={() => setExportOpen(false)} subtitle="Увесь облік за весь час" />
 
       <SettingsGroup title="Допомога">
         <SettingsRow

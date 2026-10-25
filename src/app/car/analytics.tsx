@@ -5,6 +5,7 @@ import { BarChart } from '@/components/bar-chart';
 import { CarPhoto } from '@/components/car-photo';
 import { CategoryBreakdown } from '@/components/category-breakdown';
 import { PaybackCard } from '@/components/payback-card';
+import { ExportButton } from '@/components/export-sheet';
 import { PeriodSwitcher, usePeriod } from '@/components/period-switcher';
 import { ReportStatus } from '@/components/report-status';
 import { SummaryCard } from '@/components/summary-card';
@@ -49,7 +50,10 @@ export default function CarAnalyticsScreen() {
       {!report ? (
         <ReportStatus loading={loading} error={error} onRetry={retry} />
       ) : (
-        <CarReportView report={report} price={car.price} periodLabel={p.label} periodKey={p.key} />
+        <>
+          <CarReportView report={report} price={car.price} periodLabel={p.label} periodKey={p.key} />
+          <ExportButton filter={{ carId: car.id, period: p.key }} subtitle={`${car.brand} ${car.model} · ${p.label}`} title={`Експорт за ${p.label}`} />
+        </>
       )}
     </Screen>
   );

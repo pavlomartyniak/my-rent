@@ -6,6 +6,7 @@ import { BarChart } from '@/components/bar-chart';
 import { CarPhoto } from '@/components/car-photo';
 import { CategoryBreakdown } from '@/components/category-breakdown';
 import { ComparisonCard } from '@/components/comparison-card';
+import { ExportButton } from '@/components/export-sheet';
 import { PeriodSwitcher, usePeriod } from '@/components/period-switcher';
 import { ReportStatus } from '@/components/report-status';
 import { SummaryCard } from '@/components/summary-card';
@@ -63,6 +64,8 @@ export default function ReportScreen() {
       ) : (
         <>
           <SummaryCard title={`Прибуток · ${p.label}`} profit={data.totals.profit} income={data.totals.income} expense={data.totals.expense} />
+
+          <ExportButton filter={{ period: p.key }} subtitle={`Усі авто · ${p.label}`} title={`Експорт за ${p.label}`} />
 
           <ComparisonCard
             title={monthly ? 'Порівняно з минулим місяцем' : 'Порівняно з минулим роком'}
