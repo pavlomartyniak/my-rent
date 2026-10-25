@@ -50,6 +50,7 @@ export function OfferCard({ offer: o, viewer, children }: Props) {
       <View style={styles.rows}>
         {viewer === 'owner' ? <Row label="Заявка" value={`${wantedTitle(o.wanted)} · ${o.wanted.city}`} /> : null}
         <Row label="Дати" value={`${formatDate(o.wanted.startDate)} – ${formatDate(o.wanted.endDate)}`} />
+        {o.paymentPlan === 'monthly' ? <Row label="Оплата" value="щомісяця" /> : null}
         <Row label={`${o.days} ${plural(o.days, 'доба', 'доби', 'діб')} × ${formatMoney(o.pricePerDay)}`} value={formatMoney(o.totalPrice)} bold />
         <Row label={who} value={o.counterpart.name} />
       </View>

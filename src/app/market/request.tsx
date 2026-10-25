@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
+import { PaymentPlanPicker, type PaymentPlan } from '@/components/payment-plan-picker';
 import { ReportStatus } from '@/components/report-status';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,7 @@ export default function RentalRequestScreen() {
   const [start, setStart] = useState(addDays(today, 1));
   const [end, setEnd] = useState(addDays(today, 4));
   const [message, setMessage] = useState('');
+  const [plan, setPlan] = useState<PaymentPlan>('lump');
   const [sending, setSending] = useState(false);
 
   if (!car) {
@@ -56,7 +58,7 @@ export default function RentalRequestScreen() {
     if (sending || !car) return;
     setSending(true);
     try {
-      const res = await api<{ chatId: string | null }>('POST', '/rentals', { carId: car.id, startDate: start, endDate: end, message: message.trim() });
+      const res = await api<{ chatId: string | null }>('POST', '/rentals', { carId: car.id, startDate: start, endDate: end, message: message.trim(), paymentPlan: days >= 60 ? plan : 'lump' });
       invalidate();
       router.dismissAll();
       router.navigate('/renter/requests');
@@ -92,6 +94,8 @@ export default function RentalRequestScreen() {
           ≈ {formatMoney(days * car.pricePerDay)}
         </ThemedText>
       </View>
+
+      <PaymentPlanPicker days={days} value={plan} onChange={setPlan} />
 
       <Field
         label="Повідомлення власнику (необов’язково)"

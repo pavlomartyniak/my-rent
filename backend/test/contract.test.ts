@@ -76,3 +76,56 @@ describe('вікно підписання', () => {
   it('пізно: після закриття', () => assert.equal(signingState('2026-11-13', '2026-11-10'), 'late'));
   it('межа місяця й року', () => assert.deepEqual(signingWindow('2027-01-01'), { opensAt: '2026-12-31', closesAt: '2027-01-03' }));
 });
+
+import { contractTotal, settledAmount, usedDays } from '../src/deals/deal-payments';
+
+describe('автоматичні платежі за договором', () => {
+  it('сума за договором — доби × ціна', () => assert.equal(contractTotal(1200, '2026-11-01', '2026-11-11'), 12000));
+  it('до початку використано 0 діб, у день початку теж', () => {
+    assert.equal(usedDays('2026-11-01', '2026-11-11', '2026-10-30'), 0);
+    assert.equal(usedDays('2026-11-01', '2026-11-11', '2026-11-01'), 0);
+  });
+  it('з наступного дня — доби від початку, не менше однієї', () => {
+    assert.equal(usedDays('2026-11-01', '2026-11-11', '2026-11-02'), 1);
+    assert.equal(usedDays('2026-11-01', '2026-11-11', '2026-11-04'), 3);
+  });
+  it('після закінчення — не більше за договір', () => assert.equal(usedDays('2026-11-01', '2026-11-11', '2027-01-01'), 10));
+  it('розрахунок при розірванні: за використані доби, до початку 0', () => {
+    assert.equal(settledAmount(500, '2026-11-01', '2026-11-11', '2026-11-04'), 1500);
+    assert.equal(settledAmount(500, '2026-11-01', '2026-11-11', '2026-10-30'), 0);
+    assert.equal(settledAmount(500, '2026-11-01', '2026-11-11', '2026-12-01'), 5000);
+  });
+});
+
+import { buildSchedule, planError } from '../src/deals/payment-plan';
+
+describe('план оплати', () => {
+  it('одразу: один платіж у день початку на всю суму', () => assert.deepEqual(buildSchedule('2026-11-01', '2026-11-11', 500, 'lump'), [{ n: 1, dueDate: '2026-11-01', days: 10, amount: 5000 }]));
+  it('щомісяця: 90 діб = три рівні платежі кожні 30 діб', () => {
+    const s = buildSchedule('2026-11-01', '2027-01-30', 100, 'monthly');
+    assert.equal(s.length, 3);
+    assert.deepEqual(s.map((p) => p.dueDate), ['2026-11-01', '2026-12-01', '2026-12-31']);
+    assert.deepEqual(s.map((p) => p.amount), [3000, 3000, 3000]);
+  });
+  it('щомісяця: останній платіж на залишок, сума збігається з вартістю', () => {
+    const s = buildSchedule('2026-11-01', '2027-01-15', 100, 'monthly'); // 75 діб
+    assert.deepEqual(s.map((p) => p.days), [30, 30, 15]);
+    assert.equal(s.reduce((n, p) => n + p.amount, 0), 7500);
+  });
+  it('частинами лише від 60 діб', () => {
+    assert.equal(planError('monthly', '2026-11-01', '2026-12-31'), null); // рівно 60 діб
+    assert.ok(planError('monthly', '2026-11-01', '2026-12-30')); // 59 діб — ще замало
+  });
+  it('коротша оренда — лише одразу', () => {
+    assert.ok(planError('monthly', '2026-11-01', '2026-11-20'));
+    assert.equal(planError('lump', '2026-11-01', '2026-11-20'), null);
+  });
+  it('договір містить графік платежів', () => {
+    const t = buildTerms({
+      number: 'MR-1', createdAt: new Date('2026-10-25T10:00:00Z'), city: 'Львів', owner: { name: 'А', phone: '' }, renter: { name: 'Б', phone: '' },
+      car: { title: 'X', brand: 'X', model: 'X', year: 2020, vin: '', mileage: 1 }, startDate: '2026-11-01', endDate: '2027-01-30', pricePerDay: 100, paymentPlan: 'monthly',
+    });
+    const text = buildSections(t).flatMap((s) => s.paragraphs).join('\n');
+    assert.ok(text.includes('Платіж 1: 01.11.2026') && text.includes('Платіж 3: 31.12.2026') && text.includes('щомісяця'));
+  });
+});

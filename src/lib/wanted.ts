@@ -36,6 +36,7 @@ export type OfferView = {
   dealId: string | null;
   dealStage: string | null;
   hasContract: boolean;
+  paymentPlan: 'lump' | 'monthly';
   wantedId: string;
   carId: string;
   pricePerDay: number;

@@ -24,6 +24,10 @@ export class Offer {
   @Prop({ default: '' })
   message: string;
 
+  /** План оплати, який запропонував власник: одразу вся сума чи щомісяця (від 60 діб) */
+  @Prop({ enum: ['lump', 'monthly'], default: 'lump' })
+  paymentPlan: string;
+
   @Prop({ required: true, enum: OFFER_STATUSES, default: 'pending' })
   status: string;
 

@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+import { type Installment, type PaymentPlan, buildSchedule, planLabel } from '../deals/payment-plan';
 import { rentalDays, totalPrice } from '../rentals/rentals.math';
 
 /** Умови договору оренди: знімок на момент прийняття домовленості, далі не змінюються */
@@ -19,6 +20,9 @@ export type ContractTerms = {
   days: number;
   pricePerDay: number;
   total: number;
+  /** План оплати й графік платежів: фіксуються разом з іншими умовами */
+  paymentPlan: PaymentPlan;
+  payments: Installment[];
 };
 
 export type ContractSection = { title: string; paragraphs: string[] };
@@ -38,6 +42,7 @@ export function buildTerms(input: {
   startDate: string;
   endDate: string;
   pricePerDay: number;
+  paymentPlan?: PaymentPlan;
 }): ContractTerms {
   return {
     number: input.number,
@@ -51,6 +56,8 @@ export function buildTerms(input: {
     days: rentalDays(input.startDate, input.endDate),
     pricePerDay: input.pricePerDay,
     total: totalPrice(input.pricePerDay, input.startDate, input.endDate),
+    paymentPlan: input.paymentPlan ?? 'lump',
+    payments: buildSchedule(input.startDate, input.endDate, input.pricePerDay, input.paymentPlan ?? 'lump'),
   };
 }
 
@@ -74,6 +81,23 @@ function sortKeys(value: unknown): unknown {
 const money = (n: number) => `${Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} грн`;
 const date = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
 const plural = (n: number) => (n % 100 >= 11 && n % 100 <= 14 ? 'діб' : n % 10 === 1 ? 'доба' : n % 10 >= 2 && n % 10 <= 4 ? 'доби' : 'діб');
+
+/** Пункти договору про порядок оплати: одразу вся сума чи графік платежів */
+function paymentParagraphs(t: ContractTerms): string[] {
+  const plan = t.paymentPlan ?? 'lump';
+  const payments = t.payments ?? [];
+  if (plan === 'monthly' && payments.length > 1) {
+    return [
+      `3.2. Оплата здійснюється частинами, ${planLabel(plan)}: ${payments.length} ${payments.length < 5 ? 'платежі' : 'платежів'}. Перший платіж Орендар вносить під час передачі Авто, кожен наступний — у вказану дату.`,
+      ...payments.map((p) => `Платіж ${p.n}: ${date(p.dueDate)} — ${money(p.amount)} (${p.days} ${plural(p.days)}).`),
+      '3.3. Сторони підтверджують отримання й сплату кожного платежу в застосунку my-rent для обліку.',
+    ];
+  }
+  return [
+    `3.2. Оплата здійснюється ${planLabel(plan)}: Орендар сплачує всю суму ${money(t.total)} під час передачі Авто.`,
+    '3.3. Сторони підтверджують отримання й сплату в застосунку my-rent для обліку.',
+  ];
+}
 
 export const CONTRACT_DISCLAIMER =
   'Договір сформовано застосунком my-rent за типовим шаблоном на підставі умов, які погодили Сторони. Застосунок не є стороною договору й не надає юридичних консультацій.';
@@ -108,8 +132,8 @@ export function buildSections(t: ContractTerms): ContractSection[] {
       title: '3. Орендна плата та розрахунки',
       paragraphs: [
         `3.1. Орендна плата становить ${money(t.pricePerDay)} за добу. За весь строк оренди орієнтовно ${money(t.total)}.`,
-        '3.2. Порядок і спосіб оплати Сторони погоджують між собою. Платежі можна фіксувати в застосунку my-rent для обліку.',
-        '3.3. За прострочення повернення Авто Орендар сплачує орендну плату за кожну добу прострочення в тому ж розмірі.',
+        ...paymentParagraphs(t),
+        '3.4. За прострочення повернення Авто Орендар сплачує орендну плату за кожну добу прострочення в тому ж розмірі.',
       ],
     },
     {

@@ -44,6 +44,7 @@ export function RentalCard({ rental: r, viewer, children }: Props) {
 
       <View style={styles.rows}>
         <Row label="Дати" value={`${formatDate(r.startDate)} – ${formatDate(r.endDate)}`} />
+        {r.paymentPlan === 'monthly' ? <Row label="Оплата" value="щомісяця" /> : null}
         <Row label={`${r.days} ${plural(r.days, 'доба', 'доби', 'діб')} × ${formatMoney(r.car.pricePerDay)}`} value={formatMoney(r.totalPrice)} bold />
         <Row label={who} value={r.counterpart.name} />
       </View>

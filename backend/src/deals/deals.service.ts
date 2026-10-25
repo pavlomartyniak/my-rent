@@ -6,6 +6,7 @@ import type { AuthUser } from '../common/current-user';
 import { renderContractPdf } from '../contract/contract.pdf';
 import { signContract } from '../contract/contract.signing';
 import { buildSections } from '../contract/contract.terms';
+import { settledAmount } from './deal-payments';
 import { SIGN_DAYS_AFTER, signingState, signingWindow } from '../contract/contract.window';
 import { fullName, todayUtc } from '../rentals/rentals.math';
 import { Car } from '../schemas/car.schema';
@@ -200,6 +201,8 @@ export class DealsService {
    * автоматичного скасування непідписаного договору.
    */
   private async close(deal: DealDocument, by: 'owner' | 'renter' | 'system', note: string, reason: string, session?: ClientSession) {
+    // Майбутні платежі, за які нічого не підтверджено, скасовуються разом з орендою
+    this.cancelFuturePayments(deal);
     const today = todayUtc();
     deal.status = 'terminated';
     deal.terminatedBy = by;
@@ -290,6 +293,156 @@ export class DealsService {
       await session.endSession();
     }
     return this.viewFor(user, result as unknown as DealDocument);
+  }
+
+  // ---- платежі за договором ----
+
+  /**
+   * Підтвердження платежу своєю стороною: орендар — «я сплатив», власник — «я отримав». Сума за замовчуванням повна,
+   * можна вказати частину. Облік (витрата в орендаря, дохід у власника) створюється чи оновлюється саме за цією відповіддю.
+   */
+  async confirmPayment(user: AuthUser, id: string, n: number, amount?: number) {
+    const session = await this.connection.startSession();
+    let result: DealDocument | null = null;
+    try {
+      await session.withTransaction(async () => {
+        const deal = await this.deals.findOne({ _id: id, ...this.side(user) }, null, { session }).exec();
+        if (!deal) throw new NotFoundException('Оренду не знайдено');
+        const c = this.requireContract(deal);
+        if (deal.status !== 'active') throw new ConflictException('Платежі підтверджуються після підписання договору');
+        const plan = c.terms.payments?.find((p) => p.n === n);
+        const state = deal.payments?.find((p) => p.n === n);
+        if (!plan || !state) throw new NotFoundException('Платіж не знайдено');
+        if (state.cancelled) throw new ConflictException('Цей платіж скасовано');
+        if (!this.isAvailable(plan, state)) throw new ConflictException('Строк цього платежу ще не настав');
+
+        const confirmed = Math.round((amount ?? plan.amount) * 100) / 100;
+        if (!(confirmed > 0) || confirmed > plan.amount) throw new ConflictException(`Сума має бути більшою за нуль і не більшою за ${plan.amount}`);
+
+        if (user.role === 'renter') {
+          state.renterPaid = confirmed;
+          state.renterLaterUntil = undefined;
+        } else {
+          state.ownerReceived = confirmed;
+          state.ownerLaterUntil = undefined;
+        }
+        deal.markModified('payments');
+        await deal.save({ session });
+
+        const count = c.terms.payments.length;
+        const mine = user.role === 'renter';
+        const filter = { userId: user.id, dealId: deal._id, paymentN: n, auto: 'contract' };
+        const note = `Платіж ${n} з ${count} за договором № ${c.terms.number}`;
+        const existing = await this.transactions.findOne(filter, null, { session }).exec();
+        if (existing) {
+          existing.amount = confirmed;
+          await existing.save({ session });
+        } else {
+          await this.transactions.create(
+            [
+              {
+                ...filter,
+                carId: deal.carId,
+                type: mine ? 'expense' : 'income',
+                amount: confirmed,
+                date: todayUtc(),
+                category: mine ? 'Оренда авто' : 'Оренда',
+                driver: mine ? '' : c.terms.renter.name,
+                note,
+              },
+            ],
+            { session },
+          );
+        }
+        result = deal;
+      });
+    } finally {
+      await session.endSession();
+    }
+    return this.viewFor(user, result as unknown as DealDocument);
+  }
+
+  /** «Ще ні»: не питати про цей платіж до завтра */
+  async postponePayment(user: AuthUser, id: string, n: number) {
+    const deal = await this.mine(user, id);
+    const state = deal.payments?.find((p) => p.n === n);
+    if (!state) throw new NotFoundException('Платіж не знайдено');
+    if (user.role === 'renter') state.renterLaterUntil = todayUtc();
+    else state.ownerLaterUntil = todayUtc();
+    deal.markModified('payments');
+    await deal.save();
+    return this.viewFor(user, deal);
+  }
+
+  /** Платежі, про які треба спитати цього користувача: строк настав (перший — одразу після підписання), підтверджено не все */
+  async awaitingPayment(user: AuthUser) {
+    const today = todayUtc();
+    const items = await this.deals.find({ ...this.side(user), status: 'active', 'contract.signedAt': { $exists: true } }).limit(50).exec();
+    const as = user.role === 'renter' ? 'renter' : 'owner';
+    const people = await this.people(items.map((d) => (as === 'renter' ? d.ownerId : d.renterId)));
+    const out: Record<string, unknown>[] = [];
+    for (const d of items) {
+      const name = this.view(d, as, people).counterpart.name;
+      for (const p of this.paymentsView(d, as, today)) {
+        if (!p.available || p.cancelled || p.remaining <= 0 || p.snoozed) continue;
+        out.push({ dealId: String(d._id), title: d.title, counterpart: name, count: d.contract!.terms.payments.length, ...p });
+      }
+    }
+    return out;
+  }
+
+  private isAvailable(plan: { n: number; dueDate: string }, _state: unknown) {
+    // Перший платіж доступний одразу після підписання (гроші передаються під час зустрічі), наступні — з їхнього строку
+    return plan.n === 1 || plan.dueDate <= todayUtc();
+  }
+
+  private cancelFuturePayments(deal: DealDocument) {
+    const today = todayUtc();
+    const plan = deal.contract?.terms.payments ?? [];
+    let changed = false;
+    for (const st of deal.payments ?? []) {
+      const due = plan.find((p) => p.n === st.n)?.dueDate ?? today;
+      if (due > today && !st.renterPaid && !st.ownerReceived && !st.cancelled) {
+        st.cancelled = true;
+        changed = true;
+      }
+    }
+    if (changed) deal.markModified('payments');
+  }
+
+  /** Платежі для екрана: графік з відповідями обох сторін, розбіжності й що можна підтвердити зараз */
+  private paymentsView(d: DealDocument, as: 'renter' | 'owner', today = todayUtc()) {
+    const plan = d.contract?.terms.payments ?? [];
+    return plan.map((p) => {
+      const st = d.payments?.find((x) => x.n === p.n);
+      const mine = (as === 'renter' ? st?.renterPaid : st?.ownerReceived) ?? 0;
+      const other = (as === 'renter' ? st?.ownerReceived : st?.renterPaid) ?? 0;
+      const later = as === 'renter' ? st?.renterLaterUntil : st?.ownerLaterUntil;
+      return {
+        n: p.n,
+        dueDate: p.dueDate,
+        days: p.days,
+        amount: p.amount,
+        mine,
+        other,
+        remaining: Math.round((p.amount - mine) * 100) / 100,
+        available: d.status === 'active' && !!d.contract?.signedAt && (p.n === 1 || p.dueDate <= today),
+        cancelled: !!st?.cancelled,
+        snoozed: later === today,
+        /** Обидві сторони відповіли, але суми різні */
+        mismatch: mine > 0 && other > 0 && mine !== other,
+      };
+    });
+  }
+
+  /** Розрахунок після розірвання: що належить за використані доби, скільки сплатив орендар і отримав власник */
+  private settlementView(d: DealDocument) {
+    const c = d.contract;
+    if (d.status !== 'terminated' || !c?.signedAt) return null;
+    const used = settledAmount(c.terms.pricePerDay, c.terms.startDate, c.terms.endDate, (d.terminatedAt ?? new Date()).toISOString().slice(0, 10));
+    const paid = (d.payments ?? []).reduce((s, p) => s + (p.renterPaid ?? 0), 0);
+    const received = (d.payments ?? []).reduce((s, p) => s + (p.ownerReceived ?? 0), 0);
+    return { due: used, paid: Math.round(paid * 100) / 100, received: Math.round(received * 100) / 100 };
   }
 
   /** До підписання кожна сторона може скасувати домовленість: авто знову вільне, запит завершується */
@@ -405,6 +558,10 @@ export class DealsService {
       contract: d.contract
         ? { number: d.contract.terms.number, signed: { owner: !!d.contract.signatures?.owner, renter: !!d.contract.signatures?.renter }, mySigned: !!d.contract.signatures?.[as], signedAt: d.contract.signedAt ?? null, signing: this.signingView(d.startDate) }
         : null,
+      /** План оплати й графік платежів із відповідями сторін (для оренд з договором) */
+      paymentPlan: d.contract?.terms.paymentPlan ?? null,
+      payments: d.contract ? this.paymentsView(d, as) : [],
+      settlement: this.settlementView(d),
       // Пропозиція про розірвання, що чекає відповіді; `mine` — чи її подав автор запиту
       terminationRequest: d.terminationRequest ? { by: d.terminationRequest.by, at: d.terminationRequest.at, note: d.terminationRequest.note ?? '', mine: d.terminationRequest.by === as } : null,
       terminatedBy: d.terminatedBy,

@@ -5,6 +5,7 @@ import { type Connection, type Model, Types } from 'mongoose';
 import { FINISHED_RENTAL_STATUSES, RENTAL_STATUSES, type RentalStatus } from '../common/constants';
 import { acceptedMessage, requestMessage } from '../chat/auto-messages';
 import { ChatService } from '../chat/chat.service';
+import { planError, type PaymentPlan } from '../deals/payment-plan';
 import { newDealData } from '../deals/deal-factory';
 import { dealStageOf } from '../deals/deal-stage';
 import { Car } from '../schemas/car.schema';
@@ -35,6 +36,10 @@ export class RentalsService {
     const rangeError = validateRange(dto.startDate, dto.endDate, todayUtc());
     if (rangeError) throw new BadRequestException(rangeError);
 
+    const plan: PaymentPlan = dto.paymentPlan ?? 'lump';
+    const planProblem = planError(plan, dto.startDate, dto.endDate);
+    if (planProblem) throw new BadRequestException(planProblem);
+
     const car = await this.cars
       .findOne({ _id: dto.carId, 'listing.published': true, status: 'Вільне' })
       .exec();
@@ -58,13 +63,14 @@ export class RentalsService {
       startDate: dto.startDate,
       endDate: dto.endDate,
       message: dto.message ?? '',
+      paymentPlan: plan,
       car: { title: `${car.brand} ${car.model} ${car.year}`, city: car.listing.city, pricePerDay: car.listing.pricePerDay, photoUri: car.photoUri },
     });
     // Одразу відкриваємо чат із власником і кидаємо в нього повідомлення, щоб вони могли зв'язатись
     const chatId = await this.chat.autoStart(
       { id: renterId, role: 'renter' },
       { rentalId: String(created._id) },
-      requestMessage({ title: created.car.title, startDate: dto.startDate, endDate: dto.endDate, days: rentalDays(dto.startDate, dto.endDate), total: totalPrice(created.car.pricePerDay, dto.startDate, dto.endDate), note: dto.message }),
+      requestMessage({ title: created.car.title, startDate: dto.startDate, endDate: dto.endDate, days: rentalDays(dto.startDate, dto.endDate), total: totalPrice(created.car.pricePerDay, dto.startDate, dto.endDate), note: dto.message, plan }),
       `auto-${created._id}`,
     );
     return { ...this.view(created, 'renter', await this.people([car.userId])), chatId };
@@ -184,6 +190,7 @@ export class RentalsService {
               endDate: request.endDate,
               source: 'request',
               sourceId: request._id,
+              paymentPlan: request.paymentPlan as PaymentPlan,
         });
         await this.deals.create([dealData], { session });
         createdDeal = String(dealData._id);
@@ -251,6 +258,7 @@ export class RentalsService {
       days: rentalDays(r.startDate, r.endDate),
       totalPrice: totalPrice(r.car.pricePerDay, r.startDate, r.endDate),
       message: r.message,
+      paymentPlan: r.paymentPlan ?? 'lump',
       decisionNote: r.decisionNote,
       createdAt: r.createdAt,
       respondedAt: r.respondedAt ?? null,

@@ -1,8 +1,8 @@
-import { Body, Controller, Delete, Get, Header, HttpCode, Param, Post, StreamableFile } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, HttpCode, Param, ParseIntPipe, Post, StreamableFile } from '@nestjs/common';
 
 import { type AuthUser, CurrentUser, Roles } from '../common/current-user';
 import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
-import { TerminateDealDto } from './deals.dto';
+import { ConfirmPaymentDto, TerminateDealDto } from './deals.dto';
 import { DealsService } from './deals.service';
 
 /** Оренди орендаря: авто, які він взяв в оренду. Облік по них ведеться через /transactions і /reports/renter */
@@ -31,6 +31,27 @@ export class DealsController {
   async forCar(@CurrentUser() user: AuthUser, @Param('carId', ParseObjectIdPipe) carId: string) {
     // Порожня відповідь віддається як null у тілі, щоб клієнт відрізняв її від помилки
     return (await this.deals.activeForCar(user.id, carId)) ?? { none: true };
+  }
+
+  /** Платежі, про які треба спитати мене: «ви сплатили?» (орендар) чи «ви отримали?» (власник) */
+  @Header('Cache-Control', 'no-store')
+  @Get('awaiting-payment')
+  awaitingPayment(@CurrentUser() user: AuthUser) {
+    return this.deals.awaitingPayment(user);
+  }
+
+  /** Підтвердити платіж: орендар — сплатив, власник — отримав; без суми — повністю, з сумою — частину */
+  @HttpCode(200)
+  @Post(':id/payments/:n/confirm')
+  confirmPayment(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Param('n', ParseIntPipe) n: number, @Body() dto: ConfirmPaymentDto) {
+    return this.deals.confirmPayment(user, id, n, dto.amount);
+  }
+
+  /** «Ще ні»: відкласти запитання про платіж до завтра */
+  @HttpCode(200)
+  @Post(':id/payments/:n/later')
+  postponePayment(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Param('n', ParseIntPipe) n: number) {
+    return this.deals.postponePayment(user, id, n);
   }
 
   /** Договори, які чекають мого підпису (власнику й орендарю) */

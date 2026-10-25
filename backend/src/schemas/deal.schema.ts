@@ -75,6 +75,23 @@ export class Deal {
     signedAt?: Date;
   };
 
+  /**
+   * Стан платежів за графіком договору: скільки кожна сторона підтвердила за кожен платіж. Облік (витрата в орендаря,
+   * дохід у власника) створюється за підтвердженнями, а не при підписанні.
+   */
+  @Prop({ type: MongooseSchema.Types.Mixed })
+  payments?: {
+    n: number;
+    /** Скільки сплатив орендар і скільки отримав власник (за їхніми відповідями) */
+    renterPaid: number;
+    ownerReceived: number;
+    /** Відповідь «ще ні» відкладає запитання до цієї дати (YYYY-MM-DD) */
+    renterLaterUntil?: string;
+    ownerLaterUntil?: string;
+    /** Платіж скасовано (оренду розірвано до його строку) */
+    cancelled?: boolean;
+  }[];
+
   /** Власник відповів «оренда триває» на підказку звільнити авто після закінчення оренди */
   @Prop({ default: false })
   releaseDismissed: boolean;

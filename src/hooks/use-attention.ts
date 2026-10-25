@@ -1,7 +1,7 @@
 import { useReport } from '@/hooks/use-report';
 import { daysUntil } from '@/lib/date';
-import type { DealView } from '@/lib/deals';
-import { plural } from '@/lib/format';
+import type { DealView, PaymentQuestion } from '@/lib/deals';
+import { formatMoney, plural } from '@/lib/format';
 import type { RentalView } from '@/lib/rentals';
 import type { WantedView } from '@/lib/wanted';
 import { useFleet } from '@/store/fleet';
@@ -13,7 +13,8 @@ export type AttentionTarget =
   | { kind: 'deal'; dealId: string }
   | { kind: 'car'; carId: string }
   | { kind: 'tab'; href: string; params?: Record<string, string> }
-  | { kind: 'release'; deal: DealView };
+  | { kind: 'release'; deal: DealView }
+  | { kind: 'payment'; dealId: string; n: number };
 
 export type AttentionItem = {
   key: string;
@@ -47,11 +48,26 @@ export function useAttention(role: 'owner' | 'renter' | null) {
   const requests = useReport<RentalView[]>(owner ? '/rentals/incoming?status=pending' : null, POLL).data ?? [];
   const offers = useReport<WantedView[]>(renter ? '/wanted/mine' : null, POLL).data ?? [];
   const release = useReport<DealView[]>(owner ? '/deals/awaiting-release' : null, POLL).data ?? [];
+  const payments = useReport<PaymentQuestion[]>(role ? '/deals/awaiting-payment' : null, POLL).data ?? [];
 
   const items: AttentionItem[] = [];
 
   for (const d of signing.filter((x) => x.contract?.signing.state === 'open')) {
     items.push({ key: `sign-${d.id}`, tone: 'success', icon: 'create', title: 'Час підписати договір', action: 'Підписати', text: `${d.title}. Підписуйте під час зустрічі, коли передаєте авто, ключі й гроші`, count: 1, tab: 'home', target: { kind: 'contract', dealId: d.id } });
+  }
+  // Платежі за договором: «ви сплатили?» (орендар) чи «ви отримали?» (власник)
+  for (const p of payments) {
+    items.push({
+      key: `pay-${p.dealId}-${p.n}`,
+      tone: 'urgent',
+      icon: 'cash',
+      title: renter ? `Ви сплатили ${formatMoney(p.remaining)}?` : `Ви отримали ${formatMoney(p.remaining)}?`,
+      text: `${p.title}${p.count > 1 ? `, платіж ${p.n} з ${p.count}` : ''}. Підтвердьте, щоб це потрапило в облік`,
+      action: 'Відповісти',
+      count: 1,
+      tab: 'home',
+      target: { kind: 'payment', dealId: p.dealId, n: p.n },
+    });
   }
   for (const d of termination) {
     items.push({

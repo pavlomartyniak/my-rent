@@ -3,6 +3,7 @@ import { Alert, StyleSheet, View } from 'react-native';
 
 import { CarPhoto } from '@/components/car-photo';
 import { ContractCard } from '@/components/contract-card';
+import { PaymentsCard } from '@/components/payments-card';
 import { ContactChips } from '@/components/contact-chips';
 import { contactActions } from '@/lib/contact-actions';
 import { TerminateDeal } from '@/components/terminate-deal';
@@ -95,6 +96,8 @@ export default function DealScreen() {
       </Card>
 
       <ContractCard deal={d} as="renter" />
+
+      <PaymentsCard deal={d} as="renter" />
 
       {stage === 'signing' ? null : (
       <View style={styles.actions}>

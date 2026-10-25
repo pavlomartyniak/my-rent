@@ -6,6 +6,7 @@ import { fullName, maskedName, rentalDays, todayUtc, totalPrice } from '../renta
 import { FINISHED_OFFER_STATUSES } from '../common/constants';
 import { acceptedMessage, offerMessage } from '../chat/auto-messages';
 import { ChatService } from '../chat/chat.service';
+import { planError, type PaymentPlan } from '../deals/payment-plan';
 import { newDealData } from '../deals/deal-factory';
 import { dealStageOf } from '../deals/deal-stage';
 import { Car } from '../schemas/car.schema';
@@ -41,6 +42,9 @@ export class OffersService {
 
     const car = await this.cars.findOne({ _id: dto.carId, userId: ownerId, status: 'Вільне' }).exec();
     if (!car) throw new NotFoundException('Авто не знайдено або воно не вільне');
+    const plan: PaymentPlan = dto.paymentPlan ?? 'lump';
+    const planProblem = planError(plan, w.startDate, w.endDate);
+    if (planProblem) throw new BadRequestException(planProblem);
 
     if (await this.offers.exists({ wantedId: w._id, carId: car._id, status: { $in: ['pending', 'accepted'] } })) {
       throw new ConflictException('Ви вже запропонували це авто на цю заявку');
@@ -58,6 +62,7 @@ export class OffersService {
       carId: car._id,
       pricePerDay: dto.pricePerDay,
       message: dto.message ?? '',
+      paymentPlan: plan,
       car: {
         title: `${car.brand} ${car.model} ${car.year}`,
         brand: car.brand,
@@ -72,7 +77,7 @@ export class OffersService {
     const chatId = await this.chat.autoStart(
       { id: ownerId, role: 'owner' },
       { offerId: String(created._id) },
-      offerMessage({ title: created.car.title, startDate: w.startDate, endDate: w.endDate, days: rentalDays(w.startDate, w.endDate), pricePerDay: dto.pricePerDay, total: totalPrice(dto.pricePerDay, w.startDate, w.endDate), note: dto.message }),
+      offerMessage({ title: created.car.title, startDate: w.startDate, endDate: w.endDate, days: rentalDays(w.startDate, w.endDate), pricePerDay: dto.pricePerDay, total: totalPrice(dto.pricePerDay, w.startDate, w.endDate), note: dto.message, plan }),
       `auto-${created._id}`,
     );
     return { ...this.view(created, 'owner', w, await this.people([w.renterId])), chatId };
@@ -212,6 +217,7 @@ export class OffersService {
               endDate: w.endDate,
               source: 'offer',
               sourceId: offer._id,
+              paymentPlan: offer.paymentPlan as PaymentPlan,
         });
         await this.deals.create([dealData], { session });
         createdDeal = String(dealData._id);
@@ -275,6 +281,7 @@ export class OffersService {
       days: rentalDays(w.startDate, w.endDate),
       totalPrice: totalPrice(o.pricePerDay, w.startDate, w.endDate),
       message: o.message,
+      paymentPlan: o.paymentPlan ?? 'lump',
       decisionNote: o.decisionNote,
       createdAt: o.createdAt,
       car: o.car,

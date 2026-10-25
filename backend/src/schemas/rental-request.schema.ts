@@ -25,6 +25,10 @@ export class RentalRequest {
   @Prop({ default: '' })
   message: string;
 
+  /** План оплати, який запропонував орендар: одразу вся сума чи щомісяця (від 60 діб) */
+  @Prop({ enum: ['lump', 'monthly'], default: 'lump' })
+  paymentPlan: string;
+
   @Prop({ required: true, enum: RENTAL_STATUSES, default: 'pending' })
   status: string;
 

@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import { CarPhoto } from '@/components/car-photo';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { ContractCard } from '@/components/contract-card';
+import { PaymentsCard } from '@/components/payments-card';
 import { ContactChips } from '@/components/contact-chips';
 import { contactActions } from '@/lib/contact-actions';
 import { ReleasePrompt } from '@/components/release-prompt';
@@ -114,6 +115,7 @@ export default function CarScreen() {
         </Card>
       ) : null}
 
+      {deal ? <PaymentsCard deal={deal} as="owner" /> : null}
       <View style={styles.buttons}>
         <Button title="Дохід" icon="add" variant="positive" style={styles.flex} onPress={() => add('income')} />
         <Button title="Витрата" icon="remove" variant="danger" style={styles.flex} onPress={() => add('expense')} />

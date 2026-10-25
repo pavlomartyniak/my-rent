@@ -1,4 +1,4 @@
-import { IsMongoId, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsMongoId, IsOptional, IsString, MaxLength } from 'class-validator';
 
 import { IsIsoDay } from '../common/is-iso-day';
 import { Trim } from '../common/profile';
@@ -18,6 +18,11 @@ export class CreateRentalDto {
   @IsString()
   @MaxLength(500, { message: 'Повідомлення занадто довге' })
   message?: string;
+
+  /** План оплати: одразу вся сума (за замовчуванням) чи щомісяця (від 60 діб) */
+  @IsOptional()
+  @IsIn(['lump', 'monthly'])
+  paymentPlan?: 'lump' | 'monthly';
 }
 
 export class DeclineRentalDto {

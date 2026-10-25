@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsMongoId, IsNumber, IsOptional, IsPositive, IsString, Max, MaxLength } from 'class-validator';
+import { IsIn, IsMongoId, IsNumber, IsOptional, IsPositive, IsString, Max, MaxLength } from 'class-validator';
 
 import { Trim } from '../common/profile';
 
@@ -18,6 +18,11 @@ export class CreateOfferDto {
   @IsString()
   @MaxLength(500, { message: 'Повідомлення занадто довге' })
   message?: string;
+
+  /** План оплати: одразу вся сума (за замовчуванням) чи щомісяця (від 60 діб) */
+  @IsOptional()
+  @IsIn(['lump', 'monthly'])
+  paymentPlan?: 'lump' | 'monthly';
 }
 
 export class DeclineOfferDto {

@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 
 import { type ContractParty, buildTerms, contractHash, contractNumber } from '../contract/contract.terms';
 import { fullName } from '../rentals/rentals.math';
+import type { PaymentPlan } from './payment-plan';
 
 type PersonDoc = { firstName: string; lastName: string; phone?: string };
 type CarDoc = { brand: string; model: string; year: number; vin: string; mileage: number };
@@ -27,6 +28,7 @@ export function newDealData(input: {
   endDate: string;
   source: 'request' | 'offer';
   sourceId: Types.ObjectId;
+  paymentPlan?: PaymentPlan;
 }) {
   const _id = new Types.ObjectId();
   const createdAt = new Date();
@@ -40,6 +42,7 @@ export function newDealData(input: {
     startDate: input.startDate,
     endDate: input.endDate,
     pricePerDay: input.pricePerDay,
+    paymentPlan: input.paymentPlan,
   });
   return {
     _id,
@@ -56,5 +59,6 @@ export function newDealData(input: {
     sourceId: input.sourceId,
     status: 'awaiting',
     contract: { terms, hash: contractHash(terms), signatures: {} },
+    payments: terms.payments.map((p) => ({ n: p.n, renterPaid: 0, ownerReceived: 0 })),
   };
 }

@@ -30,6 +30,8 @@ export type RentalView = {
   dealStage: string | null;
   /** Чи є в оренди договір */
   hasContract: boolean;
+  /** План оплати: одразу вся сума чи щомісяця (від 60 діб) */
+  paymentPlan: 'lump' | 'monthly';
   carId: string;
   startDate: string;
   endDate: string;

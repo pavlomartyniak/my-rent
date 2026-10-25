@@ -21,6 +21,11 @@ export type DealView = {
   contract: { number: string; signed: { owner: boolean; renter: boolean }; mySigned: boolean; signedAt: string | null; signing: { opensAt: string; closesAt: string; state: 'early' | 'open' | 'late' } } | null;
   /** Пропозиція розірвати оренду, що чекає відповіді; mine — подав її я */
   terminationRequest: { by: 'owner' | 'renter'; at: string; note: string; mine: boolean } | null;
+  /** План оплати й графік платежів із відповідями сторін */
+  paymentPlan: 'lump' | 'monthly' | null;
+  payments: PaymentView[];
+  /** Розрахунок після розірвання: що належить за використані доби, скільки сплатив орендар і отримав власник */
+  settlement: { due: number; paid: number; received: number } | null;
   terminatedBy?: 'owner' | 'renter' | 'system';
   terminatedAt?: string;
   terminationNote: string;
@@ -65,6 +70,26 @@ export type DealReport = {
   allCategories: CategoryShare[];
   overview: DealOverview;
 };
+
+export type PaymentView = {
+  n: number;
+  dueDate: string;
+  days: number;
+  amount: number;
+  /** Скільки підтвердив я і скільки друга сторона */
+  mine: number;
+  other: number;
+  remaining: number;
+  /** Строк платежу настав і його можна підтверджувати */
+  available: boolean;
+  cancelled: boolean;
+  snoozed: boolean;
+  /** Обидві сторони відповіли, але суми різні */
+  mismatch: boolean;
+};
+
+/** Платіж, про який треба спитати: «ви сплатили?» (орендар) чи «ви отримали?» (власник) */
+export type PaymentQuestion = PaymentView & { dealId: string; title: string; counterpart: string; count: number };
 
 export type DealStage = 'signing' | 'upcoming' | 'active' | 'finished' | 'terminated';
 

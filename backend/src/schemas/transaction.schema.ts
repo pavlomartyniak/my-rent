@@ -34,6 +34,14 @@ export class Transaction {
 
   @Prop({ default: '' })
   note: string;
+
+  /** Запис створено автоматично за підписаним договором (при розірванні його сума перераховується) */
+  @Prop({ enum: ['contract'] })
+  auto?: string;
+
+  /** Номер платежу за договором, який підтверджує цей запис */
+  @Prop()
+  paymentN?: number;
 }
 
 export type TransactionDocument = HydratedDocument<Transaction>;

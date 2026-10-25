@@ -81,6 +81,7 @@ function Routes() {
         </Stack.Protected>
         {/* Спільне для обох ролей; стоїть останнім, щоб не ставати стартовим екраном */}
         <Stack.Protected guard={authed && onboarded}>
+          <Stack.Screen name="payments/[id]" options={{ title: 'Платіж', headerBackTitle: 'Назад', presentation: 'modal' }} />
           <Stack.Screen name="contracts/[id]" options={{ title: 'Договір', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="chats/index" options={{ title: 'Повідомлення', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="chats/[id]" options={{ headerShown: false }} />
