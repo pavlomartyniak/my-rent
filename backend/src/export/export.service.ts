@@ -52,7 +52,7 @@ export class ExportService {
   private async collect(user: AuthUser, opts: ExportFilter): Promise<ExportData> {
     const me = new Types.ObjectId(user.id);
     const filter: Record<string, unknown> = { userId: me };
-    let name = 'my-rent';
+    let name = 'kolo';
     let subtitle = user.role === 'owner' ? 'Усі авто' : 'Усі оренди';
 
     if (opts.carId && user.role === 'owner') {

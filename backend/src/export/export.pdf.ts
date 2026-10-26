@@ -15,7 +15,7 @@ const day = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice
 /** PDF-звіт: підсумки, підсумки по авто й таблиця всіх записів (кирилиця через шрифт DejaVu) */
 export function renderExportPdf(data: ExportData): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'A4', margins: { top: 48, bottom: 48, left: 40, right: 40 }, info: { Title: data.title, Author: 'my-rent' } });
+    const doc = new PDFDocument({ size: 'A4', margins: { top: 48, bottom: 48, left: 40, right: 40 }, info: { Title: data.title, Author: 'Kolo' } });
     const chunks: Buffer[] = [];
     doc.on('data', (c: Buffer) => chunks.push(c));
     doc.on('end', () => resolve(Buffer.concat(chunks)));

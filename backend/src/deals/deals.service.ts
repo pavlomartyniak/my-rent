@@ -39,10 +39,12 @@ export class DealsService {
     return items.map((d) => this.view(d, 'renter', people));
   }
 
-  async get(renterId: string, id: string) {
-    const deal = await this.deals.findOne({ _id: id, renterId, hiddenFor: { $ne: 'renter' } }).exec();
+  /** Оренда для її сторони: орендар бачить власника, власник — орендаря (потрібно, наприклад, екрану підтвердження платежу) */
+  async get(user: AuthUser, id: string) {
+    const deal = await this.deals.findOne({ _id: id, ...this.side(user), hiddenFor: { $ne: user.role } }).exec();
     if (!deal) throw new NotFoundException('Оренду не знайдено');
-    return this.view(deal, 'renter', await this.people([deal.ownerId]));
+    const owner = user.role === 'owner';
+    return this.view(deal, owner ? 'owner' : 'renter', await this.people([owner ? deal.renterId : deal.ownerId]));
   }
 
   /** Завершені чи розірвані оренди авто власника (архів) */

@@ -8,7 +8,7 @@ const HEADER_FILL: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: 
 /** Excel-книга: аркуш «Записи» (з рядком підсумків-формул) і «Підсумки» (по кожному авто) */
 export async function renderXlsx(data: ExportData): Promise<Buffer> {
   const book = new ExcelJS.Workbook();
-  book.creator = 'my-rent';
+  book.creator = 'Kolo';
   book.created = new Date();
 
   const sheet = book.addWorksheet('Записи', { views: [{ state: 'frozen', ySplit: 1 }] });

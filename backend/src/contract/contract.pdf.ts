@@ -19,7 +19,7 @@ export type ContractSignatures = { owner?: Signature | null; renter?: Signature 
 /** PDF договору з українським текстом (шрифт DejaVu із кирилицею), підписами сторін і відбитком умов */
 export function renderContractPdf(terms: ContractTerms, hash: string, signatures: ContractSignatures): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'A4', margins: { top: 56, bottom: 56, left: 64, right: 64 }, info: { Title: `Договір оренди № ${terms.number}`, Author: 'my-rent' } });
+    const doc = new PDFDocument({ size: 'A4', margins: { top: 56, bottom: 56, left: 64, right: 64 }, info: { Title: `Договір оренди № ${terms.number}`, Author: 'Kolo' } });
     const chunks: Buffer[] = [];
     doc.on('data', (c: Buffer) => chunks.push(c));
     doc.on('end', () => resolve(Buffer.concat(chunks)));

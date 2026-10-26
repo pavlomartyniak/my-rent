@@ -138,11 +138,10 @@ export class DealsController {
     return this.deals.hide(user, id);
   }
 
-  @Roles('renter')
   @Header('Cache-Control', 'no-store')
   @Get(':id')
   get(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
-    return this.deals.get(user.id, id);
+    return this.deals.get(user, id);
   }
 
   /** Запропонувати розірвати оренду достроково: може і власник, і орендар, але друга сторона має погодитись */

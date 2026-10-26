@@ -2,7 +2,7 @@
   "name": "my-rent-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "REST API для my-rent (NestJS + MongoDB)",
+  "description": "REST API для Kolo (NestJS + MongoDB)",
   "scripts": {
     "build": "nest build",
     "start": "nest start",

@@ -24,23 +24,29 @@ export default function PaymentScreen() {
   const { id, n } = useLocalSearchParams<{ id: string; n: string }>();
   const router = useRouter();
   const { role, invalidate } = useFleet();
-  const deal = useReport<DealView>(role === 'renter' ? `/deals/${id}` : null, { useCache: false });
-  // Власник бере оренду зі списку своїх «чекають платежу»; для екрана достатньо тих самих полів
-  const asked = useReport<{ dealId: string; title: string; counterpart: string; count: number; n: number; amount: number; remaining: number; mine: number; dueDate: string }[]>('/deals/awaiting-payment', { useCache: false });
+  // Оренду з платежами віддаємо обом сторонам: питання про платіж залежить лише від самого платежу
+  const deal = useReport<DealView>(`/deals/${id}`, { useCache: false });
   const [part, setPart] = useState(false);
   const [amount, setAmount] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const q = asked.data?.find((x) => x.dealId === id && x.n === Number(n));
   const pay = deal.data?.payments.find((p) => p.n === Number(n));
-  const info = q ?? (pay && deal.data ? { title: deal.data.title, counterpart: deal.data.counterpart.name, count: deal.data.payments.length, amount: pay.amount, remaining: pay.remaining, mine: pay.mine, dueDate: pay.dueDate, n: pay.n } : undefined);
+  const info =
+    pay && deal.data && pay.available && !pay.cancelled && pay.remaining > 0
+      ? { title: deal.data.title, counterpart: deal.data.counterpart.name, count: deal.data.payments.length, amount: pay.amount, remaining: pay.remaining, mine: pay.mine, dueDate: pay.dueDate, n: pay.n }
+      : undefined;
 
   if (!info) {
     return (
       <Screen>
         <Stack.Screen options={{ title: 'Платіж' }} />
-        <ReportStatus loading={asked.loading || deal.loading} error={asked.error} onRetry={asked.retry} />
-        {!asked.loading && !asked.error ? <ThemedText type="default">Цей платіж уже підтверджено.</ThemedText> : null}
+        {!deal.data ? (
+          <ReportStatus loading={deal.loading} error={deal.error} onRetry={deal.retry} />
+        ) : (
+          <ThemedText type="default">
+            {!pay || pay.cancelled ? 'Цього платежу немає.' : !pay.available ? `Підтвердження відкриється ${formatDate(pay.dueDate)}.` : 'Цей платіж уже підтверджено.'}
+          </ThemedText>
+        )}
       </Screen>
     );
   }

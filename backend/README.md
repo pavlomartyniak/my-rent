@@ -1,4 +1,4 @@
-# my-rent API
+# Kolo API
 
 REST API для мобільного застосунку: NestJS + MongoDB (Mongoose), автентифікація через JWT.
 

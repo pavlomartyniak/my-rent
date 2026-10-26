@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Image } from 'expo-image';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -57,8 +58,11 @@ export default function LoginScreen() {
   return (
     <Screen contentContainerStyle={{ paddingTop: insets.top + Spacing.four }} gap={Spacing.three}>
       <View style={styles.header}>
-        <View style={[styles.badge, { backgroundColor: theme.accent }]}>
-          <Icon name="car-sport" size={26} color="#FFFFFF" />
+        <View style={styles.brand}>
+          <Image source={require('@/assets/images/kolo-mark.png')} style={styles.mark} accessibilityLabel="Kolo" />
+          <ThemedText type="subtitle" style={styles.wordmark}>
+            Kolo
+          </ThemedText>
         </View>
         <ThemedText type="subtitle" style={styles.hero}>
           {signingUp ? 'Створіть акаунт' : 'З поверненням'}
@@ -170,7 +174,9 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   header: { gap: Spacing.two, marginBottom: Spacing.two },
   hero: { marginTop: Spacing.two },
-  badge: { width: 52, height: 52, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  wordmark: { fontSize: 30, letterSpacing: -1 },
+  mark: { width: 52, height: 52 },
   tabs: { flexDirection: 'row', gap: Spacing.four, borderBottomWidth: 1 },
   tab: { paddingVertical: Spacing.two, borderBottomWidth: 2, borderBottomColor: 'transparent', marginBottom: -1 },
   role: { gap: Spacing.two },

@@ -21,7 +21,7 @@ export async function exportFile(format: ExportFormat, filter: ExportFilter = {}
   const dir = new Directory(Paths.cache, 'exports');
   dir.create({ idempotent: true });
   // Назву файлу дає сервер, тож завантажуємо під сталою і прибираємо стару копію
-  const target = new File(dir, `my-rent-${filter.period ?? 'all'}.${format}`);
+  const target = new File(dir, `kolo-${filter.period ?? 'all'}.${format}`);
   if (target.exists) target.delete();
 
   const task = File.createDownloadTask(`${BASE_URL}/export/transactions.${format}${query ? `?${query}` : ''}`, target, {

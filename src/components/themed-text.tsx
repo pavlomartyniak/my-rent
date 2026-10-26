@@ -21,6 +21,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 40, fontWeight: 700, lineHeight: 46, letterSpacing: -0.8 },
   subtitle: { fontSize: 30, lineHeight: 36, fontWeight: 700, letterSpacing: -0.6 },
   link: { lineHeight: 30, fontSize: 14 },
-  linkPrimary: { lineHeight: 30, fontSize: 14, color: '#4F46E5' },
+  linkPrimary: { lineHeight: 30, fontSize: 14, color: '#3D39CC' },
   code: { fontFamily: Fonts.mono, fontWeight: Platform.select({ android: 700 }) ?? 500, fontSize: 12 },
 });
