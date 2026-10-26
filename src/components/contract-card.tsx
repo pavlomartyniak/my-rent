@@ -27,7 +27,7 @@ export function ContractCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
   if (awaiting) {
     const ready = c.signing.state === 'open' && !c.mySigned;
     return (
-      <View style={[styles.box, ready ? { backgroundColor: theme.positiveSoft, borderColor: theme.positive } : { backgroundColor: theme.accentSoft, borderColor: theme.accent }]}>
+      <View style={[styles.box, ready ? { backgroundColor: theme.positiveSoft, borderColor: 'transparent' } : { backgroundColor: theme.accentSoft, borderColor: 'transparent' }]}>
         <ThemedText type="smallBold" themeColor={ready ? 'positive' : 'accent'}>
           {c.mySigned ? `Ви підписали. Чекаємо підпису: ${other}` : ready ? 'Час підписати договір' : 'Договір сформовано'}
         </ThemedText>
@@ -44,7 +44,7 @@ export function ContractCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
   }
 
   return (
-    <View style={[styles.box, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+    <View style={[styles.box, { backgroundColor: theme.backgroundSelected, borderColor: 'transparent' }]}>
       <ThemedText type="smallBold" themeColor={deal.status === 'terminated' ? 'textSecondary' : 'positive'}>
         {deal.status === 'terminated' ? 'Договір' : '✓ Договір підписано обома сторонами'}
       </ThemedText>
@@ -58,5 +58,5 @@ export function ContractCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
 }
 
 const styles = StyleSheet.create({
-  box: { gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md, borderWidth: 1 },
+  box: { gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md, borderWidth: 0 },
 });

@@ -2,6 +2,7 @@ import { Link, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { formatDate } from '@/lib/date';
 import { contactActions } from '@/lib/contact-actions';
 import { dealStage, type DealOverview, type DealView } from '@/lib/deals';
@@ -34,27 +35,41 @@ export function ActiveDealCard({ deal, month, overview }: Props) {
   const add = (type: 'income' | 'expense') => router.push({ pathname: '/transaction/new', params: { dealId: deal.id, type } });
 
   const balance = overview?.rentBalance ?? 0;
-  const balanceText = !overview ? '—' : balance > 0 ? `Борг ${formatMoney(balance)}` : balance < 0 ? `Переплата ${formatMoney(-balance)}` : 'Все сплачено';
+  const balanceText = !overview ? '—' : balance > 0 ? `Борг ${formatMoney(balance)}` : balance < 0 ? `Наперед ${formatMoney(-balance)}` : 'Все сплачено';
+
+  const theme = useTheme();
+  const progress = overview && overview.totalDays > 0 ? Math.min(1, overview.elapsedDays / overview.totalDays) : 0;
 
   return (
-    <Card>
+    <Card style={styles.card}>
       <Link href={{ pathname: '/deals/[id]', params: { id: deal.id } }} asChild>
         <Pressable accessibilityRole="button" style={styles.top}>
-          <CarPhoto uri={deal.photoUri} style={styles.thumb} iconSize={26} />
-          <View style={styles.flex}>
-            <ThemedText type="default" style={styles.bold} numberOfLines={1}>
-              {deal.title}
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-              {formatDate(deal.startDate)} – {formatDate(deal.endDate)}
-            </ThemedText>
+          <View>
+            <CarPhoto uri={deal.photoUri} style={styles.photo} iconSize={40} />
+            <View style={styles.badge}>
+              <StatusBadge status={stage} />
+            </View>
+          </View>
+          <View style={styles.titleRow}>
+            <View style={styles.flex}>
+              <ThemedText type="default" style={styles.title} numberOfLines={1}>
+                {deal.title}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                {formatDate(deal.startDate)} – {formatDate(deal.endDate)}
+              </ThemedText>
+            </View>
             {stage === 'active' && left !== undefined ? (
               <ThemedText type="smallBold" themeColor="accent">
-                Залишилось {left} {plural(left, 'доба', 'доби', 'діб')}
+                ще {left} {plural(left, 'доба', 'доби', 'діб')}
               </ThemedText>
             ) : null}
           </View>
-          <StatusBadge status={stage} />
+          {stage === 'active' && overview ? (
+            <View style={[styles.track, { backgroundColor: theme.backgroundSelected }]}>
+              <View style={[styles.fill, { backgroundColor: theme.accent, width: `${Math.round(progress * 100)}%` }]} />
+            </View>
+          ) : null}
         </Pressable>
       </Link>
 
@@ -65,29 +80,29 @@ export function ActiveDealCard({ deal, month, overview }: Props) {
         </>
       ) : (
         <>
-      <View style={styles.stats}>
-        <View style={styles.stat}>
-          <ThemedText type="small" themeColor="textSecondary">
-            Прибуток за місяць
-          </ThemedText>
-          <ThemedText type="default" style={styles.bold} themeColor={!month || month.profit >= 0 ? 'positive' : 'negative'}>
-            {formatMoney(month?.profit ?? 0)}
-          </ThemedText>
-        </View>
-        <View style={styles.stat}>
-          <ThemedText type="small" themeColor="textSecondary">
-            Платежі власнику
-          </ThemedText>
-          <ThemedText type="default" style={styles.bold} themeColor={balance > 0 ? 'negative' : 'positive'} numberOfLines={1} adjustsFontSizeToFit>
-            {balanceText}
-          </ThemedText>
-        </View>
-      </View>
+          <View style={styles.stats}>
+            <View style={[styles.stat, { backgroundColor: theme.backgroundSelected }]}>
+              <ThemedText type="small" themeColor="textSecondary">
+                За місяць
+              </ThemedText>
+              <ThemedText type="default" style={styles.bold} themeColor={!month || month.profit >= 0 ? 'positive' : 'negative'}>
+                {formatMoney(month?.profit ?? 0)}
+              </ThemedText>
+            </View>
+            <View style={[styles.stat, { backgroundColor: theme.backgroundSelected }]}>
+              <ThemedText type="small" themeColor="textSecondary">
+                Оренда
+              </ThemedText>
+              <ThemedText type="default" style={styles.bold} themeColor={balance > 0 ? 'negative' : 'positive'} numberOfLines={1} adjustsFontSizeToFit>
+                {balanceText}
+              </ThemedText>
+            </View>
+          </View>
 
-      <View style={styles.actions}>
-        <Button title="Заробіток" icon="add-circle-outline" variant="positive" style={styles.flex} onPress={() => add('income')} />
-        <Button title="Витрата" icon="remove-circle-outline" variant="secondary" style={styles.flex} onPress={() => add('expense')} />
-      </View>
+          <View style={styles.actions}>
+            <Button title="Заробіток" icon="add" variant="positive" style={styles.flex} onPress={() => add('income')} />
+            <Button title="Витрата" icon="remove" variant="secondary" style={styles.flex} onPress={() => add('expense')} />
+          </View>
           <ContactChips actions={contactActions({ chat: { dealId: deal.id } })} />
         </>
       )}
@@ -96,11 +111,17 @@ export function ActiveDealCard({ deal, month, overview }: Props) {
 }
 
 const styles = StyleSheet.create({
-  top: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  thumb: { width: 64, height: 64, borderRadius: Radius.md },
+  card: { padding: Spacing.two, gap: Spacing.three },
+  top: { gap: Spacing.two },
+  photo: { width: '100%', aspectRatio: 16 / 9, borderRadius: Radius.lg - 4 },
+  badge: { position: 'absolute', top: 10, left: 10 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingHorizontal: Spacing.two },
+  track: { height: 6, borderRadius: 3, marginHorizontal: Spacing.two, overflow: 'hidden' },
+  fill: { height: 6, borderRadius: 3 },
   flex: { flex: 1 },
-  bold: { fontWeight: 700 },
-  stats: { flexDirection: 'row', gap: Spacing.three },
-  stat: { flex: 1, gap: 2 },
-  actions: { flexDirection: 'row', gap: Spacing.two },
+  title: { fontWeight: 600, fontSize: 18 },
+  bold: { fontWeight: 600 },
+  stats: { flexDirection: 'row', gap: Spacing.two, paddingHorizontal: Spacing.two },
+  stat: { flex: 1, gap: 2, borderRadius: Radius.md, padding: Spacing.three },
+  actions: { flexDirection: 'row', gap: Spacing.two, paddingHorizontal: Spacing.two },
 });

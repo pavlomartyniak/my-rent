@@ -14,6 +14,7 @@ import { ContactChips } from './contact-chips';
 import { StatusBadge } from './status-badge';
 import { ThemedText } from './themed-text';
 import { Card } from './ui/card';
+import { InfoRow, InfoRows } from './ui/info-rows';
 
 type Props = {
   offer: OfferView;
@@ -41,19 +42,19 @@ export function OfferCard({ offer: o, viewer, children }: Props) {
             {o.car.title}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            {formatKm(o.car.mileage)}
+            {[o.car.fuel, formatKm(o.car.mileage)].filter(Boolean).join(' · ')}
           </ThemedText>
         </View>
         <StatusBadge status={o.dealStage ?? o.status} />
       </View>
 
-      <View style={styles.rows}>
-        {viewer === 'owner' ? <Row label="Заявка" value={`${wantedTitle(o.wanted)} · ${o.wanted.city}`} /> : null}
-        <Row label="Дати" value={`${formatDate(o.wanted.startDate)} – ${formatDate(o.wanted.endDate)}`} />
-        {o.paymentPlan === 'monthly' ? <Row label="Оплата" value="щомісяця" /> : null}
-        <Row label={`${o.days} ${plural(o.days, 'доба', 'доби', 'діб')} × ${formatMoney(o.pricePerDay)}`} value={formatMoney(o.totalPrice)} bold />
-        <Row label={who} value={o.counterpart.name} />
-      </View>
+      <InfoRows>
+        {viewer === 'owner' ? <InfoRow label="Заявка" value={`${wantedTitle(o.wanted)} · ${o.wanted.city}`} /> : null}
+        <InfoRow label="Дати" value={`${formatDate(o.wanted.startDate)} – ${formatDate(o.wanted.endDate)}`} />
+        {o.paymentPlan === 'monthly' ? <InfoRow label="Оплата" value="щомісяця" /> : null}
+        <InfoRow label={who} value={o.counterpart.name} />
+        <InfoRow label={`${o.days} ${plural(o.days, 'доба', 'доби', 'діб')} × ${formatMoney(o.pricePerDay)}`} value={formatMoney(o.totalPrice)} strong />
+      </InfoRows>
 
       {o.message ? (
         <ThemedText type="small" themeColor="textSecondary" style={styles.message}>
@@ -78,24 +79,11 @@ export function OfferCard({ offer: o, viewer, children }: Props) {
   );
 }
 
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
-  return (
-    <View style={styles.row}>
-      <ThemedText type="small" themeColor="textSecondary">
-        {label}
-      </ThemedText>
-      <ThemedText type="small" style={[styles.value, bold && styles.bold]}>
-        {value}
-      </ThemedText>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  thumb: { width: 56, height: 56, borderRadius: Radius.md },
+  thumb: { width: 64, height: 64, borderRadius: Radius.md },
   flex: { flex: 1 },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600 },
   rows: { gap: Spacing.one, marginTop: Spacing.one },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.three },
   value: { flexShrink: 1, fontWeight: 600, textAlign: 'right' },

@@ -25,7 +25,7 @@ export default function MyRequestsScreen() {
   return (
     <Screen tabs refreshControl={<RefreshControl refreshing={false} onRefresh={invalidate} />}>
       <ScreenTitle>Мої запити</ScreenTitle>
-      <Segmented options={SECTIONS} value={section} onChange={(s) => setPick({ param: params.tab, section: s })} badges={{ 'Шукаю авто': offers }} />
+      <Segmented scroll options={SECTIONS} value={section} onChange={(s) => setPick({ param: params.tab, section: s })} badges={{ 'Шукаю авто': offers }} />
 
       {section === 'Запити на авто' ? <RenterRentals /> : <RenterWanted />}
     </Screen>

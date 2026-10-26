@@ -7,7 +7,7 @@ import { lookupBrandId } from '@/lib/catalog';
 import { openCatalogPicker } from '@/lib/catalog-picker';
 import { isValidISODate, todayISO } from '@/lib/date';
 import { useFleet } from '@/store/fleet';
-import { CAR_STATUSES, MANUAL_CAR_STATUSES, type Car } from '@/types';
+import { CAR_STATUSES, FUEL_TYPES, MANUAL_CAR_STATUSES, type Car, type FuelType } from '@/types';
 
 import { DeleteCar } from './delete-car';
 import { Hint } from './hint';
@@ -48,6 +48,7 @@ export function CarForm({ car }: { car?: Car }) {
   const [price, setPrice] = useState(car ? String(car.price) : '');
   const [vin, setVin] = useState(car?.vin ?? '');
   const [mileage, setMileage] = useState(car ? String(car.mileage) : '');
+  const [fuel, setFuel] = useState<FuelType | ''>(car?.fuel ?? '');
   const [driver, setDriver] = useState(car?.driver ?? '');
   const [rentStart, setRentStart] = useState(car?.rentStart ?? todayISO());
   // Галерея; для старих авто з одним фото беремо його
@@ -127,6 +128,7 @@ export function CarForm({ car }: { car?: Car }) {
       price: Number(price),
       vin: vin.trim().toUpperCase(),
       mileage: Math.round(Number(mileage)) || 0,
+      fuel,
       rentStart: isValidISODate(rentStart) ? rentStart : todayISO(),
       status,
       // Для авто, яке не в оренді, водій не зберігається
@@ -164,10 +166,14 @@ export function CarForm({ car }: { car?: Car }) {
       <NumberField label="Вартість авто, ₴" value={price} onChangeValue={setPrice} error={err('price')} maxDigits={10} placeholder="650 000" />
 
       <NumberField label="Пробіг, км" value={mileage} onChangeValue={setMileage} maxDigits={7} placeholder="120 000" />
+      <View style={styles.group}>
+        <ThemedText type="smallBold">Тип палива</ThemedText>
+        <Segmented scroll options={FUEL_TYPES} value={fuel as FuelType} onChange={(f) => setFuel(f === fuel ? '' : f)} />
+      </View>
       <Field label="VIN" value={vin} onChangeText={setVin} error={err('vin')} autoCapitalize="characters" autoCorrect={false} maxLength={17} placeholder="17 символів" />
 
       <View style={styles.group}>
-        <ThemedText type="small" themeColor="textSecondary">
+        <ThemedText type="smallBold">
           Статус
         </ThemedText>
         <Segmented options={status === 'Заброньоване' ? CAR_STATUSES : MANUAL_CAR_STATUSES} value={status} onChange={setStatus} />

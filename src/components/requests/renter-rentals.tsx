@@ -55,7 +55,7 @@ export function RenterRentals() {
           onAction={() => router.navigate('/renter/search')}
         />
       ) : (
-        <View style={{ gap: Spacing.two }}>
+        <View style={{ gap: Spacing.three }}>
           {open.map((r) => (
             <RentalCard key={r.id} rental={r} viewer="renter">
               {r.status === 'pending' ? <Button title="Скасувати запит" variant="danger" disabled={busy === r.id} onPress={() => confirmCancel(r)} /> : null}

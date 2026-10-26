@@ -20,8 +20,8 @@ export function ChatButton() {
       accessibilityLabel={unread > 0 ? `Повідомлення, непрочитаних: ${unread}` : 'Повідомлення'}
       hitSlop={8}
       onPress={() => router.push('/chats')}
-      style={({ pressed }) => [styles.button, { backgroundColor: theme.accentSoft, borderColor: theme.accent }, pressed && styles.pressed]}>
-      <Icon name="chatbubbles" size={22} color="accent" />
+      style={({ pressed }) => [styles.button, { backgroundColor: theme.backgroundElement, borderColor: theme.border }, pressed && styles.pressed]}>
+      <Icon name="chatbubble-ellipses-outline" size={22} color="text" />
       {unread > 0 ? (
         <View style={[styles.badge, { backgroundColor: theme.negative }]}>
           <ThemedText style={styles.badgeText}>{unread > 99 ? '99+' : unread}</ThemedText>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
-import { Segmented } from '@/components/ui/segmented';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { isValidPhone } from '@/lib/profile';
@@ -56,26 +55,62 @@ export default function LoginScreen() {
   }
 
   return (
-    <Screen contentContainerStyle={{ paddingTop: insets.top + Spacing.five }}>
+    <Screen contentContainerStyle={{ paddingTop: insets.top + Spacing.four }} gap={Spacing.three}>
       <View style={styles.header}>
-        <View style={[styles.badge, { backgroundColor: theme.accentSoft }]}>
-          <Icon name="car-sport" size={40} color="accent" />
+        <View style={[styles.badge, { backgroundColor: theme.accent }]}>
+          <Icon name="car-sport" size={26} color="#FFFFFF" />
         </View>
-        <ThemedText type="subtitle">my-rent</ThemedText>
-        <ThemedText type="default" themeColor="textSecondary" style={styles.center}>
-          Облік авто в оренді: доходи, витрати, прибуток і нагадування
+        <ThemedText type="subtitle" style={styles.hero}>
+          {signingUp ? 'Створіть акаунт' : 'З поверненням'}
+        </ThemedText>
+        <ThemedText type="default" themeColor="textSecondary">
+          {signingUp ? 'Облік авто або пошук оренди — оберіть, що вам потрібно.' : 'Увійдіть, щоб побачити свої авто, оренди й повідомлення.'}
         </ThemedText>
       </View>
 
-      <Segmented options={MODES} value={mode} onChange={(m) => { setMode(m); setError(null); }} />
+      <View style={[styles.tabs, { borderBottomColor: theme.border }]}>
+        {MODES.map((m) => (
+          <Pressable
+            key={m}
+            accessibilityRole="button"
+            accessibilityState={{ selected: m === mode }}
+            onPress={() => {
+              setMode(m);
+              setError(null);
+            }}
+            style={[styles.tab, m === mode && { borderBottomColor: theme.ink }]}>
+            <ThemedText type="default" style={{ fontWeight: 600 }} themeColor={m === mode ? 'text' : 'textSecondary'}>
+              {m}
+            </ThemedText>
+          </Pressable>
+        ))}
+      </View>
 
       {signingUp ? (
         <>
           <View style={styles.role}>
-            <ThemedText type="small" themeColor="textSecondary">
-              Хто ви? Тип акаунта потім змінити не можна
-            </ThemedText>
-            <Segmented options={ROLES} value={roleLabel} onChange={setRoleLabel} />
+            <ThemedText type="smallBold">Хто ви? Тип акаунта потім змінити не можна</ThemedText>
+            <View style={styles.roles}>
+              {ROLES.map((r) => {
+                const on = r === roleLabel;
+                return (
+                  <Pressable
+                    key={r}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: on }}
+                    onPress={() => setRoleLabel(r)}
+                    style={[styles.roleCard, { borderColor: on ? theme.ink : theme.border, borderWidth: on ? 2 : 1, backgroundColor: on ? theme.backgroundSelected : theme.backgroundElement }]}>
+                    <Icon name={r === ROLES[0] ? 'key-outline' : 'search-outline'} size={24} color="text" />
+                    <ThemedText type="default" style={{ fontWeight: 600 }}>
+                      {r === ROLES[0] ? 'Я власник авто' : 'Шукаю авто'}
+                    </ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {r === ROLES[0] ? 'Облік, оренди й прибуток' : 'Пошук і оренда'}
+                    </ThemedText>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
           <Field label="Ім’я" value={firstName} onChangeText={setFirstName} autoCapitalize="words" autoComplete="given-name" textContentType="givenName" maxLength={50} placeholder="Павло" />
           <Field label="Прізвище" value={lastName} onChangeText={setLastName} autoCapitalize="words" autoComplete="family-name" textContentType="familyName" maxLength={50} placeholder="Мартиняк" />
@@ -133,8 +168,13 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { alignItems: 'center', gap: Spacing.two, marginBottom: Spacing.two },
-  role: { gap: Spacing.one },
-  badge: { width: 80, height: 80, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
+  header: { gap: Spacing.two, marginBottom: Spacing.two },
+  hero: { marginTop: Spacing.two },
+  badge: { width: 52, height: 52, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  tabs: { flexDirection: 'row', gap: Spacing.four, borderBottomWidth: 1 },
+  tab: { paddingVertical: Spacing.two, borderBottomWidth: 2, borderBottomColor: 'transparent', marginBottom: -1 },
+  role: { gap: Spacing.two },
+  roles: { flexDirection: 'row', gap: Spacing.two },
+  roleCard: { flex: 1, borderRadius: Radius.lg, padding: Spacing.three, gap: 4 },
   center: { textAlign: 'center' },
 });

@@ -71,6 +71,7 @@ export class OffersService {
         model: car.model,
         year: car.year,
         mileage: car.mileage,
+        fuel: car.fuel ?? '',
         photoUri: car.photoUri,
         photos: (car.photos ?? []).filter((u) => u.startsWith('https://')),
       },

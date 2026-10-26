@@ -60,7 +60,7 @@ export function OwnerBoard() {
           <ThemedText type="small" themeColor="textSecondary">
             Знайдено {data.total} {plural(data.total, 'заявка', 'заявки', 'заявок')}
           </ThemedText>
-          <View style={{ gap: Spacing.two }}>
+          <View style={{ gap: Spacing.three }}>
             {data.items.map((w) => (
               <WantedCard key={w.id} wanted={w} viewer="owner">
                 {w.myOffer ? (

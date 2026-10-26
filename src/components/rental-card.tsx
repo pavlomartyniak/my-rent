@@ -13,6 +13,7 @@ import { ContactChips } from './contact-chips';
 import { StatusBadge } from './status-badge';
 import { ThemedText } from './themed-text';
 import { Card } from './ui/card';
+import { InfoRow, InfoRows } from './ui/info-rows';
 
 type Props = {
   rental: RentalView;
@@ -42,12 +43,12 @@ export function RentalCard({ rental: r, viewer, children }: Props) {
         <StatusBadge status={r.dealStage ?? r.status} />
       </View>
 
-      <View style={styles.rows}>
-        <Row label="Дати" value={`${formatDate(r.startDate)} – ${formatDate(r.endDate)}`} />
-        {r.paymentPlan === 'monthly' ? <Row label="Оплата" value="щомісяця" /> : null}
-        <Row label={`${r.days} ${plural(r.days, 'доба', 'доби', 'діб')} × ${formatMoney(r.car.pricePerDay)}`} value={formatMoney(r.totalPrice)} bold />
-        <Row label={who} value={r.counterpart.name} />
-      </View>
+      <InfoRows>
+        <InfoRow label="Дати" value={`${formatDate(r.startDate)} – ${formatDate(r.endDate)}`} />
+        {r.paymentPlan === 'monthly' ? <InfoRow label="Оплата" value="щомісяця" /> : null}
+        <InfoRow label={who} value={r.counterpart.name} />
+        <InfoRow label={`${r.days} ${plural(r.days, 'доба', 'доби', 'діб')} × ${formatMoney(r.car.pricePerDay)}`} value={formatMoney(r.totalPrice)} strong />
+      </InfoRows>
 
       {r.message ? (
         <ThemedText type="small" themeColor="textSecondary" style={styles.message}>
@@ -73,24 +74,11 @@ export function RentalCard({ rental: r, viewer, children }: Props) {
   );
 }
 
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
-  return (
-    <View style={styles.row}>
-      <ThemedText type="small" themeColor="textSecondary">
-        {label}
-      </ThemedText>
-      <ThemedText type="small" style={[styles.value, bold && styles.bold]}>
-        {value}
-      </ThemedText>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  thumb: { width: 56, height: 56, borderRadius: Radius.md },
+  thumb: { width: 64, height: 64, borderRadius: Radius.md },
   flex: { flex: 1 },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600 },
   rows: { gap: Spacing.one, marginTop: Spacing.one },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.three },
   value: { flexShrink: 1, fontWeight: 600, textAlign: 'right' },

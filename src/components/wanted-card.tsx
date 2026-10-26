@@ -10,6 +10,7 @@ import { wantedTitle, type WantedView } from '@/lib/wanted';
 import { StatusBadge } from './status-badge';
 import { ThemedText } from './themed-text';
 import { Card } from './ui/card';
+import { InfoRow, InfoRows } from './ui/info-rows';
 import { Icon } from './ui/icon';
 
 type Props = {
@@ -27,7 +28,7 @@ export function WantedCard({ wanted: w, viewer, children }: Props) {
   const fresh = viewer === 'renter' && w.status === 'open' && (offers?.pending ?? 0) > 0;
 
   return (
-    <Card style={fresh ? { borderColor: theme.accent, borderWidth: 2 } : undefined}>
+    <Card style={fresh ? { borderColor: theme.accent, borderWidth: 1.5 } : undefined}>
       <View style={styles.head}>
         <View style={styles.flex}>
           <ThemedText type="default" style={styles.bold}>
@@ -40,11 +41,11 @@ export function WantedCard({ wanted: w, viewer, children }: Props) {
         {viewer === 'renter' ? <StatusBadge status={w.status === 'fulfilled' && (w.dealStage === 'terminated' || w.dealStage === 'finished') ? w.dealStage : w.status} /> : null}
       </View>
 
-      <View style={styles.rows}>
-        <Row label="Дати" value={`${formatDate(w.startDate)} – ${formatDate(w.endDate)} · ${w.days} ${plural(w.days, 'доба', 'доби', 'діб')}`} />
-        <Row label="Бюджет" value={w.maxPricePerDay ? `до ${formatMoney(w.maxPricePerDay)} за добу` : 'не вказано'} />
-        {viewer === 'owner' && w.renter ? <Row label="Орендар" value={w.renter} /> : null}
-      </View>
+      <InfoRows>
+        <InfoRow label="Дати" value={`${formatDate(w.startDate)} – ${formatDate(w.endDate)} · ${w.days} ${plural(w.days, 'доба', 'доби', 'діб')}`} />
+        <InfoRow label="Бюджет" value={w.maxPricePerDay ? `до ${formatMoney(w.maxPricePerDay)} за добу` : 'не вказано'} />
+        {viewer === 'owner' && w.renter ? <InfoRow label="Орендар" value={w.renter} /> : null}
+      </InfoRows>
 
       {w.notes ? (
         <ThemedText type="small" themeColor="textSecondary" style={styles.notes}>
@@ -92,28 +93,15 @@ export function WantedCard({ wanted: w, viewer, children }: Props) {
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.row}>
-      <ThemedText type="small" themeColor="textSecondary">
-        {label}
-      </ThemedText>
-      <ThemedText type="small" style={styles.value}>
-        {value}
-      </ThemedText>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   flex: { flex: 1 },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600, fontSize: 18 },
   rows: { gap: Spacing.one, marginTop: Spacing.one },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.three },
   value: { flexShrink: 1, fontWeight: 600, textAlign: 'right' },
   notes: { fontStyle: 'italic' },
   offers: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
-  fresh: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md },
+  fresh: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.pill, paddingHorizontal: Spacing.four },
   freshText: { flex: 1, color: '#FFFFFF' },
 });

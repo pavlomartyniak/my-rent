@@ -2,6 +2,9 @@
 export const CAR_STATUSES = ['В оренді', 'Вільне', 'На сервісі', 'Заброньоване'] as const;
 /** Статуси, які власник може вибрати вручну */
 export const MANUAL_CAR_STATUSES = ['В оренді', 'Вільне', 'На сервісі'] as const;
+/** Тип палива авто */
+export const FUEL_TYPES = ['Бензин', 'Дизель', 'Газ', 'Гібрид', 'Електро'] as const;
+export type FuelType = (typeof FUEL_TYPES)[number];
 export type CarStatus = (typeof CAR_STATUSES)[number];
 
 export type Car = {
@@ -11,6 +14,8 @@ export type Car = {
   year: number;
   vin: string;
   mileage: number;
+  /** Тип палива; порожній — не вказано */
+  fuel?: FuelType | '';
   /** ISO date, YYYY-MM-DD */
   rentStart: string;
   /** Вартість авто, база для ROI */

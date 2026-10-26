@@ -14,8 +14,8 @@ export function EmptyState({ icon, title, text, action, onAction }: Props) {
 
   return (
     <View style={styles.wrap}>
-      <View style={[styles.badge, { backgroundColor: theme.accentSoft }]}>
-        <Icon name={icon} size={28} color="accent" />
+      <View style={[styles.badge, { backgroundColor: theme.backgroundSelected }]}>
+        <Icon name={icon} size={28} color="text" />
       </View>
       <ThemedText type="default" style={styles.title}>
         {title}
@@ -32,8 +32,8 @@ export function EmptyState({ icon, title, text, action, onAction }: Props) {
 
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.five },
-  badge: { width: 64, height: 64, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  title: { fontWeight: 700 },
+  badge: { width: 72, height: 72, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
+  title: { fontWeight: 700, fontSize: 18 },
   center: { textAlign: 'center' },
   button: { alignSelf: 'stretch', marginTop: Spacing.two },
 });

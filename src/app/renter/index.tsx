@@ -49,11 +49,11 @@ export default function RenterHomeScreen() {
               return <ActiveDealCard key={d.id} deal={d} month={row?.period} overview={row?.overview} />;
             })}
           </View>
-          <Button title="Знайти ще авто" icon="search" variant="secondary" onPress={() => router.navigate('/renter/search')} />
+          <Button title="Знайти ще авто" icon="search" variant="soft" onPress={() => router.navigate('/renter/search')} />
         </>
       )}
 
-      {hasPast ? <Button title="Усі оренди й архів" icon="albums-outline" variant="secondary" onPress={() => router.push('/rentals/archive')} /> : null}
+      {hasPast ? <Button title="Усі оренди й архів" icon="albums-outline" variant="soft" onPress={() => router.push('/rentals/archive')} /> : null}
     </Screen>
   );
 }

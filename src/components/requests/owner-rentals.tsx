@@ -76,7 +76,7 @@ export function OwnerRentals() {
               Очікують вашої відповіді: {pending}
             </ThemedText>
           ) : null}
-          <View style={{ gap: Spacing.two }}>
+          <View style={{ gap: Spacing.three }}>
             {sorted.map((r) => (
               <RentalCard key={r.id} rental={r} viewer="owner">
                 {r.status === 'pending' ? (

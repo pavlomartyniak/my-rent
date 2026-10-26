@@ -49,7 +49,7 @@ function Routes() {
   return (
     <>
       <AnimatedSplashOverlay />
-      <Stack screenOptions={{ headerShadowVisible: false }}>
+      <Stack screenOptions={{ headerShadowVisible: false, headerTitleStyle: { fontWeight: '600', fontSize: 17 }, headerLargeTitleShadowVisible: false }}>
         <Stack.Protected guard={!authed}>
           <Stack.Screen name="login" options={{ headerShown: false }} />
         </Stack.Protected>

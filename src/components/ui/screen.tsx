@@ -11,7 +11,7 @@ type Props = ScrollViewProps & {
   gap?: number;
 };
 
-export function Screen({ tabs, gap = Spacing.three, contentContainerStyle, children, ...rest }: Props) {
+export function Screen({ tabs, gap = 20, contentContainerStyle, children, ...rest }: Props) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -39,6 +39,6 @@ export function Screen({ tabs, gap = Spacing.three, contentContainerStyle, child
 }
 
 const styles = StyleSheet.create({
-  content: { alignItems: 'center', paddingHorizontal: Spacing.three },
+  content: { alignItems: 'center', paddingHorizontal: 20 },
   inner: { width: '100%', maxWidth: MaxContentWidth },
 });

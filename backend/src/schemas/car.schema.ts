@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { type HydratedDocument, Schema as MongooseSchema, type Types } from 'mongoose';
 
-import { CAR_STATUSES } from '../common/constants';
+import { CAR_STATUSES, FUEL_TYPES } from '../common/constants';
 import { jsonOptions } from '../common/json-options';
 
 /** Оголошення про оренду, видиме орендарям, поки published=true і авто вільне */
@@ -47,6 +47,9 @@ export class Car {
 
   @Prop({ default: 0 })
   mileage: number;
+
+  @Prop({ type: String, enum: [...FUEL_TYPES, ''], default: '' })
+  fuel: string;
 
   /** YYYY-MM-DD */
   @Prop({ required: true })

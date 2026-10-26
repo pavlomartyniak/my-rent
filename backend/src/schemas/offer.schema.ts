@@ -43,11 +43,11 @@ export class Offer {
 
   /** Дані авто на момент пропозиції: орендар бачить лише їх, а не картку авто власника */
   @Prop({
-    type: { title: String, brand: String, model: String, year: Number, mileage: Number, photoUri: String, photos: [String] },
+    type: { title: String, brand: String, model: String, year: Number, mileage: Number, fuel: String, photoUri: String, photos: [String] },
     _id: false,
     required: true,
   })
-  car: { title: string; brand: string; model: string; year: number; mileage: number; photoUri?: string; photos: string[] };
+  car: { title: string; brand: string; model: string; year: number; mileage: number; fuel?: string; photoUri?: string; photos: string[] };
 
   createdAt: Date;
 }

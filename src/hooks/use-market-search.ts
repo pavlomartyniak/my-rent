@@ -9,7 +9,9 @@ type Loaded = { key: string; page: number; pages: number; total: number; items: 
  * Пошук оголошень із відкладеним запитом (300 мс після останнього символу) і підвантаженням сторінок.
  * Зміна фільтрів скидає список на першу сторінку.
  */
-export function useMarketSearch(city: string | undefined, regionId: number | undefined, minPrice: string, maxPrice: string) {
+export type MarketFilters = { brand?: string; model?: string; fuel?: string };
+
+export function useMarketSearch(city: string | undefined, regionId: number | undefined, minPrice: string, maxPrice: string, extra: MarketFilters = {}) {
   const [debounced, setDebounced] = useState({ minPrice: '', maxPrice: '' });
   const [attempt, setAttempt] = useState(0);
   const [want, setWant] = useState({ key: '', page: 1 });
@@ -20,7 +22,7 @@ export function useMarketSearch(city: string | undefined, regionId: number | und
     return () => clearTimeout(timer);
   }, [minPrice, maxPrice]);
 
-  const key = `${city ?? ''}|${regionId ?? ''}|${debounced.minPrice}|${debounced.maxPrice}|${attempt}`;
+  const key = `${city ?? ''}|${regionId ?? ''}|${debounced.minPrice}|${debounced.maxPrice}|${extra.brand ?? ''}|${extra.model ?? ''}|${extra.fuel ?? ''}|${attempt}`;
   const page = want.key === key ? want.page : 1;
 
   useEffect(() => {
@@ -28,6 +30,9 @@ export function useMarketSearch(city: string | undefined, regionId: number | und
     const params = new URLSearchParams({ page: String(page), limit: '10' });
     if (city) params.set('city', city);
     else if (regionId !== undefined) params.set('regionId', String(regionId));
+    if (extra.brand) params.set('brand', extra.brand);
+    if (extra.model) params.set('model', extra.model);
+    if (extra.fuel) params.set('fuel', extra.fuel);
     if (Number(debounced.minPrice) > 0) params.set('minPrice', debounced.minPrice);
     if (Number(debounced.maxPrice) > 0) params.set('maxPrice', debounced.maxPrice);
 
@@ -49,6 +54,7 @@ export function useMarketSearch(city: string | undefined, regionId: number | und
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debounced, city, regionId, page, attempt, key]);
 
   const current = loaded?.key === key ? loaded : null;

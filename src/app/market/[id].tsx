@@ -42,7 +42,7 @@ export default function MarketCarScreen() {
           {car.brand} {car.model}
         </ThemedText>
         <ThemedText type="default" themeColor="textSecondary">
-          {car.year} · {formatKm(car.mileage)} · {car.city}
+          {[car.year, car.fuel, formatKm(car.mileage), car.city].filter(Boolean).join(' · ')}
         </ThemedText>
       </View>
 

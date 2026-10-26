@@ -6,6 +6,8 @@ export type MarketCar = {
   model: string;
   year: number;
   mileage: number;
+  /** Тип палива; порожній — не вказано */
+  fuel: string;
   photoUri: string | null;
   /** Усі фото оголошення (https), обкладинка перша */
   photos: string[];

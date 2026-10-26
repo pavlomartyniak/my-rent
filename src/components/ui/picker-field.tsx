@@ -24,7 +24,7 @@ export function PickerField({ label, value, placeholder, onPress, error, hint, d
 
   return (
     <View style={styles.wrap}>
-      <ThemedText type="small" themeColor="textSecondary">
+      <ThemedText type="smallBold" themeColor="text">
         {label}
       </ThemedText>
       <Pressable
@@ -41,7 +41,7 @@ export function PickerField({ label, value, placeholder, onPress, error, hint, d
         <ThemedText type="default" themeColor={value ? 'text' : 'textSecondary'} style={styles.text} numberOfLines={1}>
           {value || placeholder}
         </ThemedText>
-        <Icon name="chevron-down" size={20} color="accent" />
+        <Icon name="chevron-down" size={20} color="textSecondary" />
       </Pressable>
       {error ? (
         <ThemedText type="small" themeColor="negative">
@@ -59,7 +59,7 @@ export function PickerField({ label, value, placeholder, onPress, error, hint, d
 const styles = StyleSheet.create({
   wrap: { gap: Spacing.one },
   box: {
-    minHeight: 50,
+    minHeight: 54,
     borderRadius: Radius.md,
     borderWidth: 1,
     paddingHorizontal: Spacing.three,
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
   },
-  text: { flex: 1, fontWeight: 600 },
+  text: { flex: 1, fontWeight: 500 },
   pressed: { opacity: 0.7 },
   disabled: { opacity: 0.5 },
 });

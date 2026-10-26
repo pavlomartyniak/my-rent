@@ -78,7 +78,7 @@ export default function ReportScreen() {
           </Card>
 
           <SectionHeader title="Рейтинг авто" />
-          <Segmented options={CRITERIA} value={criterion} onChange={setCriterion} />
+          <Segmented scroll options={CRITERIA} value={criterion} onChange={setCriterion} />
           <Card style={styles.list}>
             {ranking.map(({ car, period, all }, i) => {
               const main =

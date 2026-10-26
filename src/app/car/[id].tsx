@@ -19,6 +19,7 @@ import type { DealView } from '@/lib/deals';
 import { HistoryList } from '@/components/history-list';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { InfoRow, InfoRows } from '@/components/ui/info-rows';
 import { EmptyState } from '@/components/ui/empty-state';
 import { IconButton } from '@/components/ui/icon-button';
 import { Screen } from '@/components/ui/screen';
@@ -84,6 +85,16 @@ export default function CarScreen() {
         </Pressable>
       )}
 
+      <View style={styles.titleBlock}>
+        <ThemedText type="subtitle" style={styles.carTitle} numberOfLines={2}>
+          {car.brand} {car.model}
+        </ThemedText>
+        <ThemedText type="default" themeColor="textSecondary">
+          {car.year} · {car.status}
+          {car.driver ? ` · ${car.driver}` : ''}
+        </ThemedText>
+      </View>
+
       {report ? (
         <>
           <SummaryCard title="Прибуток за весь час" profit={report.overview.profit} income={report.overview.income} expense={report.overview.expense} />
@@ -123,7 +134,7 @@ export default function CarScreen() {
       <Button
         title="Аналітика й окупність"
         icon="stats-chart"
-        variant="secondary"
+        variant="soft"
         onPress={() => router.push({ pathname: '/car/analytics', params: { id: car.id } })}
       />
 
@@ -163,13 +174,16 @@ export default function CarScreen() {
 
       <SectionHeader title="Про авто" />
       <Card>
+        <InfoRows>
         <InfoRow label="Рік" value={String(car.year)} />
         <InfoRow label="Статус" value={car.status} />
         {car.driver ? <InfoRow label="Водій" value={car.driver} /> : null}
+        {car.fuel ? <InfoRow label="Паливо" value={car.fuel} /> : null}
         {car.mileage ? <InfoRow label="Пробіг" value={formatKm(car.mileage)} /> : null}
         {car.vin ? <InfoRow label="VIN" value={car.vin} /> : null}
         <InfoRow label="В оренді з" value={formatDate(car.rentStart)} />
         <InfoRow label="Вартість" value={formatMoney(car.price)} />
+        </InfoRows>
       </Card>
 
       {deal ? <PaymentsCard deal={deal} as="owner" /> : null}
@@ -179,25 +193,12 @@ export default function CarScreen() {
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.infoRow}>
-      <ThemedText type="small" themeColor="textSecondary">
-        {label}
-      </ThemedText>
-      <ThemedText type="small" style={styles.infoValue} numberOfLines={1}>
-        {value}
-      </ThemedText>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   rentHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600 },
+  titleBlock: { gap: 2 },
+  carTitle: { fontSize: 28, lineHeight: 34 },
   photo: { width: '100%', aspectRatio: 16 / 9, borderRadius: Radius.lg },
   buttons: { flexDirection: 'row', gap: Spacing.two },
   flex: { flex: 1 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.three },
-  infoValue: { flexShrink: 1, fontWeight: 600 },
 });

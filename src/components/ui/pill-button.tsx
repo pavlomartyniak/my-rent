@@ -19,12 +19,12 @@ export function PillButton({ title, icon, onPress }: Props) {
       hitSlop={6}
       style={({ pressed }) => [
         styles.pill,
-        { backgroundColor: theme.accentSoft, borderColor: theme.accent },
+        { backgroundColor: theme.backgroundSelected, borderColor: 'transparent' },
         pressed && styles.pressed,
       ]}>
       <View style={styles.content}>
-        {icon ? <Icon name={icon} size={16} color="accent" /> : null}
-        <ThemedText type="smallBold" themeColor="accent">
+        {icon ? <Icon name={icon} size={16} color="text" /> : null}
+        <ThemedText type="smallBold" themeColor="text">
           {title}
         </ThemedText>
       </View>
@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
   pill: {
     minHeight: 36,
     borderRadius: Radius.pill,
-    borderWidth: 1.5,
+    borderWidth: 1,
     paddingHorizontal: Spacing.three,
     alignItems: 'center',
     justifyContent: 'center',

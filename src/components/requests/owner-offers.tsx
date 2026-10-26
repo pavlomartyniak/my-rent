@@ -48,7 +48,7 @@ export function OwnerOffers() {
       {open.length === 0 ? (
         <EmptyState icon="paper-plane-outline" title="Пропозицій ще немає" text="Відкрийте «Заявки орендарів» і запропонуйте своє вільне авто." />
       ) : (
-        <View style={{ gap: Spacing.two }}>
+        <View style={{ gap: Spacing.three }}>
           {open.map((o) => (
             <OfferCard key={o.id} offer={o} viewer="owner">
               {o.status === 'pending' ? <Button title="Відкликати пропозицію" variant="danger" disabled={busy === o.id} onPress={() => confirmWithdraw(o)} /> : null}

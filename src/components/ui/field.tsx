@@ -12,14 +12,14 @@ export function Field({ label, error, style, ...rest }: Props) {
 
   return (
     <View style={styles.wrap}>
-      <ThemedText type="small" themeColor="textSecondary">
+      <ThemedText type="smallBold" themeColor="text">
         {label}
       </ThemedText>
       <TextInput
         placeholderTextColor={theme.textSecondary}
         style={[
           styles.input,
-          { backgroundColor: theme.backgroundElement, color: theme.text, borderColor: error ? theme.negative : theme.border },
+          { backgroundColor: theme.backgroundElement, color: theme.text, borderColor: error ? theme.negative : theme.borderStrong },
           style,
         ]}
         {...rest}
@@ -36,7 +36,7 @@ export function Field({ label, error, style, ...rest }: Props) {
 const styles = StyleSheet.create({
   wrap: { gap: Spacing.one },
   input: {
-    minHeight: 50,
+    minHeight: 54,
     borderRadius: Radius.md,
     borderWidth: 1,
     paddingHorizontal: Spacing.three,

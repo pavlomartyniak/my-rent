@@ -12,8 +12,9 @@ export default function RenterTabs() {
   const { urgent: home, requests } = useAttention('renter');
 
   return (
-    <NativeTabs backgroundColor={colors.background} indicatorColor={colors.backgroundElement} // П'ять вкладок: дрібніший підпис, щоб назви не налазили одна на одну
-      labelStyle={{ default: { fontSize: 11 }, selected: { fontSize: 11, color: colors.text } }}>
+    <NativeTabs backgroundColor={colors.background}
+      tintColor={colors.accent} indicatorColor={colors.backgroundElement} // П'ять вкладок: дрібніший підпис, щоб назви не налазили одна на одну
+      labelStyle={{ default: { fontSize: 11 }, selected: { fontSize: 11, color: colors.accent } }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Головна</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />

@@ -91,7 +91,7 @@ export default function PaymentScreen() {
         {renter ? 'Після відповіді сума потрапить у ваші витрати.' : 'Після відповіді сума потрапить у ваші доходи.'} Застосунок не проводить гроші, а лише фіксує ваші відповіді. Друга сторона підтверджує свою частину окремо.
       </ThemedText>
 
-      <Button title={`Так, ${formatMoney(info.remaining)}`} icon="checkmark" variant="positive" disabled={busy} onPress={() => void call('confirm', info.mine > 0 ? { amount: info.amount } : {})} />
+      <Button title={`Так, ${formatMoney(info.remaining)}`} icon="checkmark" variant="primary" disabled={busy} onPress={() => void call('confirm', info.mine > 0 ? { amount: info.amount } : {})} />
 
       {part ? (
         <View style={{ gap: Spacing.two }}>
@@ -99,10 +99,10 @@ export default function PaymentScreen() {
           <Button title="Підтвердити цю суму" icon="checkmark" disabled={busy || !!partError || !amount} onPress={() => void call('confirm', { amount: partAmount })} />
         </View>
       ) : (
-        <Button title="Частину" icon="remove-circle-outline" variant="secondary" disabled={busy} onPress={() => setPart(true)} />
+        <Button title="Частину" icon="remove-circle-outline" variant="soft" disabled={busy} onPress={() => setPart(true)} />
       )}
 
-      <Button title="Ще ні" variant="secondary" disabled={busy} onPress={() => void call('later')} />
+      <Button title="Ще ні" variant="soft" disabled={busy} onPress={() => void call('later')} />
     </Screen>
   );
 }

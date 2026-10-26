@@ -2,7 +2,7 @@ import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
 import { ArrayMaxSize, IsArray, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, Max, MaxLength, Min } from 'class-validator';
 
-import { CAR_STATUSES, MAX_PHOTOS } from '../common/constants';
+import { CAR_STATUSES, FUEL_TYPES, MAX_PHOTOS } from '../common/constants';
 import { IsIsoDay } from '../common/is-iso-day';
 import { Trim } from '../common/profile';
 
@@ -32,6 +32,11 @@ export class CreateCarDto {
   @Min(0)
   @Max(5_000_000)
   mileage?: number;
+
+  /** Тип палива; порожній рядок — не вказано */
+  @IsOptional()
+  @IsIn([...FUEL_TYPES, ''])
+  fuel?: string;
 
   @IsIsoDay()
   rentStart: string;

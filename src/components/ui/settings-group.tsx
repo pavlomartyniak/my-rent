@@ -45,11 +45,11 @@ type RowProps = {
 
 export function SettingsRow({ icon, title, subtitle, onPress, danger, right }: RowProps) {
   const theme = useTheme();
-  const tone = danger ? 'negative' : 'accent';
+  const tone = danger ? 'negative' : 'text';
 
   const content = (
     <View style={styles.row}>
-      <View style={[styles.icon, { backgroundColor: danger ? theme.negativeSoft : theme.accentSoft }]}>
+      <View style={[styles.icon, { backgroundColor: danger ? theme.negativeSoft : theme.backgroundSelected }]}>
         <Icon name={icon} size={20} color={tone} />
       </View>
       <View style={styles.text}>
@@ -77,12 +77,12 @@ export function SettingsRow({ icon, title, subtitle, onPress, danger, right }: R
 
 const styles = StyleSheet.create({
   group: { gap: Spacing.two },
-  title: { marginLeft: Spacing.one, fontSize: 12 },
+  title: { marginLeft: Spacing.one, fontSize: 12, letterSpacing: 0.6 },
   card: { paddingVertical: Spacing.one, paddingHorizontal: Spacing.three, gap: 0 },
   divider: { height: StyleSheet.hairlineWidth, marginLeft: 52 },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.three },
   icon: { width: 36, height: 36, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
   text: { flex: 1 },
-  rowTitle: { fontWeight: 600 },
+  rowTitle: { fontWeight: 500 },
   pressed: { opacity: 0.6 },
 });

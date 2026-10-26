@@ -2,61 +2,61 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { formatKm, formatMoney } from '@/lib/format';
 import type { MarketCar } from '@/lib/rentals';
 
 import { CarPhoto } from './car-photo';
 import { ThemedText } from './themed-text';
-import { Card } from './ui/card';
-import { Icon } from './ui/icon';
 
-/** Оголошення в списку пошуку: фото, назва, місто й ціна за добу */
+/** Оголошення в пошуку: велике фото, назва й місто, ціна за добу */
 export function MarketCard({ car }: { car: MarketCar }) {
   const router = useRouter();
+  const theme = useTheme();
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${car.brand} ${car.model}, ${car.city}, ${formatMoney(car.pricePerDay)} за добу`}
       onPress={() => router.push({ pathname: '/market/[id]', params: { id: car.id } })}
-      style={({ pressed }) => pressed && styles.pressed}>
-      <Card style={styles.card}>
-        <CarPhoto uri={car.photoUri ?? undefined} style={styles.photo} iconSize={40} />
-        <View style={styles.row}>
-          <View style={styles.flex}>
-            <ThemedText type="default" style={styles.bold}>
-              {car.brand} {car.model} · {car.year}
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              {car.city} · {formatKm(car.mileage)}
-            </ThemedText>
-            {car.myRequest ? (
-              <ThemedText type="smallBold" themeColor="positive">
-                ✓ Запит надіслано
-              </ThemedText>
-            ) : null}
-          </View>
-          <View style={styles.price}>
-            <ThemedText type="default" style={styles.bold} themeColor="accent">
-              {formatMoney(car.pricePerDay)}
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              за добу
+      style={({ pressed }) => [styles.wrap, pressed && styles.pressed]}>
+      <View>
+        <CarPhoto uri={car.photoUri ?? undefined} style={styles.photo} iconSize={44} />
+        {car.myRequest ? (
+          <View style={[styles.badge, { backgroundColor: theme.backgroundElement }]}>
+            <ThemedText type="smallBold" themeColor="positive" style={{ fontSize: 13 }}>
+              ✓ Запит надіслано
             </ThemedText>
           </View>
-          <Icon name="chevron-forward" size={18} color="textSecondary" />
+        ) : null}
+      </View>
+      <View style={styles.row}>
+        <View style={styles.flex}>
+          <ThemedText type="default" style={styles.bold} numberOfLines={1}>
+            {car.brand} {car.model} · {car.year}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+            {[car.city, car.fuel, formatKm(car.mileage)].filter(Boolean).join(' · ')}
+          </ThemedText>
         </View>
-      </Card>
+        <ThemedText type="default" style={styles.bold}>
+          {formatMoney(car.pricePerDay)}
+          <ThemedText type="small" themeColor="textSecondary">
+            {' '}
+            / доба
+          </ThemedText>
+        </ThemedText>
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  pressed: { opacity: 0.7 },
-  card: { gap: Spacing.three },
-  photo: { width: '100%', aspectRatio: 16 / 9, borderRadius: Radius.md },
-  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  wrap: { gap: Spacing.two },
+  pressed: { opacity: 0.85 },
+  photo: { width: '100%', aspectRatio: 4 / 3, borderRadius: Radius.lg },
+  badge: { position: 'absolute', top: 12, left: 12, paddingHorizontal: 12, paddingVertical: 5, borderRadius: Radius.pill },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two, paddingHorizontal: 2 },
   flex: { flex: 1 },
-  price: { alignItems: 'flex-end' },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600 },
 });

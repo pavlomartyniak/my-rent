@@ -84,8 +84,8 @@ export function PaybackCard({ profit, price, eta }: Props) {
 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  bold: { fontWeight: 700 },
-  track: { height: 12, borderRadius: Radius.pill, overflow: 'hidden', marginVertical: Spacing.one },
-  fill: { height: 12, borderRadius: Radius.pill },
+  bold: { fontWeight: 600 },
+  track: { height: 8, borderRadius: Radius.pill, overflow: 'hidden', marginVertical: Spacing.one },
+  fill: { height: 8, borderRadius: Radius.pill },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.two },
 });

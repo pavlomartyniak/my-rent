@@ -6,12 +6,11 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 import { ThemedText } from './themed-text';
-import { Button } from './ui/button';
 import { Icon } from './ui/icon';
 
 export type StatusOption = { label: string; count: number };
 
-/** Кнопка «Фільтрувати за…» зі списком станів авто (з кількістю) у нижньому листі */
+/** Кнопка-«пігулка» «Фільтр» зі списком станів авто (з кількістю) у нижньому листі */
 export function CarStatusFilter({ options, value, onChange }: { options: StatusOption[]; value: string; onChange: (label: string) => void }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -19,7 +18,7 @@ export function CarStatusFilter({ options, value, onChange }: { options: StatusO
 
   return (
     <>
-      <Button title={value === 'Усі' ? 'Фільтрувати за станом' : `Стан: ${value}`} icon="filter" variant="secondary" onPress={() => setOpen(true)} />
+      <Chip icon="options-outline" title={value === 'Усі' ? 'Фільтр' : value} active={value !== 'Усі'} onPress={() => setOpen(true)} />
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
@@ -59,4 +58,24 @@ const styles = StyleSheet.create({
   heading: { fontWeight: 700, fontSize: 18, marginBottom: Spacing.one },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.three },
   title: { flex: 1, fontWeight: 600 },
+});
+
+/** Компактна кнопка-«пігулка»: сіра, а коли фільтр увімкнено, графітова */
+export function Chip({ title, icon, active, onPress }: { title: string; icon: 'options-outline' | 'swap-vertical'; active?: boolean; onPress: () => void }) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [chip.base, { backgroundColor: active ? theme.ink : theme.backgroundSelected }, pressed && { opacity: 0.7 }]}>
+      <Icon name={icon} size={16} color={active ? theme.onInk : theme.text} />
+      <ThemedText type="smallBold" style={{ color: active ? theme.onInk : theme.text }}>
+        {title}
+      </ThemedText>
+    </Pressable>
+  );
+}
+
+const chip = StyleSheet.create({
+  base: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, height: 38, borderRadius: Radius.pill },
 });

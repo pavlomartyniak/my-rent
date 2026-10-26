@@ -1,5 +1,7 @@
 /** Заброньоване — домовленість прийнята, чекаємо підписання договору чи початку оренди */
 export const CAR_STATUSES = ['В оренді', 'Вільне', 'На сервісі', 'Заброньоване'] as const;
+/** Тип палива авто; порожній — не вказано */
+export const FUEL_TYPES = ['Бензин', 'Дизель', 'Газ', 'Гібрид', 'Електро'] as const;
 export const EXPENSE_CATEGORIES = ['Ремонт', 'ТО', 'Страховка', 'Шини', 'Паливо', 'Інше'] as const;
 export const INCOME_CATEGORY = 'Оренда';
 export const TRANSACTION_TYPES = ['income', 'expense'] as const;

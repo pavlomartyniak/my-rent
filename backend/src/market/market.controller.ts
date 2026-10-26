@@ -1,7 +1,8 @@
 import { Controller, Get, Header, Param, Query } from '@nestjs/common';
 import { Type } from 'class-transformer';
-import { IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
+import { FUEL_TYPES } from '../common/constants';
 import { type AuthUser, CurrentUser } from '../common/current-user';
 import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
 import { MarketService } from './market.service';
@@ -25,6 +26,22 @@ class SearchQuery {
   @IsString()
   @MaxLength(60)
   q?: string;
+
+  /** Марка (точний збіг) */
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  brand?: string;
+
+  /** Модель (точний збіг) */
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  model?: string;
+
+  @IsOptional()
+  @IsIn(FUEL_TYPES)
+  fuel?: string;
 
   @IsOptional()
   @Type(() => Number)

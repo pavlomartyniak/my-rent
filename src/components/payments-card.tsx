@@ -10,11 +10,23 @@ import { formatMoney } from '@/lib/format';
 import { ThemedText } from './themed-text';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
+import { Icon } from './ui/icon';
 
 /**
  * Платежі за договором: графік, що підтвердила кожна сторона, розбіжності й розрахунок після розірвання.
  * Облік створюється саме за цими підтвердженнями.
  */
+function Check({ done, text }: { done: boolean; text: string }) {
+  return (
+    <View style={styles.check}>
+      <Icon name={done ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={done ? 'positive' : 'textSecondary'} />
+      <ThemedText type="small" themeColor={done ? 'positive' : 'textSecondary'} style={{ flex: 1 }}>
+        {text}
+      </ThemedText>
+    </View>
+  );
+}
+
 export function PaymentsCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status' | 'paymentPlan' | 'payments' | 'settlement' | 'contract'>; as: 'owner' | 'renter' }) {
   const router = useRouter();
   const theme = useTheme();
@@ -41,17 +53,18 @@ export function PaymentsCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
       {payments.map((p) => (
         <View key={p.n} style={[styles.row, { borderTopColor: theme.border }]}>
           <View style={styles.head}>
-            <ThemedText type="smallBold">
-              {deal.payments.length > 1 ? `Платіж ${p.n}` : 'Оплата'} · {formatDate(p.dueDate)}
+            <View>
+              <ThemedText type="smallBold">{deal.payments.length > 1 ? `Платіж ${p.n}` : 'Оплата'}</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {formatDate(p.dueDate)}
+              </ThemedText>
+            </View>
+            <ThemedText type="default" style={styles.amount}>
+              {formatMoney(p.amount)}
             </ThemedText>
-            <ThemedText type="smallBold">{formatMoney(p.amount)}</ThemedText>
           </View>
-          <ThemedText type="small" themeColor={p.mine >= p.amount ? 'positive' : 'textSecondary'}>
-            {p.mine > 0 ? `Ви ${mineVerb}: ${formatMoney(p.mine)}${p.mine < p.amount ? ` з ${formatMoney(p.amount)}` : ''}` : `Ви ще не підтвердили`}
-          </ThemedText>
-          <ThemedText type="small" themeColor={p.other >= p.amount ? 'positive' : 'textSecondary'}>
-            {p.other > 0 ? `${otherName} ${otherVerb}: ${formatMoney(p.other)}` : `${otherName} ще не підтвердив`}
-          </ThemedText>
+          <Check done={p.mine >= p.amount} text={p.mine > 0 ? `Ви ${mineVerb}: ${formatMoney(p.mine)}${p.mine < p.amount ? ` з ${formatMoney(p.amount)}` : ''}` : 'Ви ще не підтвердили'} />
+          <Check done={p.other >= p.amount} text={p.other > 0 ? `${otherName} ${otherVerb}: ${formatMoney(p.other)}` : `${otherName} ще не підтвердив`} />
           {p.mismatch ? (
             <View style={[styles.warn, { backgroundColor: theme.warningSoft }]}>
               <ThemedText type="smallBold" themeColor="warning">
@@ -84,8 +97,10 @@ export function PaymentsCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
 }
 
 const styles = StyleSheet.create({
-  bold: { fontWeight: 700 },
-  row: { gap: Spacing.one, paddingTop: Spacing.three, borderTopWidth: StyleSheet.hairlineWidth },
-  head: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.two },
+  bold: { fontWeight: 600, fontSize: 18 },
+  amount: { fontWeight: 700 },
+  check: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  row: { gap: Spacing.two, paddingTop: Spacing.three, borderTopWidth: StyleSheet.hairlineWidth },
+  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.two },
   warn: { padding: Spacing.three, borderRadius: Radius.md, gap: Spacing.one },
 });

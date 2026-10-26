@@ -4,7 +4,7 @@ import { View } from 'react-native';
 
 import { AttentionList } from '@/components/attention-list';
 import { CarCard } from '@/components/car-card';
-import { CarStatusFilter } from '@/components/car-status-filter';
+import { CarStatusFilter, Chip } from '@/components/car-status-filter';
 import { CurrentRentals } from '@/components/current-rentals';
 import { ReportStatus } from '@/components/report-status';
 import { SummaryCard } from '@/components/summary-card';
@@ -12,15 +12,18 @@ import { ScreenTitle } from '@/components/screen-title';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
-import { SectionHeader } from '@/components/ui/section-header';
-import { Segmented } from '@/components/ui/segmented';
+import { PillButton } from '@/components/ui/pill-button';
+import { SwitchTabs } from '@/components/ui/switch-tabs';
 import { Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { monthKey, monthTitle, todayISO } from '@/lib/date';
+import type { DealView } from '@/lib/deals';
 import type { SummaryReport } from '@/lib/reports';
 import { useFleet } from '@/store/fleet';
 
-const SORTS = ['За прибутком', 'Як додано'] as const;
+const VIEWS = ['Мій автопарк', 'В оренді'] as const;
+
+type Sort = 'За прибутком' | 'Як додано';
 
 /** Фільтр за станом авто: підпис → статус авто */
 const FILTERS: Record<string, string | null> = { Усі: null, 'В оренді': 'В оренді', Вільні: 'Вільне', 'На сервісі': 'На сервісі', Заброньовані: 'Заброньоване' };
@@ -28,8 +31,10 @@ const FILTERS: Record<string, string | null> = { Усі: null, 'В оренді'
 export default function HomeScreen() {
   const router = useRouter();
   const { cars, canAddCar } = useFleet();
-  const [sort, setSort] = useState<(typeof SORTS)[number]>('За прибутком');
+  const [sort, setSort] = useState<Sort>('За прибутком');
   const [filter, setFilter] = useState('Усі');
+  const [view, setView] = useState<(typeof VIEWS)[number]>('Мій автопарк');
+  const { data: rentals } = useReport<DealView[]>('/deals/current', { refetchOnFocus: true });
 
   const month = monthKey(todayISO());
   // Підсумок місяця й прибуток по кожному авто рахує сервер
@@ -75,16 +80,30 @@ export default function HomeScreen() {
 
       <Button title="Додати дохід або витрату" icon="add" onPress={() => router.push('/transaction/new')} />
 
-      <CurrentRentals />
+      <SwitchTabs options={VIEWS} value={view} onChange={setView} counts={{ 'Мій автопарк': cars.length, 'В оренді': rentals?.length ?? 0 }} />
 
-      <SectionHeader title="Авто" action="+ Додати" onAction={addCar} />
-      {cars.length > 1 ? <Segmented options={SORTS} value={sort} onChange={setSort} /> : null}
-      {cars.length > 1 ? <CarStatusFilter options={options} value={active} onChange={setFilter} /> : null}
-      <View style={{ gap: Spacing.two }}>
-        {shown.map(({ car, profit }) => (
-          <CarCard key={car.id} car={car} profit={profit} />
-        ))}
-      </View>
+      {view === 'Мій автопарк' ? (
+        <>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two }}>
+            {cars.length > 1 ? (
+              <>
+                <CarStatusFilter options={options} value={active} onChange={setFilter} />
+                <Chip icon="swap-vertical" title={sort === 'За прибутком' ? 'За прибутком' : 'Як додано'} onPress={() => setSort(sort === 'За прибутком' ? 'Як додано' : 'За прибутком')} />
+              </>
+            ) : null}
+            <View style={{ flex: 1, alignItems: 'flex-end' }}>
+              <PillButton title="+ Додати" onPress={addCar} />
+            </View>
+          </View>
+          <View style={{ gap: Spacing.four }}>
+            {shown.map(({ car, profit }) => (
+              <CarCard key={car.id} car={car} profit={profit} />
+            ))}
+          </View>
+        </>
+      ) : (
+        <CurrentRentals />
+      )}
 
     </Screen>
   );

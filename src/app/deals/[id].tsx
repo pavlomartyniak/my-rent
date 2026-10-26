@@ -14,6 +14,7 @@ import { SummaryCard } from '@/components/summary-card';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { InfoRow, InfoRows } from '@/components/ui/info-rows';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
@@ -82,9 +83,11 @@ export default function DealScreen() {
           </View>
           <StatusBadge status={dealStage(d)} />
         </View>
-        <Row label="Оренда" value={`${formatDate(d.startDate)} – ${formatDate(d.endDate)}`} />
-        <Row label="Ціна за добу" value={formatMoney(d.pricePerDay)} />
-        <Row label="Власник" value={d.counterpart.name} />
+        <InfoRows>
+          <InfoRow label="Оренда" value={`${formatDate(d.startDate)} – ${formatDate(d.endDate)}`} />
+          <InfoRow label="Ціна за добу" value={formatMoney(d.pricePerDay)} />
+          <InfoRow label="Власник" value={d.counterpart.name} />
+        </InfoRows>
         <ContactChips actions={contactActions({ chat: { dealId: d.id }, contract: d.contract ? () => router.push({ pathname: '/contracts/[id]', params: { id: d.id } }) : undefined })} />
         {stage === 'terminated' ? (
           <ThemedText type="small" themeColor="negative">
@@ -115,18 +118,20 @@ export default function DealScreen() {
             <ThemedText type="default" style={styles.bold}>
               Платежі за оренду
             </ThemedText>
-            <Row label={`Минуло ${o.elapsedDays} з ${o.totalDays} діб`} value={`${formatMoney(o.rentDue)} до сплати`} />
-            <Row label="Сплачено власнику" value={formatMoney(o.rentPaid)} />
-            <Row
-              label={o.rentBalance > 0 ? 'Борг перед власником' : o.rentBalance < 0 ? 'Переплата' : 'Розрахунок'}
-              value={o.rentBalance === 0 ? 'Все сплачено' : formatMoney(Math.abs(o.rentBalance))}
-              tone={o.rentBalance > 0 ? 'negative' : 'positive'}
-            />
-            <Row label="Інші витрати (паливо, мийка…)" value={formatMoney(o.otherExpenses)} />
-            <Row label="За весь період за договором" value={formatMoney(o.plannedRent)} />
+            <InfoRows>
+              <InfoRow label={`Минуло ${o.elapsedDays} з ${o.totalDays} діб`} value={`${formatMoney(o.rentDue)} до сплати`} />
+              <InfoRow label="Сплачено власнику" value={formatMoney(o.rentPaid)} />
+              <InfoRow
+                label={o.rentBalance > 0 ? 'Борг перед власником' : o.rentBalance < 0 ? 'Оплачено наперед' : 'Розрахунок'}
+                value={o.rentBalance === 0 ? 'Все сплачено' : formatMoney(Math.abs(o.rentBalance))}
+                tone={o.rentBalance > 0 ? 'negative' : 'positive'}
+              />
+              <InfoRow label="Інші витрати (паливо, мийка…)" value={formatMoney(o.otherExpenses)} />
+              <InfoRow label="За весь період за договором" value={formatMoney(o.plannedRent)} strong />
+            </InfoRows>
           </Card>
 
-          <Button title="Детальна аналітика" icon="stats-chart-outline" variant="secondary" onPress={() => router.push({ pathname: '/deals/analytics', params: { id: d.id } })} />
+          <Button title="Детальна аналітика" icon="stats-chart-outline" variant="soft" onPress={() => router.push({ pathname: '/deals/analytics', params: { id: d.id } })} />
         </>
       )}
 
@@ -140,25 +145,10 @@ export default function DealScreen() {
   );
 }
 
-function Row({ label, value, tone }: { label: string; value: string; tone?: 'positive' | 'negative' }) {
-  return (
-    <View style={styles.row}>
-      <ThemedText type="small" themeColor="textSecondary" style={styles.flex}>
-        {label}
-      </ThemedText>
-      <ThemedText type="small" style={styles.value} themeColor={tone}>
-        {value}
-      </ThemedText>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  photo: { width: '100%', aspectRatio: 16 / 7, borderRadius: Radius.lg },
+  photo: { width: '100%', aspectRatio: 16 / 10, borderRadius: Radius.lg },
   head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   flex: { flex: 1 },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600, fontSize: 18 },
   actions: { flexDirection: 'row', gap: Spacing.two },
-  row: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.three },
-  value: { fontWeight: 600, textAlign: 'right' },
 });

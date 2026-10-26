@@ -19,6 +19,6 @@ export function SectionHeader({ title, action, onAction }: Props) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.two, marginBottom: -Spacing.one, minHeight: 36 },
-  title: { fontWeight: 700, fontSize: 18 },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.three, marginBottom: -Spacing.one, minHeight: 36 },
+  title: { fontWeight: 700, fontSize: 22, letterSpacing: -0.3 },
 });

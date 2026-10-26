@@ -96,7 +96,7 @@ export default function ContractScreen() {
             <ThemedText type="small" themeColor="textSecondary">
               Договір оренди транспортного засобу
             </ThemedText>
-            <ThemedText type="subtitle">№ {data.number}</ThemedText>
+            <ThemedText type="subtitle" style={{ fontSize: 22, lineHeight: 28 }}>№ {data.number}</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               від {formatDate(data.createdAt.slice(0, 10))}
             </ThemedText>
@@ -175,7 +175,7 @@ export default function ContractScreen() {
 function SignatureRow({ label, name, signature, you }: { label: string; name: string; signature: ContractSignature; you: boolean }) {
   const theme = useTheme();
   return (
-    <View style={[styles.sign, { backgroundColor: signature ? theme.positiveSoft : theme.backgroundElement, borderColor: signature ? theme.positive : theme.borderStrong }]}>
+    <View style={[styles.sign, { backgroundColor: signature ? theme.positiveSoft : theme.backgroundElement, borderColor: signature ? 'transparent' : theme.border }]}>
       <Icon name={signature ? 'checkmark-circle' : 'time-outline'} size={26} color={signature ? 'positive' : 'textSecondary'} />
       <View style={styles.flex}>
         <ThemedText type="default" style={styles.bold}>

@@ -9,7 +9,7 @@ import { Car, type CarDocument } from '../schemas/car.schema';
 import { RentalRequest } from '../schemas/rental-request.schema';
 import { User } from '../schemas/user.schema';
 
-export type MarketQuery = { city?: string; regionId?: number; q?: string; minPrice?: number; maxPrice?: number; page: number; limit: number };
+export type MarketQuery = { city?: string; regionId?: number; q?: string; minPrice?: number; maxPrice?: number; brand?: string; model?: string; fuel?: string; page: number; limit: number };
 
 /** Лише публічні поля: без VIN, вартості авто, водія, контактів і прізвища власника */
 function publicView(car: CarDocument, ownerName: string) {
@@ -20,6 +20,7 @@ function publicView(car: CarDocument, ownerName: string) {
     model: car.model,
     year: car.year,
     mileage: car.mileage,
+    fuel: car.fuel ?? '',
     photoUri: car.photoUri ?? null,
     // У публічній галереї лише фото, доступні за https; обкладинка завжди перша
     photos: (car.photos?.length ? car.photos : car.photoUri ? [car.photoUri] : []).filter((u) => u.startsWith('https://')),
@@ -53,6 +54,12 @@ export class MarketService {
       const rx = { $regex: escapeRegex(q), $options: 'i' };
       filter['$or'] = [{ brand: rx }, { model: rx }];
     }
+    // Марка й модель з каталогу: точний збіг без урахування регістру
+    const brand = (query.brand ?? '').trim();
+    if (brand) filter['brand'] = { $regex: `^${escapeRegex(brand)}$`, $options: 'i' };
+    const model = (query.model ?? '').trim();
+    if (model) filter['model'] = { $regex: `^${escapeRegex(model)}$`, $options: 'i' };
+    if (query.fuel) filter['fuel'] = query.fuel;
     if (query.minPrice !== undefined || query.maxPrice !== undefined) {
       filter['listing.pricePerDay'] = {
         ...(query.minPrice !== undefined ? { $gte: query.minPrice } : {}),

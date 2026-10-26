@@ -21,7 +21,7 @@ export default function RequestsScreen() {
   return (
     <Screen tabs>
       <ScreenTitle>Запити</ScreenTitle>
-      <Segmented options={SECTIONS} value={section} onChange={setSection} />
+      <Segmented scroll options={SECTIONS} value={section} onChange={setSection} />
 
       {section === 'Запити' ? <OwnerRentals /> : section === 'Шукають авто' ? <OwnerBoard /> : <OwnerOffers />}
     </Screen>

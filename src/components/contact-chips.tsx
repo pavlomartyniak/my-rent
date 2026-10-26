@@ -24,9 +24,9 @@ export function ContactChips({ actions }: { actions: (MenuAction | false | null 
           accessibilityRole="button"
           accessibilityLabel={a.title}
           onPress={a.onPress}
-          style={({ pressed }) => [styles.button, { backgroundColor: theme.accentSoft }, pressed && { opacity: 0.6 }]}>
-          <Icon name={a.icon} size={20} color="accent" />
-          <ThemedText type="default" themeColor="accent" style={styles.label} numberOfLines={1}>
+          style={({ pressed }) => [styles.button, { marginHorizontal: 0, backgroundColor: theme.backgroundSelected }, pressed && { opacity: 0.6 }]}>
+          <Icon name={a.icon} size={20} color="text" />
+          <ThemedText type="default" themeColor="text" style={styles.label} numberOfLines={1}>
             {a.short ?? a.title}
           </ThemedText>
         </Pressable>
@@ -38,5 +38,5 @@ export function ContactChips({ actions }: { actions: (MenuAction | false | null 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: Spacing.two },
   button: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.two, minHeight: 48, borderRadius: Radius.md },
-  label: { fontWeight: 700 },
+  label: { fontWeight: 600 },
 });

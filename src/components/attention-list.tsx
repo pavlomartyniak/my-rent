@@ -76,15 +76,14 @@ export function AttentionList({ role }: { role: 'owner' | 'renter' }) {
       </View>
       {items.map((item) => {
         const c = palette(item.tone);
-        const loud = item.tone !== 'info';
         return (
           <Pressable key={item.key} accessibilityRole="button" disabled={busy} onPress={() => open(item)} style={({ pressed }) => pressed && { opacity: 0.85 }}>
-            <View style={[styles.row, { backgroundColor: c.soft, borderColor: loud ? c.solid : theme.border, borderWidth: loud ? 1.5 : 1 }]}>
+            <View style={[styles.row, { backgroundColor: c.soft, borderColor: 'transparent', borderWidth: 0 }]}>
               <View style={[styles.icon, { backgroundColor: c.solid }]}>
                 <Icon name={item.icon} size={22} color="#FFFFFF" />
               </View>
               <View style={styles.flex}>
-                <ThemedText type="default" style={styles.title} numberOfLines={1}>
+                <ThemedText type="default" style={styles.title} numberOfLines={2}>
                   {item.title}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
@@ -107,13 +106,13 @@ export function AttentionList({ role }: { role: 'owner' | 'renter' }) {
 const styles = StyleSheet.create({
   wrap: { gap: Spacing.two },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  headerTitle: { fontWeight: 700, fontSize: 18 },
+  headerTitle: { fontWeight: 700, fontSize: 22, letterSpacing: -0.3 },
   count: { minWidth: 24, height: 24, paddingHorizontal: 7, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   countText: { color: '#FFFFFF', fontSize: 14, lineHeight: 18, fontWeight: 700 },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.lg },
-  icon: { width: 42, height: 42, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
+  icon: { width: 40, height: 40, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },
-  title: { fontWeight: 700 },
-  pill: { paddingHorizontal: Spacing.three, paddingVertical: 8, borderRadius: Radius.pill },
+  title: { fontWeight: 600 },
+  pill: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.pill },
   pillText: { color: '#FFFFFF' },
 });

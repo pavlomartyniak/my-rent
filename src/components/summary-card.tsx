@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { formatMoney } from '@/lib/format';
 
 import { ThemedText } from './themed-text';
@@ -8,8 +9,10 @@ import { Card } from './ui/card';
 
 type Props = { title: string; profit: number; income: number; expense: number; note?: string };
 
-/** Головне число екрана: прибуток, а під ним доходи й витрати */
+/** Головне число екрана: прибуток, а під ним доходи й витрати двома плашками */
 export function SummaryCard({ title, profit, income, expense, note }: Props) {
+  const theme = useTheme();
+
   return (
     <Card style={styles.card}>
       <ThemedText type="small" themeColor="textSecondary">
@@ -19,12 +22,22 @@ export function SummaryCard({ title, profit, income, expense, note }: Props) {
         {formatMoney(profit)}
       </ThemedText>
       <View style={styles.row}>
-        <ThemedText type="small" themeColor="textSecondary">
-          Дохід <ThemedText type="smallBold">{formatMoney(income)}</ThemedText>
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          Витрати <ThemedText type="smallBold">{formatMoney(expense)}</ThemedText>
-        </ThemedText>
+        <View style={[styles.chip, { backgroundColor: theme.positiveSoft }]}>
+          <ThemedText type="small" themeColor="positive">
+            Дохід
+          </ThemedText>
+          <ThemedText type="smallBold" themeColor="positive">
+            {formatMoney(income)}
+          </ThemedText>
+        </View>
+        <View style={[styles.chip, { backgroundColor: theme.negativeSoft }]}>
+          <ThemedText type="small" themeColor="negative">
+            Витрати
+          </ThemedText>
+          <ThemedText type="smallBold" themeColor="negative">
+            {formatMoney(expense)}
+          </ThemedText>
+        </View>
       </View>
       {note ? (
         <ThemedText type="small" themeColor="textSecondary">
@@ -36,7 +49,8 @@ export function SummaryCard({ title, profit, income, expense, note }: Props) {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: Spacing.one, paddingVertical: Spacing.four },
-  value: { fontSize: 40, lineHeight: 48, fontWeight: 700 },
-  row: { flexDirection: 'row', gap: Spacing.four, marginTop: Spacing.one },
+  card: { gap: Spacing.one, paddingVertical: Spacing.four, paddingHorizontal: Spacing.four },
+  value: { fontSize: 44, lineHeight: 52, fontWeight: 700, letterSpacing: -1 },
+  row: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.two },
+  chip: { flex: 1, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 14, gap: 2 },
 });
