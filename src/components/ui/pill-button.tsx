@@ -24,7 +24,7 @@ export function PillButton({ title, icon, onPress }: Props) {
       ]}>
       <View style={styles.content}>
         {icon ? <Icon name={icon} size={16} color="text" /> : null}
-        <ThemedText type="smallBold" themeColor="text">
+        <ThemedText type="smallBold" themeColor="text" numberOfLines={1}>
           {title}
         </ThemedText>
       </View>

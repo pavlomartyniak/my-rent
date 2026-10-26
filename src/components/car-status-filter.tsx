@@ -10,42 +10,71 @@ import { Icon } from './ui/icon';
 
 export type StatusOption = { label: string; count: number };
 
-/** Кнопка-«пігулка» «Фільтр» зі списком станів авто (з кількістю) у нижньому листі */
-export function CarStatusFilter({ options, value, onChange }: { options: StatusOption[]; value: string; onChange: (label: string) => void }) {
+type Props = {
+  options: StatusOption[];
+  value: string;
+  onChange: (label: string) => void;
+  sorts: readonly string[];
+  sort: string;
+  onSort: (sort: string) => void;
+};
+
+/**
+ * Одна кнопка «Фільтр» для всього списку авто: у нижньому листі спершу стан авто (з кількістю), нижче сортування.
+ * Лист лишається відкритим, поки користувач не натисне «Готово», щоб можна було змінити обидва параметри.
+ * Темна кнопка з крапкою означає, що щось відрізняється від типового вигляду.
+ */
+export function CarStatusFilter({ options, value, onChange, sorts, sort, onSort }: Props) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
+  const changed = value !== 'Усі' || sort !== sorts[0];
+
+  const Row = ({ label, selected, right, first, onPress }: { label: string; selected: boolean; right?: string; first?: boolean; onPress: () => void }) => (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={({ pressed }) => [styles.row, !first && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }, pressed && { opacity: 0.6 }]}>
+      <ThemedText type="default" style={styles.title}>
+        {label}
+      </ThemedText>
+      {right !== undefined ? (
+        <ThemedText type="default" themeColor="textSecondary">
+          {right}
+        </ThemedText>
+      ) : null}
+      {selected ? <Icon name="checkmark" size={22} color="accent" /> : <View style={{ width: 22 }} />}
+    </Pressable>
+  );
 
   return (
     <>
-      <Chip icon="options-outline" title={value === 'Усі' ? 'Фільтр' : value} active={value !== 'Усі'} onPress={() => setOpen(true)} />
+      <Chip icon="options-outline" title={value === 'Усі' ? 'Фільтр' : value} active={changed} onPress={() => setOpen(true)} />
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
-          <View style={[styles.sheet, { backgroundColor: theme.backgroundElement, paddingBottom: Math.max(insets.bottom, Spacing.three) }]}>
+          <Pressable style={[styles.sheet, { backgroundColor: theme.backgroundElement, paddingBottom: Math.max(insets.bottom, Spacing.three) }]} onPress={() => {}}>
             <ThemedText type="default" style={styles.heading}>
-              Показати авто
+              Стан авто
             </ThemedText>
             {options.map((o, i) => (
-              <Pressable
-                key={o.label}
-                accessibilityRole="button"
-                accessibilityState={{ selected: o.label === value }}
-                onPress={() => {
-                  setOpen(false);
-                  onChange(o.label);
-                }}
-                style={({ pressed }) => [styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }, pressed && { opacity: 0.6 }]}>
-                <ThemedText type="default" style={styles.title}>
-                  {o.label}
-                </ThemedText>
-                <ThemedText type="default" themeColor="textSecondary">
-                  {o.count}
-                </ThemedText>
-                {o.label === value ? <Icon name="checkmark" size={22} color="accent" /> : <View style={{ width: 22 }} />}
-              </Pressable>
+              <Row key={o.label} label={o.label} right={String(o.count)} selected={o.label === value} first={i === 0} onPress={() => onChange(o.label)} />
             ))}
-          </View>
+
+            <ThemedText type="default" style={[styles.heading, styles.second]}>
+              Сортування
+            </ThemedText>
+            {sorts.map((label, i) => (
+              <Row key={label} label={label} selected={label === sort} first={i === 0} onPress={() => onSort(label)} />
+            ))}
+
+            <Pressable accessibilityRole="button" onPress={() => setOpen(false)} style={[styles.done, { backgroundColor: theme.ink }]}>
+              <ThemedText type="default" style={{ color: theme.onInk, fontWeight: 600 }}>
+                Готово
+              </ThemedText>
+            </Pressable>
+          </Pressable>
         </Pressable>
       </Modal>
     </>
@@ -57,7 +86,9 @@ const styles = StyleSheet.create({
   sheet: { borderTopLeftRadius: Radius.lg, borderTopRightRadius: Radius.lg, paddingHorizontal: Spacing.three, paddingTop: Spacing.three },
   heading: { fontWeight: 700, fontSize: 18, marginBottom: Spacing.one },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.three },
-  title: { flex: 1, fontWeight: 600 },
+  title: { flex: 1, fontWeight: 500 },
+  second: { marginTop: Spacing.three },
+  done: { marginTop: Spacing.three, minHeight: 52, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
 });
 
 /** Компактна кнопка-«пігулка»: сіра, а коли фільтр увімкнено, графітова */

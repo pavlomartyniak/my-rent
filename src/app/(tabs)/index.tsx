@@ -4,7 +4,7 @@ import { View } from 'react-native';
 
 import { AttentionList } from '@/components/attention-list';
 import { CarCard } from '@/components/car-card';
-import { CarStatusFilter, Chip } from '@/components/car-status-filter';
+import { CarStatusFilter } from '@/components/car-status-filter';
 import { CurrentRentals } from '@/components/current-rentals';
 import { ReportStatus } from '@/components/report-status';
 import { SummaryCard } from '@/components/summary-card';
@@ -23,7 +23,8 @@ import { useFleet } from '@/store/fleet';
 
 const VIEWS = ['Мій автопарк', 'В оренді'] as const;
 
-type Sort = 'За прибутком' | 'Як додано';
+const SORTS = ['За прибутком', 'Як додано'] as const;
+type Sort = (typeof SORTS)[number];
 
 /** Фільтр за станом авто: підпис → статус авто */
 const FILTERS: Record<string, string | null> = { Усі: null, 'В оренді': 'В оренді', Вільні: 'Вільне', 'На сервісі': 'На сервісі', Заброньовані: 'Заброньоване' };
@@ -85,12 +86,7 @@ export default function HomeScreen() {
       {view === 'Мій автопарк' ? (
         <>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two }}>
-            {cars.length > 1 ? (
-              <>
-                <CarStatusFilter options={options} value={active} onChange={setFilter} />
-                <Chip icon="swap-vertical" title={sort === 'За прибутком' ? 'За прибутком' : 'Як додано'} onPress={() => setSort(sort === 'За прибутком' ? 'Як додано' : 'За прибутком')} />
-              </>
-            ) : null}
+            {cars.length > 1 ? <CarStatusFilter options={options} value={active} onChange={setFilter} sorts={SORTS} sort={sort} onSort={(v) => setSort(v as Sort)} /> : null}
             <View style={{ flex: 1, alignItems: 'flex-end' }}>
               <PillButton title="+ Додати" onPress={addCar} />
             </View>
