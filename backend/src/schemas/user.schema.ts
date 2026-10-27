@@ -4,13 +4,23 @@ import type { HydratedDocument } from 'mongoose';
 import { ROLES, THEMES } from '../common/constants';
 import { jsonOptions } from '../common/json-options';
 
-@Schema(jsonOptions([], ['passwordHash']))
+@Schema(jsonOptions([], ['passwordHash', 'resetCodeHash', 'resetExpires', 'resetAttempts']))
 export class User {
   @Prop({ required: true, unique: true, lowercase: true, trim: true })
   email: string;
 
   @Prop({ required: true })
   passwordHash: string;
+
+  /** Код відновлення пароля (хеш), строк дії й кількість невдалих спроб */
+  @Prop()
+  resetCodeHash?: string;
+
+  @Prop()
+  resetExpires?: Date;
+
+  @Prop({ default: 0 })
+  resetAttempts: number;
 
   /** Профіль. Порожні рядки — у акаунтів, створених до появи цих полів */
   @Prop({ default: '', trim: true })

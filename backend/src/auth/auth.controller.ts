@@ -2,7 +2,7 @@ import { Body, Controller, HttpCode, Post } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 
 import { Public } from '../common/current-user';
-import { LoginDto, RegisterDto } from './auth.dto';
+import { ForgotPasswordDto, LoginDto, RegisterDto, ResetPasswordDto } from './auth.dto';
 import { AuthService } from './auth.service';
 
 // Суворіший ліміт на автентифікацію: 10 запитів на хвилину з однієї IP
@@ -21,5 +21,20 @@ export class AuthController {
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.auth.login(dto);
+  }
+
+  /** Надіслати код відновлення на пошту. Відповідь однакова, чи є такий акаунт, щоб не розкривати email */
+  @HttpCode(204)
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @Post('forgot')
+  forgot(@Body() dto: ForgotPasswordDto) {
+    return this.auth.forgot(dto.email);
+  }
+
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('reset')
+  reset(@Body() dto: ResetPasswordDto) {
+    return this.auth.reset(dto);
   }
 }

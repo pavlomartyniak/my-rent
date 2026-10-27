@@ -14,6 +14,7 @@ import { ThemePreferenceProvider } from '@/store/theme';
 
 SplashScreen.preventAutoHideAsync();
 
+
 const navTheme = (scheme: 'light' | 'dark') => {
   const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
   const c = Colors[scheme];
@@ -52,6 +53,7 @@ function Routes() {
       <Stack screenOptions={{ headerShadowVisible: false, headerTitleStyle: { fontWeight: '600', fontSize: 17 }, headerLargeTitleShadowVisible: false }}>
         <Stack.Protected guard={!authed}>
           <Stack.Screen name="login" options={{ headerShown: false }} />
+          <Stack.Screen name="forgot" options={{ title: 'Відновлення пароля', headerBackTitle: 'Назад' }} />
         </Stack.Protected>
         <Stack.Protected guard={authed && !onboarded}>
           <Stack.Screen name="onboarding" options={{ headerShown: false }} />

@@ -29,6 +29,11 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+      # Листи (відновлення пароля) через Resend: ключ і адреса відправника вводяться в панелі Render
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
       # false: вимикає перемикач Pro без оплати. Для тестування можна тимчасово поставити true
       - key: DEMO_MODE
         value: "false"

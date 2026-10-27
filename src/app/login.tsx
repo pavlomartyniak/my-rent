@@ -1,6 +1,9 @@
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet, View } from 'react-native';
+
+import { LegalSheet } from '@/components/legal-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -19,6 +22,8 @@ const ROLES = ['Я власник авто', 'Шукаю авто в оренд�
 export default function LoginScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const [doc, setDoc] = useState<'privacy' | 'terms' | null>(null);
   const { login, register } = useAuth();
 
   const [mode, setMode] = useState<(typeof MODES)[number]>('Вхід');
@@ -167,6 +172,27 @@ export default function LoginScreen() {
       ) : null}
 
       <Button title={busy ? 'Зачекайте…' : signingUp ? 'Створити акаунт' : 'Увійти'} disabled={!valid || busy} onPress={submit} />
+
+      {!signingUp ? (
+        <Pressable accessibilityRole="button" onPress={() => router.push('/forgot')} hitSlop={8} style={{ alignSelf: 'center' }}>
+          <ThemedText type="smallBold" themeColor="accent">
+            Забули пароль?
+          </ThemedText>
+        </Pressable>
+      ) : null}
+
+      <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
+        {signingUp ? 'Створюючи акаунт' : 'Входячи'}, ви погоджуєтесь з{' '}
+        <ThemedText type="small" themeColor="accent" onPress={() => setDoc('terms')}>
+          Умовами користування
+        </ThemedText>{' '}
+        і{' '}
+        <ThemedText type="small" themeColor="accent" onPress={() => setDoc('privacy')}>
+          Політикою конфіденційності
+        </ThemedText>
+        .
+      </ThemedText>
+      <LegalSheet doc={doc} onClose={() => setDoc(null)} />
     </Screen>
   );
 }

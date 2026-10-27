@@ -14,6 +14,7 @@ import { DataModule } from './data/data.module';
 import { DealsModule } from './deals/deals.module';
 import { DatabaseModule } from './database/database.module';
 import { ExportModule } from './export/export.module';
+import { MailModule } from './mail/mail.module';
 import { HealthController } from './health.controller';
 import { MarketModule } from './market/market.module';
 import { MediaModule } from './media/media.module';
@@ -58,6 +59,7 @@ import { WantedModule } from './wanted/wanted.module';
     RemindersModule,
     ReportsModule,
     ExportModule,
+    MailModule,
     MarketModule,
     RentalsModule,
     MediaModule,

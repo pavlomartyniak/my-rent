@@ -14,6 +14,8 @@ type AuthContextValue = {
   /** Повертає текст помилки або null, якщо успішно */
   login: (email: string, password: string) => Promise<string | null>;
   register: (email: string, password: string, profile: Profile, role: Role) => Promise<string | null>;
+  /** Задає новий пароль за кодом із листа й одразу входить */
+  resetPassword: (email: string, code: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
 };
 
@@ -48,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [apply]);
 
   const authenticate = useCallback(
-    async (path: '/auth/login' | '/auth/register', body: Record<string, string>) => {
+    async (path: '/auth/login' | '/auth/register' | '/auth/reset', body: Record<string, string>) => {
       try {
         const res = await api<{ token: string }>('POST', path, body);
         await SecureStore.setItemAsync(TOKEN_KEY, res.token).catch(() => {});
@@ -75,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           lastName: profile.lastName.trim(),
           ...(profile.phone.trim() ? { phone: profile.phone.trim() } : {}),
         }),
+      resetPassword: (email, code, password) => authenticate('/auth/reset', { email: email.trim(), code: code.trim(), password }),
       signOut,
     }),
     [loading, token, authenticate, signOut],

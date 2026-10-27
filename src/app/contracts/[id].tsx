@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
 import { ReportStatus } from '@/components/report-status';
+
 import { StatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,7 @@ import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
 import { downloadContractPdf, METHOD_LABEL, type ContractSignature, type ContractView } from '@/lib/contract';
-import { formatDate } from '@/lib/date';
+import { formatDate, todayISO } from '@/lib/date';
 import { useFleet } from '@/store/fleet';
 
 /** Договір оренди: текст, підписи сторін, підписання й завантаження PDF */
@@ -101,7 +102,7 @@ export default function ContractScreen() {
               від {formatDate(data.createdAt.slice(0, 10))}
             </ThemedText>
           </View>
-          <StatusBadge status={awaiting ? 'signing' : data.status === 'terminated' ? 'terminated' : 'accepted'} />
+          <StatusBadge status={awaiting ? 'signing' : data.status === 'terminated' ? 'terminated' : todayISO() < data.terms.startDate ? 'upcoming' : todayISO() > data.terms.endDate ? 'finished' : 'active'} />
         </View>
         <ThemedText type="default" style={styles.bold}>
           {data.terms.car.title}

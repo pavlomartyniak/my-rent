@@ -12,6 +12,21 @@ export class UsersService {
     return this.users.findOne({ email: email.toLowerCase().trim() }).exec();
   }
 
+  /** Зберегти код відновлення пароля (хеш) і строк його дії */
+  setReset(id: string, codeHash: string, expires: Date) {
+    return this.users.updateOne({ _id: id }, { $set: { resetCodeHash: codeHash, resetExpires: expires, resetAttempts: 0 } }).exec();
+  }
+
+  /** Невдала спроба: рахуємо її, а після ліміту анулюємо код */
+  failReset(id: string, burn: boolean) {
+    return this.users.updateOne({ _id: id }, burn ? { $unset: { resetCodeHash: 1, resetExpires: 1 }, $set: { resetAttempts: 0 } } : { $inc: { resetAttempts: 1 } }).exec();
+  }
+
+  /** Новий пароль; код і лічильник очищаються */
+  finishReset(id: string, passwordHash: string) {
+    return this.users.updateOne({ _id: id }, { $set: { passwordHash, resetAttempts: 0 }, $unset: { resetCodeHash: 1, resetExpires: 1 } }).exec();
+  }
+
   findById(id: string) {
     return this.users.findById(id).exec();
   }

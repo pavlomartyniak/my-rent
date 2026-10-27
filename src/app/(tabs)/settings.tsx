@@ -9,6 +9,7 @@ import { Segmented } from '@/components/ui/segmented';
 import { SettingsGroup, SettingsRow } from '@/components/ui/settings-group';
 import { Spacing } from '@/constants/theme';
 import { ExportSheet } from '@/components/export-sheet';
+import { LegalSheet } from '@/components/legal-sheet';
 import { fullName } from '@/lib/profile';
 import { ensureNotificationPermission } from '@/lib/notifications';
 import { useAuth } from '@/store/auth';
@@ -29,6 +30,7 @@ export default function SettingsScreen() {
   const { preference } = useThemePreference();
   const owner = role === 'owner';
   const [exportOpen, setExportOpen] = useState(false);
+  const [doc, setDoc] = useState<'privacy' | 'terms' | null>(null);
 
   const confirm = (title: string, message: string, action: () => void) =>
     Alert.alert(title, message, [
@@ -110,7 +112,13 @@ export default function SettingsScreen() {
           />
         ) : null}
       </SettingsGroup>
+      <LegalSheet doc={doc} onClose={() => setDoc(null)} />
       <ExportSheet visible={exportOpen} onClose={() => setExportOpen(false)} subtitle="Увесь облік за весь час" />
+
+      <SettingsGroup title="Документи">
+        <SettingsRow icon="shield-checkmark-outline" title="Політика конфіденційності" onPress={() => setDoc('privacy')} />
+        <SettingsRow icon="document-text-outline" title="Умови користування" onPress={() => setDoc('terms')} />
+      </SettingsGroup>
 
       <SettingsGroup title="Допомога">
         <SettingsRow

@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { api, ApiError } from '@/lib/api';
+import { formatDate } from '@/lib/date';
 import { promptContract } from '@/lib/contract-prompt';
 import type { RentalView } from '@/lib/rentals';
 import { useFleet } from '@/store/fleet';
@@ -46,7 +47,7 @@ export function OwnerRentals() {
   const confirmAccept = (r: RentalView) =>
     Alert.alert(
       'Прийняти запит?',
-      `Авто «${r.car.title}» отримає статус «В оренді», водієм стане ${r.counterpart.name}. Оголошення буде знято, а інші запити й пропозиції на це авто відхилено.`,
+      `Авто «${r.car.title}» стане «Заброньоване» до початку оренди (${formatDate(r.startDate)}), водієм буде ${r.counterpart.name}. Оголошення буде знято, а інші запити й пропозиції на це авто відхилено.`,
       [
         { text: 'Скасувати', style: 'cancel' },
         { text: 'Прийняти', onPress: () => void respond(r, 'accept') },

@@ -47,3 +47,23 @@ export class LoginDto {
   @MaxLength(72)
   password: string;
 }
+
+export class ForgotPasswordDto {
+  @IsEmail({}, { message: 'Невірний формат email' })
+  @MaxLength(254)
+  email: string;
+}
+
+export class ResetPasswordDto {
+  @IsEmail({}, { message: 'Невірний формат email' })
+  @MaxLength(254)
+  email: string;
+
+  @Matches(/^\d{6}$/, { message: 'Код складається з 6 цифр' })
+  code: string;
+
+  @IsString()
+  @MinLength(8, { message: 'Пароль має містити щонайменше 8 символів' })
+  @MaxLength(72, { message: 'Пароль занадто довгий' })
+  password: string;
+}
