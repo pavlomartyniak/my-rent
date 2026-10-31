@@ -28,10 +28,6 @@ export class UpdateMeDto {
 
   @IsOptional()
   @IsBoolean()
-  isPro?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
   onboarded?: boolean;
 
   @IsOptional()

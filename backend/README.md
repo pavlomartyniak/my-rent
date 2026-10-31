@@ -22,7 +22,7 @@ npm run start:dev         # http://localhost:4000
 | `MONGODB_DB` | Назва бази (`my-rent`) |
 | `JWT_SECRET` | Секрет підпису токенів, мінімум 32 символи (`openssl rand -base64 48`) |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | дані Cloudinary для завантаження фото авто; без них `POST /media/upload-signature` відповідає 503 |
-| `DEMO_MODE` | `true` дозволяє перемикати Pro без оплати (поки не підключено оплату). **У продакшені — `false`** |
+| `DEMO_MODE` | `true` дозволяє «оплатити» публікацію авто без грошей (поки не підключено оплату). **У продакшені — `false`** |
 
 Мобільний застосунок бере адресу API з `EXPO_PUBLIC_API_URL` (файл `.env.local` у корені). На реальному
 телефоні це IP комп'ютера в Wi-Fi, наприклад `http://192.168.1.10:4000`.
@@ -50,10 +50,10 @@ npm run start:dev         # http://localhost:4000
 | Метод | Шлях | Опис |
 |---|---|---|
 | POST | `/auth/register`, `/auth/login` | `{email, password}` → `{token, user}` |
-| GET / PATCH / DELETE | `/me` | профіль (`isPro`, `onboarded`, `dismissedHints`); DELETE видаляє акаунт і всі дані |
+| GET / PATCH / DELETE | `/me` | профіль (`onboarded`, `dismissedHints`); DELETE видаляє акаунт і всі дані |
 | GET | `/data` | профіль, авто й нагадування одним запитом (записи не віддаються: їх беруть частинами через `/transactions/history`) |
 | DELETE | `/data` | очищає авто, записи й нагадування |
-| GET / POST | `/cars` | список / створення (ліміт: Free — 2 авто, Pro — 20) |
+| GET / POST | `/cars` | список / створення (облік безкоштовний, без ліміту на кількість авто) |
 | GET / PATCH / DELETE | `/cars/:id` | DELETE каскадно видаляє записи й нагадування авто |
 | GET / POST | `/transactions` (`?carId=`) | доходи й витрати |
 | PATCH / DELETE | `/transactions/:id` | |
@@ -65,6 +65,7 @@ npm run start:dev         # http://localhost:4000
 | GET | `/reports/summary` (`?period=2026-10` або `2026`) | загальний звіт: підсумки й маржа, зміна відносно попереднього періоду, графік (6 або 12 місяців), витрати за категоріями, показники кожного авто (за період і за весь час: ROI, окупність) |
 | GET | `/reports/cars/:id` (`?period=`) | звіт по авто: період, графік, категорії, показники за весь час, по роках, найкращий і найгірший місяць |
 | PUT / DELETE | `/cars/:id/listing` | власник: опублікувати оголошення (`city`, `pricePerDay`, `deposit` — застава, грн, необов'язково, `description`) або зняти. Авто має бути «Вільне» й мати фото на сервері (https) |
+| POST | `/cars/:id/listing/unlock` | власник: сплатити публікацію цього авто (5 $ разово). Перше авто публікується безкоштовно; без оплати публікація наступного дає `402` із кодом `LISTING_PAYMENT_REQUIRED`. Поки оплату не підключено, працює лише при `DEMO_MODE=true` |
 | GET | `/market/cars` (`?city=`, `?q=`, `?minPrice=`, `?maxPrice=`, `?maxDeposit=` (0 — лише без застави), `?page=`, `?limit=`) | усі: пошук опублікованих вільних авто; віддаються лише публічні поля (без VIN, вартості, водія, контактів) |
 | GET | `/market/cars/:id` | усі: оголошення |
 | POST | `/rentals` | орендар: запит на оренду (`carId`, `startDate`, `endDate`, `message`) |

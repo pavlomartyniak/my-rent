@@ -155,8 +155,11 @@ export default function CarScreen() {
           </>
         ) : car.status === 'Вільне' ? (
           <>
+            <ThemedText type="default" style={styles.bold}>
+              Авто ще не опубліковане
+            </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              Опублікуйте авто, щоб орендарі могли знайти його й надіслати запит на оренду.
+              Орендарі його не бачать у пошуку. Опублікуйте авто, щоб воно з’явилось і на нього можна було надсилати запити на оренду.
             </ThemedText>
             <Button title="Опублікувати для орендарів" icon="megaphone-outline" onPress={() => router.push({ pathname: '/car/listing', params: { id: car.id } })} />
           </>

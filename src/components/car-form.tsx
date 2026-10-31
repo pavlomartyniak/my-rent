@@ -137,9 +137,26 @@ export function CarForm({ car }: { car?: Car }) {
       photoUri: photos[0] ?? '',
     };
     setSaving(true);
-    const ok = await (car ? updateCar(car.id, data) : addCar(data));
+    if (car) {
+      const ok = await updateCar(car.id, data);
+      setSaving(false);
+      if (ok) router.back();
+      return;
+    }
+    const created = await addCar(data);
     setSaving(false);
-    if (ok) router.back();
+    if (!created) return;
+    // Нове авто ще не бачать орендарі: поки його не опубліковано, воно лише в обліку власника
+    if (created.status !== 'Вільне') return router.back();
+    Alert.alert(
+      'Авто додано',
+      'Воно поки що лише у вашому обліку: орендарі не бачать його в пошуку. Щоб воно з’явилось і на нього могли надсилати запити, опублікуйте оголошення.',
+      [
+        { text: 'Пізніше', style: 'cancel', onPress: () => router.back() },
+        { text: 'Опублікувати', onPress: () => router.replace({ pathname: '/car/listing', params: { id: created.id } }) },
+      ],
+      { cancelable: false },
+    );
   }
 
   return (

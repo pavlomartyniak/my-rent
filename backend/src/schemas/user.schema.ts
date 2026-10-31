@@ -37,9 +37,6 @@ export class User {
   role: string;
 
   @Prop({ default: false })
-  isPro: boolean;
-
-  @Prop({ default: false })
   onboarded: boolean;
 
   @Prop({ type: [String], default: [] })

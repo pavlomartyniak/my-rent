@@ -29,6 +29,8 @@ export type Car = {
   photos?: string[];
   /** Оголошення про оренду; воно видиме орендарям, поки published=true і авто вільне */
   listing?: { published: boolean; city: string; pricePerDay: number; deposit?: number; description: string };
+  /** Чим відкрито публікацію: free — безкоштовним першим авто (одне на власника), paid — разовою оплатою; без значення — ще не відкрита */
+  listingUnlock?: 'free' | 'paid';
 };
 
 export type Role = 'owner' | 'renter';
@@ -74,6 +76,5 @@ export type Reminder = {
   notificationIds?: string[];
 };
 
-export const FREE_CAR_LIMIT = 2;
-export const PRO_CAR_LIMIT = 20;
-export const PRO_PRICE = '$5';
+/** Публікація авто: перше безкоштовно, кожне наступне — разово за конкретне авто. Облік безкоштовний без ліміту */
+export const LISTING_PRICE = '5 $';

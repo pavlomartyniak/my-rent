@@ -42,5 +42,5 @@ export type RentalStatus = (typeof RENTAL_STATUSES)[number];
 /** Скільки фото можна додати до одного авто */
 export const MAX_PHOTOS = 10;
 
-export const FREE_CAR_LIMIT = 2;
-export const PRO_CAR_LIMIT = 20;
+/** Публікація авто: перше безкоштовно, кожне наступне коштує стільки доларів разово за конкретне авто. Облік безкоштовний без ліміту */
+export const LISTING_PRICE_USD = 5;

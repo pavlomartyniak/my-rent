@@ -4,7 +4,7 @@ import { Alert } from 'react-native';
 import { api, ApiError } from '@/lib/api';
 import type { Profile } from '@/lib/profile';
 import { cancelNotifications, scheduleReminder } from '@/lib/notifications';
-import { FREE_CAR_LIMIT, PRO_CAR_LIMIT, type Car, type Reminder, type Role, type Transaction } from '@/types';
+import { type Car, type Reminder, type Role, type Transaction } from '@/types';
 
 import { useAuth } from './auth';
 import { isThemePreference, useThemePreference, type ThemePreference } from './theme';
@@ -15,7 +15,6 @@ type Data = Profile & {
   role: Role;
   cars: Car[];
   reminders: Reminder[];
-  isPro: boolean;
   onboarded: boolean;
   /** Підказки, які користувач уже закрив */
   dismissedHints: string[];
@@ -24,12 +23,12 @@ type Data = Profile & {
 
 /** Відповідь GET /data і POST /data/import */
 type ServerData = {
-  user: Partial<Profile> & { email: string; role?: Role; isPro: boolean; onboarded: boolean; dismissedHints: string[]; theme?: ThemePreference };
+  user: Partial<Profile> & { email: string; role?: Role; onboarded: boolean; dismissedHints: string[]; theme?: ThemePreference };
   cars: Car[];
   reminders: Reminder[];
 };
 
-const EMPTY: Data = { email: '', role: 'owner', firstName: '', lastName: '', phone: '', cars: [], reminders: [], isPro: false, onboarded: false, dismissedHints: [], theme: 'system' };
+const EMPTY: Data = { email: '', role: 'owner', firstName: '', lastName: '', phone: '', cars: [], reminders: [], onboarded: false, dismissedHints: [], theme: 'system' };
 
 const fromServer = ({ user, cars, reminders }: ServerData): Data => ({
   email: user.email,
@@ -39,7 +38,6 @@ const fromServer = ({ user, cars, reminders }: ServerData): Data => ({
   phone: user.phone ?? '',
   cars,
   reminders,
-  isPro: user.isPro,
   onboarded: user.onboarded,
   dismissedHints: user.dismissedHints,
   theme: isThemePreference(user.theme) ? user.theme : 'system',
@@ -57,10 +55,9 @@ type FleetContextValue = Data & {
   reload: () => void;
   /** Позначити, що дані змінились поза стором (запити на оренду): звіти й списки завантажаться наново */
   invalidate: () => void;
-  carLimit: number;
-  canAddCar: boolean;
   // Усі зміни йдуть на сервер; повертають true, якщо вдалося (помилку показують самі)
-  addCar: (car: NewCar) => Promise<boolean>;
+  /** Повертає створене авто (щоб одразу запропонувати його опублікувати) або null, якщо не вдалося */
+  addCar: (car: NewCar) => Promise<Car | null>;
   updateCar: (id: string, patch: Partial<NewCar>) => Promise<boolean>;
   deleteCar: (id: string) => Promise<boolean>;
   addTransaction: (tx: NewTransaction) => Promise<boolean>;
@@ -69,7 +66,6 @@ type FleetContextValue = Data & {
   addReminder: (reminder: Pick<Reminder, 'carId' | 'kind' | 'date'>) => Promise<boolean>;
   toggleReminder: (id: string) => Promise<boolean>;
   deleteReminder: (id: string) => Promise<boolean>;
-  setPro: (value: boolean) => Promise<boolean>;
   finishOnboarding: () => Promise<boolean>;
   dismissHint: (id: string) => void;
   resetHints: () => Promise<boolean>;
@@ -143,11 +139,14 @@ export function FleetProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addCar = useCallback(
-    (car: NewCar) =>
-      run(async () => {
-        const created = await api<Car>('POST', '/cars', car);
-        patchData((d) => ({ ...d, cars: [...d.cars, created] }));
-      }),
+    async (car: NewCar) => {
+      const box: { created?: Car } = {};
+      const ok = await run(async () => {
+        box.created = await api<Car>('POST', '/cars', car);
+        patchData((d) => ({ ...d, cars: [...d.cars, box.created!] }));
+      });
+      return ok ? (box.created ?? null) : null;
+    },
     [run, patchData],
   );
 
@@ -242,7 +241,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
   );
 
   const updateMe = useCallback(
-    (changes: Partial<Pick<Data, 'isPro' | 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'phone'>>) =>
+    (changes: Partial<Pick<Data, 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'phone'>>) =>
       run(async () => {
         await api('PATCH', '/me', changes);
         patch((d) => ({ ...d, ...changes }));
@@ -260,7 +259,6 @@ export function FleetProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = useCallback((changes: Partial<Profile>) => updateMe(changes), [updateMe]);
 
-  const setPro = useCallback((isPro: boolean) => updateMe({ isPro }), [updateMe]);
   const finishOnboarding = useCallback(() => updateMe({ onboarded: true }), [updateMe]);
   const resetHints = useCallback(() => updateMe({ dismissedHints: [] }), [updateMe]);
 
@@ -296,7 +294,6 @@ export function FleetProvider({ children }: { children: ReactNode }) {
   );
 
   const reload = useCallback(() => setAttempt((n) => n + 1), []);
-  const carLimit = data.isPro ? PRO_CAR_LIMIT : FREE_CAR_LIMIT;
 
   const value = useMemo<FleetContextValue>(
     () => ({
@@ -306,8 +303,6 @@ export function FleetProvider({ children }: { children: ReactNode }) {
       loadError: current?.error ?? null,
       reload,
       invalidate: touch,
-      carLimit,
-      canAddCar: data.cars.length < carLimit,
       addCar,
       updateCar,
       deleteCar,
@@ -317,7 +312,6 @@ export function FleetProvider({ children }: { children: ReactNode }) {
       addReminder,
       toggleReminder,
       deleteReminder,
-      setPro,
       finishOnboarding,
       dismissHint,
       resetHints,
@@ -326,7 +320,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
       clearAll,
       deleteAccount,
     }),
-    [data, ready, dataVersion, current?.error, reload, touch, carLimit, addCar, updateCar, deleteCar, addTransaction, updateTransaction, deleteTransaction, addReminder, toggleReminder, deleteReminder, setPro, finishOnboarding, dismissHint, resetHints, setTheme, updateProfile, clearAll, deleteAccount],
+    [data, ready, dataVersion, current?.error, reload, touch, addCar, updateCar, deleteCar, addTransaction, updateTransaction, deleteTransaction, addReminder, toggleReminder, deleteReminder, finishOnboarding, dismissHint, resetHints, setTheme, updateProfile, clearAll, deleteAccount],
   );
 
   return <FleetContext.Provider value={value}>{children}</FleetContext.Provider>;

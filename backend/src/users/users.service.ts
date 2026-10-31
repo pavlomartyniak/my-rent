@@ -35,7 +35,7 @@ export class UsersService {
     return this.users.create(data);
   }
 
-  update(id: string, patch: Partial<Pick<User, 'isPro' | 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'phone'>>) {
+  update(id: string, patch: Partial<Pick<User, 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'phone'>>) {
     return this.users.findByIdAndUpdate(id, { $set: patch }, { new: true }).exec();
   }
 

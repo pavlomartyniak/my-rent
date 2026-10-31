@@ -15,7 +15,6 @@ import { ensureNotificationPermission } from '@/lib/notifications';
 import { useAuth } from '@/store/auth';
 import { useFleet } from '@/store/fleet';
 import { useThemePreference, type ThemePreference } from '@/store/theme';
-import { PRO_CAR_LIMIT } from '@/types';
 
 const THEMES: { label: string; value: ThemePreference }[] = [
   { label: 'Як у телефоні', value: 'system' },
@@ -25,7 +24,7 @@ const THEMES: { label: string; value: ThemePreference }[] = [
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { role, email, firstName, lastName, phone, cars, isPro, carLimit, setPro, clearAll, resetHints, setTheme, deleteAccount } = useFleet();
+  const { role, email, firstName, lastName, phone, clearAll, resetHints, setTheme, deleteAccount } = useFleet();
   const { signOut } = useAuth();
   const { preference } = useThemePreference();
   const owner = role === 'owner';
@@ -84,17 +83,6 @@ export default function SettingsScreen() {
           />
         </View>
       </SettingsGroup>
-
-      {owner ? (
-        <SettingsGroup title="Тариф">
-          <SettingsRow
-            icon="diamond-outline"
-            title={isPro ? 'Тариф Pro' : 'Тариф Free'}
-            subtitle={isPro ? `Авто: ${cars.length} з ${carLimit}` : `Авто: ${cars.length} з ${carLimit}. У Pro — до ${PRO_CAR_LIMIT} авто`}
-            onPress={() => (isPro ? void setPro(false) : router.push('/paywall'))}
-          />
-        </SettingsGroup>
-      ) : null}
 
       <SettingsGroup title={owner ? 'Дані та сповіщення' : 'Дані'}>
         <SettingsRow

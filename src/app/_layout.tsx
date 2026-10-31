@@ -67,7 +67,6 @@ function Routes() {
           <Stack.Screen name="car/listing" options={{ title: 'Оголошення', presentation: 'modal' }} />
           <Stack.Screen name="car/edit" options={{ title: 'Редагувати авто', presentation: 'modal' }} />
           <Stack.Screen name="reminder/new" options={{ title: 'Нове нагадування', presentation: 'modal' }} />
-          <Stack.Screen name="paywall" options={{ title: 'Pro', presentation: 'modal' }} />
           <Stack.Screen name="wanted/offer" options={{ title: 'Пропозиція орендарю', presentation: 'modal' }} />
         </Stack.Protected>
         {/* Орендар: пошук авто й запити */}

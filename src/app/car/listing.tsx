@@ -5,12 +5,14 @@ import { Alert } from 'react-native';
 import { CityField } from '@/components/place-field';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Field } from '@/components/ui/field';
 import { NumberField } from '@/components/ui/number-field';
 import { Screen } from '@/components/ui/screen';
 import { api, ApiError } from '@/lib/api';
 import { useFleet } from '@/store/fleet';
+import { LISTING_PRICE } from '@/types';
 
 /** Оголошення про оренду: місто, ціна за добу й опис. Його бачать усі орендарі, поки авто вільне. */
 export default function ListingScreen() {
@@ -18,6 +20,8 @@ export default function ListingScreen() {
   const router = useRouter();
   const { cars, reload } = useFleet();
   const car = cars.find((c) => c.id === id);
+  // Перше авто публікується безкоштовно; поки воно займає це місце, кожне наступне відкривається разовою оплатою
+  const needsPayment = !!car && !car.listingUnlock && cars.some((c) => c.id !== car.id && c.listingUnlock === 'free');
 
   const [city, setCity] = useState(car?.listing?.city ?? '');
   const [price, setPrice] = useState(car?.listing ? String(car.listing.pricePerDay) : '');
@@ -46,6 +50,7 @@ export default function ListingScreen() {
     if (errors.city || errors.price) return;
     setSaving(true);
     try {
+      if (needsPayment) await api('POST', `/cars/${car.id}/listing/unlock`);
       await api('PUT', `/cars/${car.id}/listing`, { city: city.trim(), pricePerDay: Number(price), deposit: Number(deposit) || 0, description: description.trim() });
       reload();
       router.back();
@@ -95,7 +100,22 @@ export default function ListingScreen() {
         placeholder="Стан авто, умови, ліміт пробігу…"
         style={{ minHeight: 110, paddingTop: 12, textAlignVertical: 'top' }}
       />
-      <Button title={saving ? 'Публікуємо…' : car.listing?.published ? 'Зберегти оголошення' : 'Опублікувати'} icon="megaphone-outline" disabled={saving} onPress={save} />
+      {needsPayment ? (
+        <Card>
+          <ThemedText type="default" style={{ fontWeight: 600 }}>
+            Публікація цього авто: {LISTING_PRICE} разово
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            Перше авто ви публікуєте безкоштовно, кожне наступне коштує {LISTING_PRICE} один раз за конкретне авто. Після оплати його можна знімати з публікації й публікувати знову без доплати. Облік безкоштовний і без обмежень. Оплату ще не підключено: це демо.
+          </ThemedText>
+        </Card>
+      ) : null}
+      <Button
+        title={saving ? 'Публікуємо…' : needsPayment ? `Сплатити ${LISTING_PRICE} і опублікувати` : car.listing?.published ? 'Зберегти оголошення' : 'Опублікувати'}
+        icon="megaphone-outline"
+        disabled={saving}
+        onPress={save}
+      />
     </Screen>
   );
 }

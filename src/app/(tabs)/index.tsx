@@ -31,7 +31,7 @@ const FILTERS: Record<string, string | null> = { Усі: null, 'В оренді'
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { cars, canAddCar } = useFleet();
+  const { cars } = useFleet();
   const [sort, setSort] = useState<Sort>('За прибутком');
   const [filter, setFilter] = useState('Усі');
   const [view, setView] = useState<(typeof VIEWS)[number]>('Мій автопарк');
@@ -50,7 +50,7 @@ export default function HomeScreen() {
   const active = options.some((o) => o.label === filter) ? filter : 'Усі';
   const shown = rows.filter(({ car }) => !FILTERS[active] || car.status === FILTERS[active]);
 
-  const addCar = () => router.push(canAddCar ? '/car/new' : '/paywall');
+  const addCar = () => router.push('/car/new');
 
   if (cars.length === 0) {
     return (

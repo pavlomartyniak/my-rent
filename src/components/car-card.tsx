@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
@@ -8,6 +8,7 @@ import type { Car } from '@/types';
 
 import { CarPhoto } from './car-photo';
 import { ThemedText } from './themed-text';
+import { Button } from './ui/button';
 
 /** Стан авто: колір плашки на фото */
 const STATUS_TONE: Record<string, 'positive' | 'accent' | 'warning' | 'neutral'> = {
@@ -20,7 +21,10 @@ const STATUS_TONE: Record<string, 'positive' | 'accent' | 'warning' | 'neutral'>
 /** Авто в списку: велике фото зі станом на ньому, під ним назва, опис і прибуток за місяць */
 export function CarCard({ car, profit }: { car: Car; profit?: number }) {
   const theme = useTheme();
+  const router = useRouter();
   const tone = STATUS_TONE[car.status] ?? 'neutral';
+  // Вільне авто без оголошення орендарі не бачать у пошуку: пропонуємо опублікувати
+  const unpublished = car.status === 'Вільне' && !car.listing?.published;
   const [bg, fg] = {
     positive: [theme.positiveSoft, theme.positive],
     accent: [theme.accentSoft, theme.accent],
@@ -29,42 +33,48 @@ export function CarCard({ car, profit }: { car: Car; profit?: number }) {
   }[tone];
 
   return (
-    <Link href={{ pathname: '/car/[id]', params: { id: car.id } }} asChild>
-      <Pressable accessibilityRole="button" style={({ pressed }) => [styles.wrap, pressed && styles.pressed]}>
-        <View>
-          <CarPhoto uri={car.photoUri} style={styles.photo} iconSize={44} />
-          <View style={[styles.badge, { backgroundColor: bg }]}>
-            <ThemedText type="smallBold" style={{ color: fg, fontSize: 13 }}>
-              {car.status}
-            </ThemedText>
+    <View style={styles.outer}>
+      <Link href={{ pathname: '/car/[id]', params: { id: car.id } }} asChild>
+        <Pressable accessibilityRole="button" style={({ pressed }) => [styles.wrap, pressed && styles.pressed]}>
+          <View>
+            <CarPhoto uri={car.photoUri} style={styles.photo} iconSize={44} />
+            <View style={[styles.badge, { backgroundColor: bg }]}>
+              <ThemedText type="smallBold" style={{ color: fg, fontSize: 13 }}>
+                {car.status}
+              </ThemedText>
+            </View>
           </View>
-        </View>
-        <View style={styles.row}>
-          <View style={styles.flex}>
-            <ThemedText type="default" style={styles.name} numberOfLines={1}>
-              {car.brand} {car.model}
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-              {car.year}
-              {car.driver ? ` · ${car.driver}` : ''}
-              {car.listing?.published && car.status === 'Вільне' ? ' · В оголошеннях' : ''}
-            </ThemedText>
+          <View style={styles.row}>
+            <View style={styles.flex}>
+              <ThemedText type="default" style={styles.name} numberOfLines={1}>
+                {car.brand} {car.model}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                {car.year}
+                {car.driver ? ` · ${car.driver}` : ''}
+                {car.listing?.published && car.status === 'Вільне' ? ' · В оголошеннях' : ''}
+              </ThemedText>
+            </View>
+            <View style={styles.profit}>
+              <ThemedText type="default" style={styles.name} themeColor={profit === undefined ? 'textSecondary' : profit >= 0 ? 'positive' : 'negative'}>
+                {profit === undefined ? '—' : formatMoney(profit)}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                за місяць
+              </ThemedText>
+            </View>
           </View>
-          <View style={styles.profit}>
-            <ThemedText type="default" style={styles.name} themeColor={profit === undefined ? 'textSecondary' : profit >= 0 ? 'positive' : 'negative'}>
-              {profit === undefined ? '—' : formatMoney(profit)}
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              за місяць
-            </ThemedText>
-          </View>
-        </View>
-      </Pressable>
-    </Link>
+        </Pressable>
+      </Link>
+      {unpublished ? (
+        <Button title="Опублікувати для орендарів" icon="megaphone-outline" variant="soft" onPress={() => router.push({ pathname: '/car/listing', params: { id: car.id } })} />
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  outer: { gap: Spacing.two },
   wrap: { gap: Spacing.two },
   pressed: { opacity: 0.85 },
   photo: { width: '100%', aspectRatio: 16 / 10, borderRadius: Radius.lg },

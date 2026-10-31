@@ -1,8 +1,8 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 
-import { FREE_CAR_LIMIT, PRO_CAR_LIMIT } from '../common/constants';
+import { LISTING_PRICE_USD } from '../common/constants';
 import { normalize } from '../common/normalize';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
@@ -10,9 +10,16 @@ import { Reminder } from '../schemas/reminder.schema';
 import { Offer } from '../schemas/offer.schema';
 import { RentalRequest } from '../schemas/rental-request.schema';
 import { Transaction } from '../schemas/transaction.schema';
-import { UsersService } from '../users/users.service';
 import type { CreateCarDto, ListingDto, UpdateCarDto } from './cars.dto';
+import { listingAccess } from './listing-access';
 import { normalizePhotos } from './photos';
+
+/** Публікація цього авто ще не відкрита: перше авто вже зайняло безкоштовне місце. Клієнт за кодом показує оплату */
+const paymentRequired = () =>
+  new HttpException(
+    { statusCode: HttpStatus.PAYMENT_REQUIRED, error: 'Payment Required', code: 'LISTING_PAYMENT_REQUIRED', price: LISTING_PRICE_USD, message: `Перше авто публікується безкоштовно, кожне наступне коштує ${LISTING_PRICE_USD} $ разово. Сплатіть публікацію цього авто, щоб продовжити` },
+    HttpStatus.PAYMENT_REQUIRED,
+  );
 
 @Injectable()
 export class CarsService {
@@ -23,7 +30,6 @@ export class CarsService {
     @InjectModel(RentalRequest.name) private readonly rentals: Model<RentalRequest>,
     @InjectModel(Offer.name) private readonly offers: Model<Offer>,
     @InjectModel(Deal.name) private readonly deals: Model<Deal>,
-    private readonly users: UsersService,
   ) {}
 
   list(userId: string) {
@@ -31,13 +37,7 @@ export class CarsService {
   }
 
   async create(userId: string, dto: CreateCarDto) {
-    const user = await this.users.findById(userId);
-    if (!user) throw new UnauthorizedException('Користувача не знайдено');
-
-    const limit = user.isPro ? PRO_CAR_LIMIT : FREE_CAR_LIMIT;
-    if ((await this.cars.countDocuments({ userId })) >= limit) {
-      throw new ForbiddenException(`Ліміт тарифу: ${limit} авто. Перейдіть на Pro, щоб додати більше.`);
-    }
+    // Облік безкоштовний і без ліміту: платна лише публікація кожного наступного авто
     return this.cars.create({ ...normalizePhotos(dto), userId });
   }
 
@@ -69,6 +69,15 @@ export class CarsService {
     const cityKey = normalize(dto.city);
     if (!cityKey) throw new BadRequestException('Вкажіть місто');
 
+    // Публікація вже відкрита (безкоштовно чи оплатою), або це перше авто й воно займає безкоштовне місце, або потрібна оплата
+    const freeTaken = !car.listingUnlock && !!(await this.cars.exists({ userId, listingUnlock: 'free', _id: { $ne: car._id } }));
+    const access = listingAccess(car.listingUnlock, freeTaken);
+    if (access === 'payment') throw paymentRequired();
+    if (access === 'free') {
+      car.listingUnlock = 'free';
+      car.listingUnlockedAt = new Date();
+    }
+
     car.listing = {
       published: true,
       city: dto.city,
@@ -78,6 +87,24 @@ export class CarsService {
       description: dto.description ?? '',
       publishedAt: car.listing?.published ? car.listing.publishedAt : new Date(),
     };
+    try {
+      return await car.save();
+    } catch (e) {
+      // Унікальний індекс: інший запит встиг зайняти безкоштовне місце
+      if (access === 'free' && (e as { code?: number }).code === 11000) throw paymentRequired();
+      throw e;
+    }
+  }
+
+  /**
+   * Відкриває публікацію цього авто разовою оплатою. Поки оплата не підключена, працює лише в демо-режимі (перевіряє
+   * контролер). Повторний виклик для вже відкритого авто нічого не змінює.
+   */
+  async unlockListing(userId: string, id: string) {
+    const car = await this.get(userId, id);
+    if (car.listingUnlock) return car;
+    car.listingUnlock = 'paid';
+    car.listingUnlockedAt = new Date();
     return car.save();
   }
 
