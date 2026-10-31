@@ -10,6 +10,9 @@ import { Transaction } from '../schemas/transaction.schema';
 import { groupByMonth, monthSubtotals } from './history';
 import type { CreateTransactionDto, UpdateTransactionDto } from './transactions.dto';
 
+/** Скільки записів одного місяця віддавати за раз */
+const MONTH_LIMIT = 300;
+
 @Injectable()
 export class TransactionsService {
   constructor(
@@ -62,6 +65,27 @@ export class TransactionsService {
       .sort({ date: -1, _id: -1 })
       .exec();
     return { groups: groupByMonth(items, page), hasMore: all.length > months, totalMonths: all.length };
+  }
+
+  /**
+   * Записи користувача за місяць, найновіші першими, з назвою авто. Без `carId`/`dealId` — усі записи користувача,
+   * з ними — лише цього авто чи цієї оренди. Чужих записів тут не буває: вибірка завжди обмежена власником.
+   */
+  async month(user: AuthUser, month: string, target: { carId?: string; dealId?: string }) {
+    const userId = new Types.ObjectId(user.id);
+    const items = await this.transactions
+      .find({
+        userId,
+        date: { $gte: `${month}-01`, $lte: `${month}-31` },
+        ...(target.carId ? { carId: new Types.ObjectId(target.carId) } : {}),
+        ...(target.dealId ? { dealId: new Types.ObjectId(target.dealId) } : {}),
+      })
+      .sort({ date: -1, _id: -1 })
+      .limit(MONTH_LIMIT)
+      .exec();
+    const cars = await this.cars.find({ _id: { $in: [...new Set(items.map((t) => String(t.carId)))] } }, 'brand model').lean().exec();
+    const titles = new Map(cars.map((c) => [String(c._id), `${c.brand} ${c.model}`]));
+    return items.map((t) => ({ ...t.toJSON(), car: titles.get(String(t.carId)) ?? '' }));
   }
 
   async create(user: AuthUser, dto: CreateTransactionDto) {

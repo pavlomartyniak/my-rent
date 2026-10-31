@@ -52,6 +52,7 @@ npm run start:dev         # http://localhost:4000
 | POST | `/auth/register`, `/auth/login` | `{email, password}` → `{token, user}` |
 | GET / PATCH / DELETE | `/me` | профіль (`onboarded`, `dismissedHints`); DELETE видаляє акаунт і всі дані |
 | GET | `/data` | профіль, авто й нагадування одним запитом (записи не віддаються: їх беруть частинами через `/transactions/history`) |
+| GET | `/transactions/month?month=YYYY-MM` (`&carId=` чи `&dealId=` — лише це авто чи ця оренда) | записи користувача за місяць з назвою авто, найновіші першими (до 300): показуються під графіком у звітах за вибраний місяць |
 | DELETE | `/data` | очищає авто, записи й нагадування |
 | GET / POST | `/cars` | список / створення (облік безкоштовний, без ліміту на кількість авто) |
 | GET / PATCH / DELETE | `/cars/:id` | DELETE каскадно видаляє записи й нагадування авто |

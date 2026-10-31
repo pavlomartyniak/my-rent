@@ -11,11 +11,11 @@ import { ThemedText } from './themed-text';
 import { Icon } from './ui/icon';
 
 /** Рядок історії: дата-плашка (зелена для доходу, червона для витрати), назва, сума */
-export function TransactionRow({ tx }: { tx: Transaction }) {
+export function TransactionRow({ tx, car }: { tx: Transaction; /** Назва авто: показується, коли список охоплює кілька авто */ car?: string }) {
   const theme = useTheme();
   const income = tx.type === 'income';
   const tone = income ? 'positive' : 'negative';
-  const details = [tx.driver, tx.note].filter(Boolean).join(' · ');
+  const details = [car, tx.driver, tx.note].filter(Boolean).join(' · ');
 
   return (
     <Link href={{ pathname: '/transaction/[id]', params: { id: tx.id } }} asChild>

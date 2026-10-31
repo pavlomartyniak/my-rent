@@ -36,7 +36,7 @@ export default function DealAnalyticsScreen() {
           <SummaryCard title={`Прибуток · ${p.label}`} profit={data.totals.profit} income={data.totals.income} expense={data.totals.expense} />
 
           <Card>
-            <BarChart key={p.key} data={data.series} />
+            <BarChart key={p.key} data={data.series} scope={{ dealId: id }} />
           </Card>
 
           <SectionHeader title={`На що йдуть витрати · ${p.label}`} />

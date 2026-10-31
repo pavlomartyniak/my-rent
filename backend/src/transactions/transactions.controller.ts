@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Header, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
 import { Type } from 'class-transformer';
-import { IsInt, IsMongoId, IsOptional, Max, Min } from 'class-validator';
+import { IsInt, IsMongoId, IsOptional, Matches, Max, Min } from 'class-validator';
 
 import { type AuthUser, CurrentUser } from '../common/current-user';
 import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
@@ -24,6 +24,20 @@ class HistoryQuery {
   months = 2;
 }
 
+class MonthQuery {
+  /** Місяць вигляду YYYY-MM */
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, { message: 'Місяць має вигляд РРРР-ММ' })
+  month: string;
+
+  @IsOptional()
+  @IsMongoId()
+  carId?: string;
+
+  @IsOptional()
+  @IsMongoId()
+  dealId?: string;
+}
+
 @Controller('transactions')
 export class TransactionsController {
   constructor(private readonly transactions: TransactionsService) {}
@@ -38,6 +52,13 @@ export class TransactionsController {
   @Get('history')
   history(@CurrentUser() user: AuthUser, @Query() { carId, dealId, months }: HistoryQuery) {
     return this.transactions.history(user, { carId, dealId }, months);
+  }
+
+  /** Записи одного місяця (за вибраним місяцем у звітах): що саме було доходом і на що пішли витрати */
+  @Header('Cache-Control', 'no-store')
+  @Get('month')
+  month(@CurrentUser() user: AuthUser, @Query() { month, carId, dealId }: MonthQuery) {
+    return this.transactions.month(user, month, { carId, dealId });
   }
 
   @Get(':id')

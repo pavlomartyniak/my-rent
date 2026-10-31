@@ -45,6 +45,9 @@ export type CarReport = {
   worst: MonthProfit | null;
 };
 
+/** Запис місяця зі звіту: разом з назвою авто, до якого він належить */
+export type MonthEntry = Transaction & { car: string };
+
 /** Один місяць історії: підсумок рахує сервер */
 export type HistoryGroup = Totals & { month: string; items: Transaction[] };
 

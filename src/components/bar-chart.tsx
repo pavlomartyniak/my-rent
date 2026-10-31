@@ -2,11 +2,14 @@ import { useMemo, useRef, useState } from 'react';
 import { PanResponder, Pressable, StyleSheet, View, type ViewInstance } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
+import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { monthLabel, monthTitle } from '@/lib/date';
 import { formatMoney } from '@/lib/format';
+import type { MonthEntry } from '@/lib/reports';
 
 import { ThemedText } from './themed-text';
+import { TransactionRow } from './transaction-row';
 
 type Point = { month: string; income: number; expense: number };
 
@@ -14,11 +17,48 @@ const CHART_HEIGHT = 120;
 
 const barHeight = (value: number, max: number) => (value > 0 ? Math.max(3, (value / max) * CHART_HEIGHT) : 0);
 
+/** Що саме було доходом і на що пішли витрати у вибраному місяці: записи цього місяця списком */
+function MonthEntries({ month, scope }: { month: string; scope?: ChartScope }) {
+  const theme = useTheme();
+  const query = `month=${month}${scope?.carId ? `&carId=${scope.carId}` : ''}${scope?.dealId ? `&dealId=${scope.dealId}` : ''}`;
+  const { data, loading, error } = useReport<MonthEntry[]>(`/transactions/month?${query}`, { keepPrevious: true });
+  // Назву авто показуємо лише там, де записи охоплюють кілька авто
+  const showCar = !scope?.carId && !scope?.dealId;
+
+  return (
+    <View style={styles.entries}>
+      <ThemedText type="smallBold" themeColor="textSecondary">
+        Записи · {monthTitle(month)}
+      </ThemedText>
+      {!data ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          {error ?? (loading ? 'Завантажуємо…' : '')}
+        </ThemedText>
+      ) : data.length === 0 ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          За цей місяць записів немає
+        </ThemedText>
+      ) : (
+        data.map((tx, i) => (
+          <View key={tx.id}>
+            {i > 0 ? <View style={[styles.divider, { backgroundColor: theme.border }]} /> : null}
+            <TransactionRow tx={tx} car={showCar ? tx.car : undefined} />
+          </View>
+        ))
+      )}
+    </View>
+  );
+}
+
+/** Звідки брати записи вибраного місяця: усі записи користувача, лише авто чи лише оренди */
+export type ChartScope = { carId?: string; dealId?: string };
+
 /**
  * Стовпчики доходів (зелені) і витрат (червоні). Місяць можна вибрати дотиком
- * або вести пальцем уздовж графіка; суми вибраного місяця показані над ним.
+ * або вести пальцем уздовж графіка; суми вибраного місяця показані над ним, а під графіком
+ * записи цього місяця: за що був дохід і на що пішли витрати.
  */
-export function BarChart({ data }: { data: Point[] }) {
+export function BarChart({ data, scope }: { data: Point[]; scope?: ChartScope }) {
   const theme = useTheme();
   const [selected, setSelected] = useState(data.length - 1);
   // Положення графіка на екрані: за ним переводимо дотик пальця в номер місяця
@@ -102,6 +142,8 @@ export function BarChart({ data }: { data: Point[] }) {
           Торкніться або ведіть пальцем
         </ThemedText>
       </View>
+
+      <MonthEntries month={current.month} scope={scope} />
     </View>
   );
 }
@@ -130,6 +172,8 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, lineHeight: 18 },
   labelCompact: { fontSize: 10, lineHeight: 14 },
   labelActive: { fontWeight: 700 },
+  entries: { gap: 0 },
+  divider: { height: StyleSheet.hairlineWidth, marginLeft: 48 + Spacing.three },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: Spacing.two },
   legend: { flexDirection: 'row', gap: Spacing.three },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },

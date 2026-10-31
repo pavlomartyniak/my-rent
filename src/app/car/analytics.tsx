@@ -51,7 +51,7 @@ export default function CarAnalyticsScreen() {
         <ReportStatus loading={loading} error={error} onRetry={retry} />
       ) : (
         <>
-          <CarReportView report={report} price={car.price} periodLabel={p.label} periodKey={p.key} />
+          <CarReportView report={report} carId={car.id} price={car.price} periodLabel={p.label} periodKey={p.key} />
           <ExportButton filter={{ carId: car.id, period: p.key }} subtitle={`${car.brand} ${car.model} · ${p.label}`} title={`Експорт за ${p.label}`} />
         </>
       )}
@@ -59,7 +59,7 @@ export default function CarAnalyticsScreen() {
   );
 }
 
-function CarReportView({ report, price, periodLabel, periodKey }: { report: CarReport; price: number; periodLabel: string; periodKey: string }) {
+function CarReportView({ report, carId, price, periodLabel, periodKey }: { report: CarReport; carId: string; price: number; periodLabel: string; periodKey: string }) {
   const { overview, totals, best, worst } = report;
   const eta = overview.paybackMonths === 0 ? 'Окупилось' : overview.paybackMonths ? `≈ ${formatMonths(overview.paybackMonths)}` : '—';
 
@@ -68,7 +68,7 @@ function CarReportView({ report, price, periodLabel, periodKey }: { report: CarR
       <SummaryCard title={`Прибуток · ${periodLabel}`} profit={totals.profit} income={totals.income} expense={totals.expense} />
 
       <Card>
-        <BarChart key={periodKey} data={report.series} />
+        <BarChart key={periodKey} data={report.series} scope={{ carId }} />
       </Card>
 
       <SectionHeader title={`На що йдуть витрати · ${periodLabel}`} />
