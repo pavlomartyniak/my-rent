@@ -24,6 +24,8 @@ export function newDealData(input: {
   photoUri?: string;
   city: string;
   pricePerDay: number;
+  /** Застава, грн: фіксується в договорі; 0 чи без значення — без застави */
+  deposit?: number;
   startDate: string;
   endDate: string;
   source: 'request' | 'offer';
@@ -42,6 +44,7 @@ export function newDealData(input: {
     startDate: input.startDate,
     endDate: input.endDate,
     pricePerDay: input.pricePerDay,
+    deposit: input.deposit,
     paymentPlan: input.paymentPlan,
   });
   return {

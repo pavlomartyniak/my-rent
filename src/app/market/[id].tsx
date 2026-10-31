@@ -55,6 +55,9 @@ export default function MarketCarScreen() {
             за добу
           </ThemedText>
         </View>
+        <ThemedText type="small" themeColor={car.deposit > 0 ? undefined : 'textSecondary'} style={car.deposit > 0 ? { fontWeight: 600 } : undefined}>
+          {car.deposit > 0 ? `Застава ${formatMoney(car.deposit)}: вноситься разом із першою оплатою й повертається після оренди` : 'Без застави'}
+        </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           Власник: {car.owner}
         </ThemedText>

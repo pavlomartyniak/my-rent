@@ -23,6 +23,8 @@ export type ContractTerms = {
   /** План оплати й графік платежів: фіксуються разом з іншими умовами */
   paymentPlan: PaymentPlan;
   payments: Installment[];
+  /** Застава (гарантійний платіж), грн. Є лише в договорах із заставою, тож відбиток решти договорів не змінюється */
+  deposit?: number;
 };
 
 export type ContractSection = { title: string; paragraphs: string[] };
@@ -43,6 +45,7 @@ export function buildTerms(input: {
   endDate: string;
   pricePerDay: number;
   paymentPlan?: PaymentPlan;
+  deposit?: number;
 }): ContractTerms {
   return {
     number: input.number,
@@ -58,6 +61,7 @@ export function buildTerms(input: {
     total: totalPrice(input.pricePerDay, input.startDate, input.endDate),
     paymentPlan: input.paymentPlan ?? 'lump',
     payments: buildSchedule(input.startDate, input.endDate, input.pricePerDay, input.paymentPlan ?? 'lump'),
+    ...(input.deposit && input.deposit > 0 ? { deposit: Math.round(input.deposit) } : {}),
   };
 }
 
@@ -82,10 +86,29 @@ const money = (n: number) => `${Math.round(n).toString().replace(/\B(?=(\d{3})+(
 const date = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
 const plural = (n: number) => (n % 100 >= 11 && n % 100 <= 14 ? 'діб' : n % 10 === 1 ? 'доба' : n % 10 >= 2 && n % 10 <= 4 ? 'доби' : 'діб');
 
+const paymentsWord = (n: number) => (n % 100 >= 11 && n % 100 <= 14 ? 'платежів' : n % 10 === 1 ? 'платіж' : n % 10 >= 2 && n % 10 <= 4 ? 'платежі' : 'платежів');
+
+/** Скільки платежів перелічувати в тексті договору поштучно: довший графік описується правилом */
+const MAX_LISTED = 12;
+
 /** Пункти договору про порядок оплати: одразу вся сума чи графік платежів */
 function paymentParagraphs(t: ContractTerms): string[] {
   const plan = t.paymentPlan ?? 'lump';
   const payments = t.payments ?? [];
+  if (plan === 'weekly' && payments.length > 1) {
+    return [
+      `3.2. Оплата здійснюється щотижня наперед: за кожні 7 діб оренди (${money(t.pricePerDay * 7)}), останній платіж — за залишок строку. Усього ${payments.length} ${paymentsWord(payments.length)}. Перший платіж Орендар вносить під час передачі Авто, кожен наступний — у перший день відповідного тижня.`,
+      // Довгий графік у тексті не перелічуємо: він є в застосунку, а правило вище однозначне
+      ...(payments.length <= MAX_LISTED ? payments.map((p) => `Платіж ${p.n}: ${date(p.dueDate)} — ${money(p.amount)} (${p.days} ${plural(p.days)}).`) : []),
+      '3.3. Сторони підтверджують отримання й сплату кожного платежу в застосунку Kolo для обліку.',
+    ];
+  }
+  if (plan === 'daily' && payments.length > 1) {
+    return [
+      `3.2. Оплата здійснюється щодня наперед: за кожну добу оренди ${money(t.pricePerDay)}. Перший платіж Орендар вносить під час передачі Авто, кожен наступний — на початку відповідної доби. Усього ${payments.length} ${paymentsWord(payments.length)} за строк оренди.`,
+      '3.3. Сторони підтверджують отримання й сплату в застосунку Kolo для обліку.',
+    ];
+  }
   if (plan === 'monthly' && payments.length > 1) {
     return [
       `3.2. Оплата здійснюється частинами, ${planLabel(plan)}: ${payments.length} ${payments.length < 5 ? 'платежі' : 'платежів'}. Перший платіж Орендар вносить під час передачі Авто, кожен наступний — у вказану дату.`,
@@ -98,6 +121,10 @@ function paymentParagraphs(t: ContractTerms): string[] {
     '3.3. Сторони підтверджують отримання й сплату в застосунку Kolo для обліку.',
   ];
 }
+
+/** Пункт про заставу: це гарантійний платіж, а не орендна плата, тож у суму оренди він не входить */
+const depositParagraph = (amount: number) =>
+  `3.4. Гарантійний платіж (застава) становить ${money(amount)}. Орендар вносить його разом із першим платежем під час передачі Авто. Він не є орендною платою й не входить до її суми. Орендодавець повертає його протягом 3 діб після повернення Авто, за вирахуванням сум, які Орендар винен за цим договором (збитки за пошкодження Авто, штрафи, несплачена орендна плата), з письмовим поясненням підстав. Сторони підтверджують внесення застави в застосунку Kolo.`;
 
 export const CONTRACT_DISCLAIMER =
   'Договір сформовано застосунком Kolo за типовим шаблоном на підставі умов, які погодили Сторони. Застосунок не є стороною договору й не надає юридичних консультацій.';
@@ -133,7 +160,8 @@ export function buildSections(t: ContractTerms): ContractSection[] {
       paragraphs: [
         `3.1. Орендна плата становить ${money(t.pricePerDay)} за добу. За весь строк оренди орієнтовно ${money(t.total)}.`,
         ...paymentParagraphs(t),
-        '3.4. За прострочення повернення Авто Орендар сплачує орендну плату за кожну добу прострочення в тому ж розмірі.',
+        ...(t.deposit ? [depositParagraph(t.deposit)] : []),
+        `${t.deposit ? '3.5' : '3.4'}. За прострочення повернення Авто Орендар сплачує орендну плату за кожну добу прострочення в тому ж розмірі.`,
       ],
     },
     {

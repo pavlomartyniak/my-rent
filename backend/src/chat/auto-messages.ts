@@ -3,7 +3,8 @@
 const money = (n: number) => `${Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} грн`;
 const date = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
 const plural = (n: number) => (n % 100 >= 11 && n % 100 <= 14 ? 'діб' : n % 10 === 1 ? 'доба' : n % 10 >= 2 && n % 10 <= 4 ? 'доби' : 'діб');
-const planNote = (plan?: string) => (plan === 'monthly' ? ' Оплата щомісяця.' : '');
+const PLAN_NOTES: Record<string, string> = { weekly: ' Оплата щотижня.', daily: ' Оплата щодня.', monthly: ' Оплата щомісяця.' };
+const planNote = (plan?: string) => PLAN_NOTES[plan ?? ''] ?? '';
 const withNote = (text: string, note?: string) => (note?.trim() ? `${text}\n\n${note.trim()}` : text);
 
 /** Орендар надіслав запит на оголошення */

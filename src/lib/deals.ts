@@ -1,4 +1,5 @@
 import { todayISO } from '@/lib/date';
+import type { PaymentPlan } from '@/lib/payment-plan';
 import type { CategoryShare, SeriesPoint, Totals } from '@/lib/reports';
 
 /** Відповіді ендпоінтів /deals і /reports/renter: оренди орендаря та його облік */
@@ -22,8 +23,10 @@ export type DealView = {
   /** Пропозиція розірвати оренду, що чекає відповіді; mine — подав її я */
   terminationRequest: { by: 'owner' | 'renter'; at: string; note: string; mine: boolean } | null;
   /** План оплати й графік платежів із відповідями сторін */
-  paymentPlan: 'lump' | 'monthly' | null;
+  paymentPlan: PaymentPlan | null;
   payments: PaymentView[];
+  /** Застава за договором і відмітки сторін; null — застави немає */
+  deposit: { amount: number; mine: boolean; other: boolean; available: boolean } | null;
   /** Розрахунок після розірвання: що належить за використані доби, скільки сплатив орендар і отримав власник */
   settlement: { due: number; paid: number; received: number } | null;
   terminatedBy?: 'owner' | 'renter' | 'system';

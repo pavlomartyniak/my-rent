@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { CarPhoto } from '@/components/car-photo';
-import { PaymentPlanPicker, type PaymentPlan } from '@/components/payment-plan-picker';
+import { PaymentPlanPicker } from '@/components/payment-plan-picker';
 import { ReportStatus } from '@/components/report-status';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
 import { formatMoney } from '@/lib/format';
+import { effectivePlan, type ChoosablePlan } from '@/lib/payment-plan';
 import type { WantedView } from '@/lib/wanted';
 import { useFleet } from '@/store/fleet';
 
@@ -34,7 +35,7 @@ export default function OfferScreen() {
   const [price, setPrice] = useState('');
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const [plan, setPlan] = useState<PaymentPlan>('lump');
+  const [plan, setPlan] = useState<ChoosablePlan>('weekly');
   const [sending, setSending] = useState(false);
 
   // За замовчуванням — вільне авто, що підходить під заявку, а не просто перше в списку
@@ -70,7 +71,7 @@ export default function OfferScreen() {
     if (priceError) return;
     setSending(true);
     try {
-      const res = await api<{ chatId: string | null }>('POST', `/wanted/${wanted!.id}/offers`, { carId: car.id, pricePerDay: Number(price), message: message.trim(), paymentPlan: (wanted?.days ?? 0) >= 60 ? plan : 'lump' });
+      const res = await api<{ chatId: string | null }>('POST', `/wanted/${wanted!.id}/offers`, { carId: car.id, pricePerDay: Number(price), message: message.trim(), paymentPlan: effectivePlan(wanted?.days ?? 0, plan) });
       invalidate();
       router.back();
       // Пропозиція вже лежить у чаті з орендарем: відкриваємо його, щоб можна було одразу домовитись

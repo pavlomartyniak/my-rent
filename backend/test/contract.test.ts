@@ -112,14 +112,28 @@ describe('план оплати', () => {
     assert.deepEqual(s.map((p) => p.days), [30, 30, 15]);
     assert.equal(s.reduce((n, p) => n + p.amount, 0), 7500);
   });
-  it('частинами лише від 60 діб', () => {
-    assert.equal(planError('monthly', '2026-11-01', '2026-12-31'), null); // рівно 60 діб
-    assert.ok(planError('monthly', '2026-11-01', '2026-12-30')); // 59 діб — ще замало
+  it('щотижня: платіж за кожні 7 діб наперед, перший у день передачі, останній на залишок', () => {
+    const s = buildSchedule('2026-11-01', '2026-11-23', 1000, 'weekly'); // 22 доби
+    assert.deepEqual(s.map((p) => p.dueDate), ['2026-11-01', '2026-11-08', '2026-11-15', '2026-11-22']);
+    assert.deepEqual(s.map((p) => p.days), [7, 7, 7, 1]);
+    assert.deepEqual(s.map((p) => p.amount), [7000, 7000, 7000, 1000]);
+    assert.equal(s.reduce((n, p) => n + p.amount, 0), 22_000);
   });
-  it('коротша оренда — лише одразу', () => {
-    assert.ok(planError('monthly', '2026-11-01', '2026-11-20'));
-    assert.equal(planError('lump', '2026-11-01', '2026-11-20'), null);
+  it('щодня: платіж за кожну добу, сума збігається з вартістю', () => {
+    const s = buildSchedule('2026-11-01', '2026-11-06', 800, 'daily');
+    assert.deepEqual(s.map((p) => p.dueDate), ['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05']);
+    assert.ok(s.every((p) => p.days === 1 && p.amount === 800));
   });
+  it('щотижня: рівно тиждень — це той самий один платіж, тож план не підходить', () => {
+    assert.ok(planError('weekly', '2026-11-01', '2026-11-08')); // 7 діб
+    assert.equal(planError('weekly', '2026-11-01', '2026-11-09'), null); // 8 діб: 7 + 1
+  });
+  it('щодня: від двох діб', () => {
+    assert.ok(planError('daily', '2026-11-01', '2026-11-02')); // 1 доба
+    assert.equal(planError('daily', '2026-11-01', '2026-11-03'), null);
+  });
+  it('одразу підходить для будь-якого строку', () => assert.equal(planError('lump', '2026-11-01', '2026-11-02'), null));
+  it('щомісяця більше не можна обрати', () => assert.ok(planError('monthly', '2026-11-01', '2027-03-01')));
   it('договір містить графік платежів', () => {
     const t = buildTerms({
       number: 'MR-1', createdAt: new Date('2026-10-25T10:00:00Z'), city: 'Львів', owner: { name: 'А', phone: '' }, renter: { name: 'Б', phone: '' },
@@ -127,5 +141,45 @@ describe('план оплати', () => {
     });
     const text = buildSections(t).flatMap((s) => s.paragraphs).join('\n');
     assert.ok(text.includes('Платіж 1: 01.11.2026') && text.includes('Платіж 3: 31.12.2026') && text.includes('щомісяця'));
+  });
+  const termsFor = (paymentPlan: 'weekly' | 'daily', endDate: string) =>
+    buildSections(
+      buildTerms({
+        number: 'MR-1', createdAt: new Date('2026-10-25T10:00:00Z'), city: 'Львів', owner: { name: 'А', phone: '' }, renter: { name: 'Б', phone: '' },
+        car: { title: 'X', brand: 'X', model: 'X', year: 2020, vin: '', mileage: 1 }, startDate: '2026-11-01', endDate, pricePerDay: 1000, paymentPlan,
+      }),
+    ).flatMap((s) => s.paragraphs).join('\n');
+  it('договір щотижня описує правило й перелічує короткий графік', () => {
+    const text = termsFor('weekly', '2026-11-23');
+    assert.ok(text.includes('щотижня наперед') && text.includes('7 000 грн') && text.includes('Платіж 4: 22.11.2026'));
+  });
+  it('договір щодня описує правило без переліку платежів', () => {
+    const text = termsFor('daily', '2026-11-11');
+    assert.ok(text.includes('щодня наперед') && text.includes('10 платежів') && !text.includes('Платіж 2:'));
+  });
+  const withDeposit = (deposit?: number) =>
+    buildTerms({
+      number: 'MR-1', createdAt: new Date('2026-10-25T10:00:00Z'), city: 'Львів', owner: { name: 'А', phone: '' }, renter: { name: 'Б', phone: '' },
+      car: { title: 'X', brand: 'X', model: 'X', year: 2020, vin: '', mileage: 1 }, startDate: '2026-11-01', endDate: '2026-11-11', pricePerDay: 1000, deposit,
+    });
+  it('застава потрапляє в умови й текст договору, але не в суму оренди', () => {
+    const t = withDeposit(10_000);
+    assert.equal(t.deposit, 10_000);
+    assert.equal(t.total, 10_000); // 10 діб × 1000: застава окремо
+    const text = buildSections(t).flatMap((x) => x.paragraphs).join('\n');
+    assert.ok(text.includes('3.4. Гарантійний платіж (застава) становить 10 000 грн') && text.includes('3.5. За прострочення') && text.includes('не входить до її суми'));
+  });
+  it('без застави в умовах немає поля, а відбиток такий самий, як раніше', () => {
+    for (const none of [undefined, 0]) {
+      const t = withDeposit(none);
+      assert.ok(!('deposit' in t));
+      assert.ok(buildSections(t).flatMap((x) => x.paragraphs).join('\n').includes('3.4. За прострочення'));
+    }
+    assert.equal(contractHash(withDeposit(0)), contractHash(withDeposit(undefined)));
+    assert.notEqual(contractHash(withDeposit(5000)), contractHash(withDeposit(0)));
+  });
+  it('довгий тижневий графік у тексті договору не перелічується', () => {
+    const text = termsFor('weekly', '2027-06-01'); // ~30 тижнів
+    assert.ok(text.includes('щотижня наперед') && !text.includes('Платіж 2:'));
   });
 });

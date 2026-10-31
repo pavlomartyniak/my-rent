@@ -24,8 +24,8 @@ export class Offer {
   @Prop({ default: '' })
   message: string;
 
-  /** План оплати, який запропонував власник: одразу вся сума чи щомісяця (від 60 діб) */
-  @Prop({ enum: ['lump', 'monthly'], default: 'lump' })
+  /** План оплати, який запропонував власник: одразу вся сума, щотижня чи щодня (щомісяця — лише в старих записах) */
+  @Prop({ enum: ['lump', 'weekly', 'daily', 'monthly'], default: 'lump' })
   paymentPlan: string;
 
   @Prop({ required: true, enum: OFFER_STATUSES, default: 'pending' })
@@ -43,11 +43,11 @@ export class Offer {
 
   /** Дані авто на момент пропозиції: орендар бачить лише їх, а не картку авто власника */
   @Prop({
-    type: { title: String, brand: String, model: String, year: Number, mileage: Number, fuel: String, photoUri: String, photos: [String] },
+    type: { title: String, brand: String, model: String, year: Number, mileage: Number, fuel: String, deposit: Number, photoUri: String, photos: [String] },
     _id: false,
     required: true,
   })
-  car: { title: string; brand: string; model: string; year: number; mileage: number; fuel?: string; photoUri?: string; photos: string[] };
+  car: { title: string; brand: string; model: string; year: number; mileage: number; fuel?: string; /** Застава авто на момент пропозиції; у старих немає */ deposit?: number; photoUri?: string; photos: string[] };
 
   createdAt: Date;
 }

@@ -25,8 +25,8 @@ export class RentalRequest {
   @Prop({ default: '' })
   message: string;
 
-  /** План оплати, який запропонував орендар: одразу вся сума чи щомісяця (від 60 діб) */
-  @Prop({ enum: ['lump', 'monthly'], default: 'lump' })
+  /** План оплати, який запропонував орендар: одразу вся сума, щотижня чи щодня (щомісяця — лише в старих записах) */
+  @Prop({ enum: ['lump', 'weekly', 'daily', 'monthly'], default: 'lump' })
   paymentPlan: string;
 
   @Prop({ required: true, enum: RENTAL_STATUSES, default: 'pending' })
@@ -44,11 +44,11 @@ export class RentalRequest {
   hiddenFor: string[];
 
   @Prop({
-    type: { title: String, city: String, pricePerDay: Number, photoUri: String },
+    type: { title: String, city: String, pricePerDay: Number, deposit: Number, photoUri: String },
     _id: false,
     required: true,
   })
-  car: { title: string; city: string; pricePerDay: number; photoUri?: string };
+  car: { title: string; city: string; pricePerDay: number; /** Застава на момент запиту; у старих запитів немає */ deposit?: number; photoUri?: string };
 
   createdAt: Date;
 }

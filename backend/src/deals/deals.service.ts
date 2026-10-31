@@ -384,6 +384,21 @@ export class DealsService {
     return this.viewFor(user, result as unknown as DealDocument);
   }
 
+  /** Підтвердження застави своєю стороною: орендар — «я вніс», власник — «я отримав». Лише відмітка, без обліку */
+  async confirmDeposit(user: AuthUser, id: string) {
+    const deal = await this.mine(user, id);
+    const c = this.requireContract(deal);
+    if (!c.terms.deposit) throw new ConflictException('У цьому договорі немає застави');
+    if (deal.status !== 'active') throw new ConflictException('Заставу підтверджують після підписання договору');
+    const state = { renterPaid: deal.deposit?.renterPaid ?? false, ownerReceived: deal.deposit?.ownerReceived ?? false };
+    if (user.role === 'renter') state.renterPaid = true;
+    else state.ownerReceived = true;
+    deal.deposit = state;
+    await deal.save();
+    this.pingOther(user, deal);
+    return this.viewFor(user, deal);
+  }
+
   /** «Ще ні»: не питати про цей платіж до завтра */
   async postponePayment(user: AuthUser, id: string, n: number) {
     const deal = await this.mine(user, id);
@@ -405,10 +420,10 @@ export class DealsService {
     const out: Record<string, unknown>[] = [];
     for (const d of items) {
       const name = this.view(d, as, people).counterpart.name;
-      for (const p of this.paymentsView(d, as, today)) {
-        if (!p.available || p.cancelled || p.remaining <= 0 || p.snoozed) continue;
-        out.push({ dealId: String(d._id), title: d.title, counterpart: name, count: d.contract!.terms.payments.length, ...p });
-      }
+      // Лише найстаріший невиплачений платіж: при щотижневій чи щоденній оплаті питання не мають заважати купою
+      // Якщо його відкладено («ще ні»), до завтра нічого не питаємо
+      const next = this.paymentsView(d, as, today).find((p) => p.available && !p.cancelled && p.remaining > 0);
+      if (next && !next.snoozed) out.push({ dealId: String(d._id), title: d.title, counterpart: name, count: d.contract!.terms.payments.length, ...next });
     }
     return out;
   }
@@ -455,6 +470,19 @@ export class DealsService {
         mismatch: mine > 0 && other > 0 && mine !== other,
       };
     });
+  }
+
+  /** Застава для екрана: сума з договору й відмітки сторін; null — застави немає */
+  private depositView(d: DealDocument, as: 'renter' | 'owner') {
+    const amount = d.contract?.terms.deposit;
+    if (!amount) return null;
+    const st = d.deposit;
+    return {
+      amount,
+      mine: (as === 'renter' ? st?.renterPaid : st?.ownerReceived) ?? false,
+      other: (as === 'renter' ? st?.ownerReceived : st?.renterPaid) ?? false,
+      available: d.status === 'active' && !!d.contract?.signedAt,
+    };
   }
 
   /** Розрахунок після розірвання: що належить за використані доби, скільки сплатив орендар і отримав власник */
@@ -599,6 +627,7 @@ export class DealsService {
       /** План оплати й графік платежів із відповідями сторін (для оренд з договором) */
       paymentPlan: d.contract?.terms.paymentPlan ?? null,
       payments: d.contract ? this.paymentsView(d, as) : [],
+      deposit: this.depositView(d, as),
       settlement: this.settlementView(d),
       // Пропозиція про розірвання, що чекає відповіді; `mine` — чи її подав автор запиту
       terminationRequest: d.terminationRequest ? { by: d.terminationRequest.by, at: d.terminationRequest.at, note: d.terminationRequest.note ?? '', mine: d.terminationRequest.by === as } : null,

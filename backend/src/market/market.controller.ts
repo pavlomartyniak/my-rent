@@ -55,6 +55,12 @@ class SearchQuery {
   @Min(0)
   maxPrice?: number;
 
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  maxDeposit?: number;
+
   @Type(() => Number)
   @IsInt()
   @Min(1)

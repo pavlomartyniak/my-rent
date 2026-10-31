@@ -1,3 +1,5 @@
+import type { PaymentPlan } from '@/lib/payment-plan';
+
 /** Відповіді ендпоінтів /market і /rentals */
 
 export type MarketCar = {
@@ -13,6 +15,8 @@ export type MarketCar = {
   photos: string[];
   city: string;
   pricePerDay: number;
+  /** Застава, ₴: вноситься разом із першою оплатою; 0 — без застави */
+  deposit: number;
   description: string;
   /** Ім'я власника з ініціалом прізвища */
   owner: string;
@@ -32,8 +36,8 @@ export type RentalView = {
   dealStage: string | null;
   /** Чи є в оренди договір */
   hasContract: boolean;
-  /** План оплати: одразу вся сума чи щомісяця (від 60 діб) */
-  paymentPlan: 'lump' | 'monthly';
+  /** План оплати: одразу вся сума, щотижня чи щодня */
+  paymentPlan: PaymentPlan;
   carId: string;
   startDate: string;
   endDate: string;
@@ -43,7 +47,7 @@ export type RentalView = {
   decisionNote: string;
   createdAt: string;
   respondedAt: string | null;
-  car: { title: string; city: string; pricePerDay: number; photoUri?: string };
+  car: { title: string; city: string; pricePerDay: number; deposit?: number; photoUri?: string };
   /** Для орендаря — власник, для власника — орендар; телефон віддається лише в чаті */
   counterpart: { name: string };
 };

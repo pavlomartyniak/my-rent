@@ -20,6 +20,10 @@ export class CarListing {
   @Prop({ required: true })
   pricePerDay: number;
 
+  /** Застава (гарантійний платіж), грн: орендар вносить її разом із першою оплатою; 0 — без застави */
+  @Prop({ default: 0 })
+  deposit: number;
+
   @Prop({ default: '' })
   description: string;
 

@@ -9,7 +9,8 @@ type Loaded = { key: string; page: number; pages: number; total: number; items: 
  * Пошук оголошень із відкладеним запитом (300 мс після останнього символу) і підвантаженням сторінок.
  * Зміна фільтрів скидає список на першу сторінку.
  */
-export type MarketFilters = { brand?: string; model?: string; fuel?: string };
+/** maxDeposit: порожньо — будь-яка застава, "0" — лише без застави */
+export type MarketFilters = { brand?: string; model?: string; fuel?: string; maxDeposit?: string };
 
 export function useMarketSearch(city: string | undefined, regionId: number | undefined, minPrice: string, maxPrice: string, extra: MarketFilters = {}) {
   const [debounced, setDebounced] = useState({ minPrice: '', maxPrice: '' });
@@ -22,7 +23,7 @@ export function useMarketSearch(city: string | undefined, regionId: number | und
     return () => clearTimeout(timer);
   }, [minPrice, maxPrice]);
 
-  const key = `${city ?? ''}|${regionId ?? ''}|${debounced.minPrice}|${debounced.maxPrice}|${extra.brand ?? ''}|${extra.model ?? ''}|${extra.fuel ?? ''}|${attempt}`;
+  const key = `${city ?? ''}|${regionId ?? ''}|${debounced.minPrice}|${debounced.maxPrice}|${extra.brand ?? ''}|${extra.model ?? ''}|${extra.fuel ?? ''}|${extra.maxDeposit ?? ''}|${attempt}`;
   const page = want.key === key ? want.page : 1;
 
   useEffect(() => {
@@ -33,6 +34,7 @@ export function useMarketSearch(city: string | undefined, regionId: number | und
     if (extra.brand) params.set('brand', extra.brand);
     if (extra.model) params.set('model', extra.model);
     if (extra.fuel) params.set('fuel', extra.fuel);
+    if (extra.maxDeposit) params.set('maxDeposit', extra.maxDeposit);
     if (Number(debounced.minPrice) > 0) params.set('minPrice', debounced.minPrice);
     if (Number(debounced.maxPrice) > 0) params.set('maxPrice', debounced.maxPrice);
 

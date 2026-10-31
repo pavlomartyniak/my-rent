@@ -28,7 +28,7 @@ export type Car = {
   /** Усі фото авто (до 10); перше — обкладинка, дублюється в photoUri */
   photos?: string[];
   /** Оголошення про оренду; воно видиме орендарям, поки published=true і авто вільне */
-  listing?: { published: boolean; city: string; pricePerDay: number; description: string };
+  listing?: { published: boolean; city: string; pricePerDay: number; deposit?: number; description: string };
 };
 
 export type Role = 'owner' | 'renter';

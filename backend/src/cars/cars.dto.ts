@@ -86,6 +86,14 @@ export class ListingDto {
   @Max(1_000_000)
   pricePerDay: number;
 
+  /** Застава, грн; без значення чи 0 — без застави */
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0, { message: 'Застава не може бути від’ємною' })
+  @Max(10_000_000)
+  deposit?: number;
+
   @Trim()
   @IsOptional()
   @IsString()

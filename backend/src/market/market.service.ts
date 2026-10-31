@@ -9,7 +9,7 @@ import { Car, type CarDocument } from '../schemas/car.schema';
 import { RentalRequest } from '../schemas/rental-request.schema';
 import { User } from '../schemas/user.schema';
 
-export type MarketQuery = { city?: string; regionId?: number; q?: string; minPrice?: number; maxPrice?: number; brand?: string; model?: string; fuel?: string; page: number; limit: number };
+export type MarketQuery = { city?: string; regionId?: number; q?: string; minPrice?: number; maxPrice?: number; maxDeposit?: number; brand?: string; model?: string; fuel?: string; page: number; limit: number };
 
 /** Лише публічні поля: без VIN, вартості авто, водія, контактів і прізвища власника */
 function publicView(car: CarDocument, ownerName: string) {
@@ -26,6 +26,7 @@ function publicView(car: CarDocument, ownerName: string) {
     photos: (car.photos?.length ? car.photos : car.photoUri ? [car.photoUri] : []).filter((u) => u.startsWith('https://')),
     city: listing.city,
     pricePerDay: listing.pricePerDay,
+    deposit: listing.deposit ?? 0,
     description: listing.description,
     owner: ownerName,
   };
@@ -66,6 +67,9 @@ export class MarketService {
         ...(query.maxPrice !== undefined ? { $lte: query.maxPrice } : {}),
       };
     }
+
+    // Авто без поля застави (опубліковані раніше) вважаються без застави
+    if (query.maxDeposit !== undefined) filter['$and'] = [{ $or: [{ 'listing.deposit': { $lte: query.maxDeposit } }, { 'listing.deposit': { $exists: false } }] }];
 
     const [total, cars] = await Promise.all([
       this.cars.countDocuments(filter),

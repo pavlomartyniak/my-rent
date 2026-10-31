@@ -47,6 +47,13 @@ export class DealsController {
     return this.deals.confirmPayment(user, id, n, dto.amount);
   }
 
+  /** Підтвердити заставу: орендар — вніс, власник — отримав */
+  @HttpCode(200)
+  @Post(':id/deposit/confirm')
+  confirmDeposit(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
+    return this.deals.confirmDeposit(user, id);
+  }
+
   /** «Ще ні»: відкласти запитання про платіж до завтра */
   @HttpCode(200)
   @Post(':id/payments/:n/later')

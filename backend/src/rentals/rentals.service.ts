@@ -66,7 +66,7 @@ export class RentalsService {
       endDate: dto.endDate,
       message: dto.message ?? '',
       paymentPlan: plan,
-      car: { title: `${car.brand} ${car.model} ${car.year}`, city: car.listing.city, pricePerDay: car.listing.pricePerDay, photoUri: car.photoUri },
+      car: { title: `${car.brand} ${car.model} ${car.year}`, city: car.listing.city, pricePerDay: car.listing.pricePerDay, deposit: car.listing.deposit ?? 0, photoUri: car.photoUri },
     });
     // Одразу відкриваємо чат із власником і кидаємо в нього повідомлення, щоб вони могли зв'язатись
     const chatId = await this.chat.autoStart(
@@ -193,6 +193,7 @@ export class RentalsService {
               photoUri: request.car.photoUri,
               city: request.car.city,
               pricePerDay: request.car.pricePerDay,
+              deposit: request.car.deposit ?? 0,
               startDate: request.startDate,
               endDate: request.endDate,
               source: 'request',

@@ -37,11 +37,12 @@ export default function SearchScreen() {
   const [brandId, setBrandId] = useState<number | undefined>();
   const [model, setModel] = useState('');
   const [fuel, setFuel] = useState('');
+  const [maxDeposit, setMaxDeposit] = useState('');
   const rangeError = Number(minPrice) > 0 && Number(maxPrice) > 0 && Number(minPrice) > Number(maxPrice) ? 'Верхня межа менша за нижню' : undefined;
-  const { items, total, error, loading, hasMore, loadMore, refresh } = useMarketSearch(place?.city, place?.regionId, minPrice, maxPrice, { brand, model, fuel });
+  const { items, total, error, loading, hasMore, loadMore, refresh } = useMarketSearch(place?.city, place?.regionId, minPrice, maxPrice, { brand, model, fuel, maxDeposit });
 
-  const summary = [brand && `${brand}${model ? ` ${model}` : ''}`, fuel, minPrice || maxPrice ? `${minPrice || '0'}–${maxPrice || '∞'} ₴/доба` : 'Будь-яка ціна'].filter(Boolean).join(' · ');
-  const filtered = !!(place || brand || model || fuel || minPrice || maxPrice);
+  const summary = [brand && `${brand}${model ? ` ${model}` : ''}`, fuel, maxDeposit !== '' && (maxDeposit === '0' ? 'без застави' : `застава до ${maxDeposit} ₴`), minPrice || maxPrice ? `${minPrice || '0'}–${maxPrice || '∞'} ₴/доба` : 'Будь-яка ціна'].filter(Boolean).join(' · ');
+  const filtered = !!(place || brand || model || fuel || minPrice || maxPrice || maxDeposit);
 
   function pickBrand() {
     openCatalogPicker({
@@ -73,6 +74,7 @@ export default function SearchScreen() {
     setFuel('');
     setMinPrice('');
     setMaxPrice('');
+    setMaxDeposit('');
   }
 
   return (
@@ -118,6 +120,7 @@ export default function SearchScreen() {
               <NumberField label="до, ₴/доба" value={maxPrice} onChangeValue={setMaxPrice} maxDigits={7} placeholder="2 000" error={rangeError} />
             </View>
           </View>
+          <NumberField label="Застава до, ₴ (0 — без застави)" value={maxDeposit} onChangeValue={setMaxDeposit} maxDigits={7} placeholder="Будь-яка" />
           {filtered ? <Button title="Скинути фільтри" variant="soft" onPress={reset} /> : null}
         </Card>
       ) : null}

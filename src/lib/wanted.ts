@@ -1,3 +1,5 @@
+import type { PaymentPlan } from '@/lib/payment-plan';
+
 /** Відповіді ендпоінтів /wanted і /offers */
 
 export type WantedStatus = 'open' | 'fulfilled' | 'cancelled';
@@ -38,7 +40,7 @@ export type OfferView = {
   dealId: string | null;
   dealStage: string | null;
   hasContract: boolean;
-  paymentPlan: 'lump' | 'monthly';
+  paymentPlan: PaymentPlan;
   wantedId: string;
   carId: string;
   pricePerDay: number;
@@ -47,7 +49,7 @@ export type OfferView = {
   message: string;
   decisionNote: string;
   createdAt: string;
-  car: { title: string; brand: string; model: string; year: number; mileage: number; fuel?: string; photoUri?: string; photos: string[] };
+  car: { title: string; brand: string; model: string; year: number; mileage: number; fuel?: string; deposit?: number; photoUri?: string; photos: string[] };
   /** Для орендаря — власник, для власника — орендар; телефон віддається лише в чаті */
   counterpart: { name: string };
   wanted: { city: string; brand: string; model: string; startDate: string; endDate: string; status: WantedStatus };

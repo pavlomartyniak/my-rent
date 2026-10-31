@@ -1,41 +1,40 @@
 import { View } from 'react-native';
 
 import { Spacing } from '@/constants/theme';
+import { availablePlans, effectivePlan, type ChoosablePlan } from '@/lib/payment-plan';
 
 import { ThemedText } from './themed-text';
 import { Segmented } from './ui/segmented';
 
-export const MONTHLY_MIN_DAYS = 60;
-export type PaymentPlan = 'lump' | 'monthly';
-const LABELS = { lump: 'Одразу вся сума', monthly: 'Щомісяця' } as const;
-const OPTIONS = [LABELS.lump, LABELS.monthly] as const;
+const LABELS: Record<ChoosablePlan, string> = { lump: 'Одразу вся сума', weekly: 'Щотижня', daily: 'Щодня' };
+const HINTS: Record<ChoosablePlan, string> = {
+  lump: 'Орендар сплачує всю суму під час передачі авто.',
+  weekly: 'Орендар платить за кожні 7 діб наперед: перший платіж під час передачі авто. Збігається з тижневими виплатами Bolt, Uber чи Uklon. Графік потрапить у договір.',
+  daily: 'Орендар платить за кожну добу наперед: перший платіж під час передачі авто. Графік потрапить у договір.',
+};
 
 /**
- * Вибір плану оплати в запиті чи пропозиції. Частинами можна платити лише за оренду від 60 діб, для коротшої
- * вибору немає: оплачується вся сума одразу, це одразу видно під блоком.
+ * Вибір плану оплати в запиті чи пропозиції. Щотижня можна платити за оренду довшу за 7 діб, щодня — від 2 діб.
+ * Для однієї доби вибору немає: оплачується вся сума одразу, це видно під блоком.
  */
-export function PaymentPlanPicker({ days, value, onChange }: { days: number; value: PaymentPlan; onChange: (plan: PaymentPlan) => void }) {
-  const allowed = days >= MONTHLY_MIN_DAYS;
-  const plan: PaymentPlan = allowed ? value : 'lump';
+export function PaymentPlanPicker({ days, value, onChange }: { days: number; value: ChoosablePlan; onChange: (plan: ChoosablePlan) => void }) {
+  const options = availablePlans(days);
+  const plan = effectivePlan(days, value);
 
   return (
     <View style={{ gap: Spacing.one }}>
       <ThemedText type="small" themeColor="textSecondary">
         Оплата
       </ThemedText>
-      {allowed ? (
-        <Segmented options={OPTIONS} value={LABELS[plan]} onChange={(label) => onChange(label === LABELS.monthly ? 'monthly' : 'lump')} />
+      {options.length > 1 ? (
+        <Segmented options={options.map((o) => LABELS[o])} value={LABELS[plan]} onChange={(label) => onChange(options.find((o) => LABELS[o] === label) ?? 'lump')} />
       ) : (
         <ThemedText type="default" style={{ fontWeight: 600 }}>
           {LABELS.lump}
         </ThemedText>
       )}
       <ThemedText type="small" themeColor="textSecondary">
-        {allowed
-          ? plan === 'monthly'
-            ? 'Орендар платить за кожні 30 діб: перший платіж під час передачі авто. Графік потрапить у договір.'
-            : 'Орендар сплачує всю суму під час передачі авто.'
-          : `Частинами можна платити за оренду від ${MONTHLY_MIN_DAYS} діб. Коротша оплачується одразу вся.`}
+        {options.length > 1 ? HINTS[plan] : 'Оренда на одну добу оплачується одразу вся.'}
       </ThemedText>
     </View>
   );

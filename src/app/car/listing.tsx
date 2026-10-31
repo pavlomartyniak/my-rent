@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 
 import { CityField } from '@/components/place-field';
+import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Field } from '@/components/ui/field';
@@ -20,6 +21,7 @@ export default function ListingScreen() {
 
   const [city, setCity] = useState(car?.listing?.city ?? '');
   const [price, setPrice] = useState(car?.listing ? String(car.listing.pricePerDay) : '');
+  const [deposit, setDeposit] = useState(car?.listing?.deposit ? String(car.listing.deposit) : '');
   const [description, setDescription] = useState(car?.listing?.description ?? '');
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -44,7 +46,7 @@ export default function ListingScreen() {
     if (errors.city || errors.price) return;
     setSaving(true);
     try {
-      await api('PUT', `/cars/${car.id}/listing`, { city: city.trim(), pricePerDay: Number(price), description: description.trim() });
+      await api('PUT', `/cars/${car.id}/listing`, { city: city.trim(), pricePerDay: Number(price), deposit: Number(deposit) || 0, description: description.trim() });
       reload();
       router.back();
     } catch (e) {
@@ -80,13 +82,17 @@ export default function ListingScreen() {
     <Screen>
       <CityField value={city} onChange={setCity} error={submitted ? errors.city : undefined} />
       <NumberField label="Ціна за добу, ₴" value={price} onChangeValue={setPrice} error={submitted ? errors.price : undefined} maxDigits={7} placeholder="1 200" />
+      <NumberField label="Застава, ₴ (необов’язково)" value={deposit} onChangeValue={setDeposit} maxDigits={7} placeholder="0" />
+      <ThemedText type="small" themeColor="textSecondary">
+        Орендар вносить її разом із першою оплатою, а ви повертаєте після оренди. Сума потрапить у договір і буде видна в пошуку. Залиште порожнім, якщо застави немає.
+      </ThemedText>
       <Field
         label="Опис (необов’язково)"
         value={description}
         onChangeText={setDescription}
         multiline
         maxLength={1000}
-        placeholder="Стан авто, умови, застава, ліміт пробігу…"
+        placeholder="Стан авто, умови, ліміт пробігу…"
         style={{ minHeight: 110, paddingTop: 12, textAlignVertical: 'top' }}
       />
       <Button title={saving ? 'Публікуємо…' : car.listing?.published ? 'Зберегти оголошення' : 'Опублікувати'} icon="megaphone-outline" disabled={saving} onPress={save} />

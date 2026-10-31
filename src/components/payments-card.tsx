@@ -1,11 +1,15 @@
 import { useRouter } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/date';
 import type { DealView } from '@/lib/deals';
 import { formatMoney } from '@/lib/format';
+import { planLabel } from '@/lib/payment-plan';
+import { useFleet } from '@/store/fleet';
 
 import { ThemedText } from './themed-text';
 import { Button } from './ui/button';
@@ -27,9 +31,12 @@ function Check({ done, text }: { done: boolean; text: string }) {
   );
 }
 
-export function PaymentsCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status' | 'paymentPlan' | 'payments' | 'settlement' | 'contract'>; as: 'owner' | 'renter' }) {
+export function PaymentsCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status' | 'paymentPlan' | 'payments' | 'deposit' | 'settlement' | 'contract'>; as: 'owner' | 'renter' }) {
   const router = useRouter();
   const theme = useTheme();
+  const [expanded, setExpanded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const { invalidate } = useFleet();
   if (!deal.contract || deal.payments.length === 0) return null;
 
   const mineVerb = as === 'renter' ? 'сплатили' : 'отримали';
@@ -37,12 +44,33 @@ export function PaymentsCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
   const otherName = as === 'renter' ? 'Власник' : 'Орендар';
   const signed = deal.status !== 'awaiting';
   const payments = deal.payments.filter((p) => !p.cancelled);
+  const total = payments.reduce((sum, p) => sum + p.amount, 0);
+  const paid = payments.reduce((sum, p) => sum + Math.min(p.mine, p.amount), 0);
+  // Щотижнева чи щоденна оплата дає десятки платежів: поза розгорнутим списком лишаємо поточний, сусідні й проблемні
+  const done = (p: (typeof payments)[number]) => p.mine >= p.amount && p.other >= p.amount;
+  const cur = Math.max(0, payments.findIndex((p) => !done(p)));
+  const collapsed = !expanded && payments.length > 6;
+  const shown = collapsed ? payments.filter((p, i) => p.mismatch || (i >= cur - 1 && i <= cur + 2)) : payments;
   const open = (n: number) => router.push({ pathname: '/payments/[id]', params: { id: deal.id, n: String(n) } });
+
+  async function confirmDeposit() {
+    setBusy(true);
+    try {
+      await api('POST', `/deals/${deal.id}/deposit/confirm`, {});
+      invalidate();
+    } catch (e) {
+      Alert.alert('Не вдалося зберегти', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const dep = deal.deposit;
 
   return (
     <Card>
       <ThemedText type="default" style={styles.bold}>
-        Платежі за договором · {deal.paymentPlan === 'monthly' ? 'щомісяця' : 'вся сума одразу'}
+        Платежі за договором · {planLabel(deal.paymentPlan)}
       </ThemedText>
       {!signed ? (
         <ThemedText type="small" themeColor="textSecondary">
@@ -50,7 +78,37 @@ export function PaymentsCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
         </ThemedText>
       ) : null}
 
-      {payments.map((p) => (
+      {dep ? (
+        <View style={[styles.row, { borderTopColor: theme.border }]}>
+          <View style={styles.head}>
+            <View style={{ flex: 1 }}>
+              <ThemedText type="smallBold">Застава</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                Разом із першою оплатою. Не входить в оренду й не потрапляє в облік: повернення домовляєтесь самі
+              </ThemedText>
+            </View>
+            <ThemedText type="default" style={styles.amount}>
+              {formatMoney(dep.amount)}
+            </ThemedText>
+          </View>
+          <Check done={dep.mine} text={dep.mine ? `Ви ${as === 'renter' ? 'внесли' : 'отримали'} заставу` : 'Ви ще не підтвердили'} />
+          <Check done={dep.other} text={dep.other ? `${otherName} ${as === 'renter' ? 'отримав' : 'вніс'} заставу` : `${otherName} ще не підтвердив`} />
+          {dep.available && !dep.mine ? <Button title={as === 'renter' ? 'Я вніс заставу' : 'Я отримав заставу'} icon="shield-checkmark-outline" disabled={busy} onPress={() => void confirmDeposit()} /> : null}
+          {!dep.available && !dep.mine ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              Підтвердження відкриється після підписання договору.
+            </ThemedText>
+          ) : null}
+        </View>
+      ) : null}
+
+      {payments.length > 1 ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          Ви {mineVerb} {formatMoney(paid)} з {formatMoney(total)}
+        </ThemedText>
+      ) : null}
+
+      {shown.map((p) => (
         <View key={p.n} style={[styles.row, { borderTopColor: theme.border }]}>
           <View style={styles.head}>
             <View>
@@ -82,6 +140,8 @@ export function PaymentsCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
           ) : null}
         </View>
       ))}
+
+      {payments.length > 6 ? <Button title={collapsed ? `Показати всі платежі (${payments.length})` : 'Згорнути'} variant="secondary" onPress={() => setExpanded((v) => !v)} /> : null}
 
       {deal.settlement ? (
         <View style={[styles.warn, { backgroundColor: theme.backgroundSelected }]}>

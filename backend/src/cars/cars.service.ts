@@ -74,6 +74,7 @@ export class CarsService {
       city: dto.city,
       cityKey,
       pricePerDay: dto.pricePerDay,
+      deposit: Math.round(dto.deposit ?? 0),
       description: dto.description ?? '',
       publishedAt: car.listing?.published ? car.listing.publishedAt : new Date(),
     };

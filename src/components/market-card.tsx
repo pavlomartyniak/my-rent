@@ -17,7 +17,7 @@ export function MarketCard({ car }: { car: MarketCar }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${car.brand} ${car.model}, ${car.city}, ${formatMoney(car.pricePerDay)} за добу`}
+      accessibilityLabel={`${car.brand} ${car.model}, ${car.city}, ${formatMoney(car.pricePerDay)} за добу, ${car.deposit > 0 ? `застава ${formatMoney(car.deposit)}` : 'без застави'}`}
       onPress={() => router.push({ pathname: '/market/[id]', params: { id: car.id } })}
       style={({ pressed }) => [styles.wrap, pressed && styles.pressed]}>
       <View>
@@ -37,6 +37,9 @@ export function MarketCard({ car }: { car: MarketCar }) {
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
             {[car.city, car.fuel, formatKm(car.mileage)].filter(Boolean).join(' · ')}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+            {car.deposit > 0 ? `Застава ${formatMoney(car.deposit)}` : 'Без застави'}
           </ThemedText>
         </View>
         <ThemedText type="default" style={styles.bold}>
