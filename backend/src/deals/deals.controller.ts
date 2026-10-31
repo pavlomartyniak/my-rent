@@ -47,6 +47,20 @@ export class DealsController {
     return this.deals.confirmPayment(user, id, n, dto.amount);
   }
 
+  /** Застава, про яку треба спитати мене: «ви внесли?» (орендар) чи «ви отримали?» (власник) */
+  @Header('Cache-Control', 'no-store')
+  @Get('awaiting-deposit')
+  awaitingDeposit(@CurrentUser() user: AuthUser) {
+    return this.deals.awaitingDeposit(user);
+  }
+
+  /** «Ще ні» щодо застави: відкласти запитання до завтра */
+  @HttpCode(200)
+  @Post(':id/deposit/later')
+  postponeDeposit(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
+    return this.deals.postponeDeposit(user, id);
+  }
+
   /** Підтвердити заставу: орендар — вніс, власник — отримав */
   @HttpCode(200)
   @Post(':id/deposit/confirm')

@@ -1,15 +1,13 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/date';
 import type { DealView } from '@/lib/deals';
 import { formatMoney } from '@/lib/format';
 import { planLabel } from '@/lib/payment-plan';
-import { useFleet } from '@/store/fleet';
 
 import { ThemedText } from './themed-text';
 import { Button } from './ui/button';
@@ -35,8 +33,6 @@ export function PaymentsCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
   const router = useRouter();
   const theme = useTheme();
   const [expanded, setExpanded] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const { invalidate } = useFleet();
   if (!deal.contract || deal.payments.length === 0) return null;
 
   const mineVerb = as === 'renter' ? 'сплатили' : 'отримали';
@@ -52,18 +48,6 @@ export function PaymentsCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
   const collapsed = !expanded && payments.length > 6;
   const shown = collapsed ? payments.filter((p, i) => p.mismatch || (i >= cur - 1 && i <= cur + 2)) : payments;
   const open = (n: number) => router.push({ pathname: '/payments/[id]', params: { id: deal.id, n: String(n) } });
-
-  async function confirmDeposit() {
-    setBusy(true);
-    try {
-      await api('POST', `/deals/${deal.id}/deposit/confirm`, {});
-      invalidate();
-    } catch (e) {
-      Alert.alert('Не вдалося зберегти', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
-    } finally {
-      setBusy(false);
-    }
-  }
 
   const dep = deal.deposit;
 
@@ -93,7 +77,7 @@ export function PaymentsCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
           </View>
           <Check done={dep.mine} text={dep.mine ? `Ви ${as === 'renter' ? 'внесли' : 'отримали'} заставу` : 'Ви ще не підтвердили'} />
           <Check done={dep.other} text={dep.other ? `${otherName} ${as === 'renter' ? 'отримав' : 'вніс'} заставу` : `${otherName} ще не підтвердив`} />
-          {dep.available && !dep.mine ? <Button title={as === 'renter' ? 'Я вніс заставу' : 'Я отримав заставу'} icon="shield-checkmark-outline" disabled={busy} onPress={() => void confirmDeposit()} /> : null}
+          {dep.available && !dep.mine ? <Button title={as === 'renter' ? 'Я вніс заставу' : 'Я отримав заставу'} icon="shield-checkmark-outline" onPress={() => router.push({ pathname: '/deposit/[id]', params: { id: deal.id } })} /> : null}
           {!dep.available && !dep.mine ? (
             <ThemedText type="small" themeColor="textSecondary">
               Підтвердження відкриється після підписання договору.

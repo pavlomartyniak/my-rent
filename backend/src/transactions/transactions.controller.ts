@@ -25,9 +25,9 @@ class HistoryQuery {
 }
 
 class MonthQuery {
-  /** Місяць вигляду YYYY-MM */
-  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, { message: 'Місяць має вигляд РРРР-ММ' })
-  month: string;
+  /** Місяць вигляду YYYY-MM або рік YYYY (стовпчик графіка за весь час) */
+  @Matches(/^\d{4}(-(0[1-9]|1[0-2]))?$/, { message: 'Період має вигляд РРРР-ММ або РРРР' })
+  period: string;
 
   @IsOptional()
   @IsMongoId()
@@ -54,11 +54,11 @@ export class TransactionsController {
     return this.transactions.history(user, { carId, dealId }, months);
   }
 
-  /** Записи одного місяця (за вибраним місяцем у звітах): що саме було доходом і на що пішли витрати */
+  /** Записи за вибраний місяць чи рік у звітах: що саме було доходом і на що пішли витрати */
   @Header('Cache-Control', 'no-store')
-  @Get('month')
-  month(@CurrentUser() user: AuthUser, @Query() { month, carId, dealId }: MonthQuery) {
-    return this.transactions.month(user, month, { carId, dealId });
+  @Get('period')
+  period(@CurrentUser() user: AuthUser, @Query() { period, carId, dealId }: MonthQuery) {
+    return this.transactions.inPeriod(user, period, { carId, dealId });
   }
 
   @Get(':id')

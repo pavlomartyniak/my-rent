@@ -6,9 +6,9 @@ import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
 import { ReportsService } from './reports.service';
 
 class PeriodQuery {
-  /** Місяць `2026-10` або рік `2026`; за замовчуванням поточний місяць */
+  /** Місяць `2026-10`, рік `2026` або `all` — увесь час; за замовчуванням поточний місяць */
   @IsOptional()
-  @Matches(/^\d{4}(-\d{2})?$/, { message: 'Період має бути у форматі РРРР-ММ або РРРР' })
+  @Matches(/^(all|\d{4}(-\d{2})?)$/, { message: 'Період має бути у форматі РРРР-ММ, РРРР або all' })
   period?: string;
 }
 

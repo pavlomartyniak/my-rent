@@ -54,7 +54,7 @@ type WithMargin = Totals & { margin: number | null };
 
 export type RenterSummary = {
   period: string;
-  previousPeriod: string;
+  previousPeriod: string | null;
   totals: WithMargin;
   previous: WithMargin;
   change: { profit: number | null; income: number | null; expense: number | null; marginPoints: number | null };
@@ -93,6 +93,9 @@ export type PaymentView = {
 
 /** Платіж, про який треба спитати: «ви сплатили?» (орендар) чи «ви отримали?» (власник) */
 export type PaymentQuestion = PaymentView & { dealId: string; title: string; counterpart: string; count: number };
+
+/** Застава, про яку треба спитати: «ви внесли?» (орендар) чи «ви отримали?» (власник) */
+export type DepositQuestion = { dealId: string; title: string; counterpart: string; amount: number };
 
 export type DealStage = 'signing' | 'upcoming' | 'active' | 'finished' | 'terminated';
 

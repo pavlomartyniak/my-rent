@@ -20,7 +20,8 @@ export type Overview = Totals & {
 
 export type SummaryReport = {
   period: string;
-  previousPeriod: string;
+  /** null — для всього часу порівнювати нема з чим */
+  previousPeriod: string | null;
   totals: Totals & { margin: number | null };
   previous: Totals & { margin: number | null };
   /** Зміна відносно попереднього періоду, %; null — порівнювати нема з чим */
@@ -47,6 +48,9 @@ export type CarReport = {
 
 /** Запис місяця зі звіту: разом з назвою авто, до якого він належить */
 export type MonthEntry = Transaction & { car: string };
+
+/** Відповідь /transactions/period: записи (до 300 найновіших) і скільки їх є всього */
+export type PeriodEntries = { items: MonthEntry[]; total: number };
 
 /** Один місяць історії: підсумок рахує сервер */
 export type HistoryGroup = Totals & { month: string; items: Transaction[] };

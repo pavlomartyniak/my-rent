@@ -7,10 +7,11 @@ import type { AuthUser } from '../common/current-user';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
 import { Transaction } from '../schemas/transaction.schema';
+import { parsePeriod } from '../reports/reports.math';
 import { groupByMonth, monthSubtotals } from './history';
 import type { CreateTransactionDto, UpdateTransactionDto } from './transactions.dto';
 
-/** Скільки записів одного місяця віддавати за раз */
+/** Скільки записів періоду віддавати за раз */
 const MONTH_LIMIT = 300;
 
 @Injectable()
@@ -68,24 +69,26 @@ export class TransactionsService {
   }
 
   /**
-   * Записи користувача за місяць, найновіші першими, з назвою авто. Без `carId`/`dealId` — усі записи користувача,
-   * з ними — лише цього авто чи цієї оренди. Чужих записів тут не буває: вибірка завжди обмежена власником.
+   * Записи користувача за місяць (РРРР-ММ) чи рік (РРРР), найновіші першими, з назвою авто. Без `carId`/`dealId` — усі
+   * записи користувача, з ними — лише цього авто чи цієї оренди. Чужих записів тут не буває: вибірка завжди
+   * обмежена власником. Віддається до `MONTH_LIMIT` записів, `total` каже, скільки їх є насправді.
    */
-  async month(user: AuthUser, month: string, target: { carId?: string; dealId?: string }) {
-    const userId = new Types.ObjectId(user.id);
-    const items = await this.transactions
-      .find({
-        userId,
-        date: { $gte: `${month}-01`, $lte: `${month}-31` },
-        ...(target.carId ? { carId: new Types.ObjectId(target.carId) } : {}),
-        ...(target.dealId ? { dealId: new Types.ObjectId(target.dealId) } : {}),
-      })
-      .sort({ date: -1, _id: -1 })
-      .limit(MONTH_LIMIT)
-      .exec();
+  async inPeriod(user: AuthUser, periodKey: string, target: { carId?: string; dealId?: string }) {
+    const period = parsePeriod(periodKey);
+    if (!period || period.kind === 'all') throw new BadRequestException('Невірний період: очікується РРРР-ММ або РРРР');
+    const filter = {
+      userId: new Types.ObjectId(user.id),
+      date: { $gte: period.from, $lt: period.to },
+      ...(target.carId ? { carId: new Types.ObjectId(target.carId) } : {}),
+      ...(target.dealId ? { dealId: new Types.ObjectId(target.dealId) } : {}),
+    };
+    const [total, items] = await Promise.all([
+      this.transactions.countDocuments(filter),
+      this.transactions.find(filter).sort({ date: -1, _id: -1 }).limit(MONTH_LIMIT).exec(),
+    ]);
     const cars = await this.cars.find({ _id: { $in: [...new Set(items.map((t) => String(t.carId)))] } }, 'brand model').lean().exec();
     const titles = new Map(cars.map((c) => [String(c._id), `${c.brand} ${c.model}`]));
-    return items.map((t) => ({ ...t.toJSON(), car: titles.get(String(t.carId)) ?? '' }));
+    return { total, items: items.map((t) => ({ ...t.toJSON(), car: titles.get(String(t.carId)) ?? '' })) };
   }
 
   async create(user: AuthUser, dto: CreateTransactionDto) {

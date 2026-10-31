@@ -67,11 +67,13 @@ export default function ReportScreen() {
 
           <ExportButton filter={{ period: p.key }} subtitle={`Усі авто · ${p.label}`} title={`Експорт за ${p.label}`} />
 
-          <ComparisonCard
-            title={monthly ? 'Порівняно з минулим місяцем' : 'Порівняно з минулим роком'}
-            previousLabel={monthly ? monthTitle(data.previousPeriod) : data.previousPeriod}
-            report={data}
-          />
+          {data.previousPeriod ? (
+            <ComparisonCard
+              title={monthly ? 'Порівняно з минулим місяцем' : 'Порівняно з минулим роком'}
+              previousLabel={monthly ? monthTitle(data.previousPeriod) : data.previousPeriod}
+              report={data}
+            />
+          ) : null}
 
           <Card>
             <BarChart key={p.key} data={data.series} />

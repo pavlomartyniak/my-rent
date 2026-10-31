@@ -24,12 +24,12 @@ export function margin({ income, profit }: Pick<Totals, 'income' | 'profit'>): n
   return income > 0 ? round1((profit / income) * 100) : null;
 }
 
-// ---- періоди ('YYYY-MM' або 'YYYY') ----
+// ---- періоди ('YYYY-MM', 'YYYY' або 'all' — увесь час) ----
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
 export type ParsedPeriod = {
-  kind: 'month' | 'year';
+  kind: 'month' | 'year' | 'all';
   key: string;
   /** Межі дат як рядки ISO: from <= date < to (порівняння рядків працює для YYYY-MM-DD й використовує індекс) */
   from: string;
@@ -37,6 +37,8 @@ export type ParsedPeriod = {
 };
 
 export function parsePeriod(key: string): ParsedPeriod | null {
+  // Увесь час: межі ширші за будь-яку дату запису
+  if (key === 'all') return { kind: 'all', key, from: '0000-01-01', to: '9999-12-31' };
   const month = /^(\d{4})-(\d{2})$/.exec(key);
   if (month) {
     const y = Number(month[1]);
@@ -59,15 +61,37 @@ export function shiftMonth(ym: string, delta: number) {
   return `${Math.floor(total / 12)}-${pad((total % 12) + 1)}`;
 }
 
-export function previousPeriod(p: ParsedPeriod): string {
+/** Попередній період для порівняння; для всього часу порівнювати нема з чим */
+export function previousPeriod(p: ParsedPeriod): string | null {
+  if (p.kind === 'all') return null;
   return p.kind === 'month' ? shiftMonth(p.key, -1) : String(Number(p.key) - 1);
 }
 
 /** Місяці для графіка: 12 місяців року або 6 місяців, що закінчуються вибраним */
 export function seriesMonths(p: ParsedPeriod): string[] {
+  // Для всього часу стовпчики будує allTimeBuckets
+  if (p.kind === 'all') return [];
   return p.kind === 'year'
     ? Array.from({ length: 12 }, (_, i) => `${p.key}-${pad(i + 1)}`)
     : [5, 4, 3, 2, 1, 0].map((n) => shiftMonth(p.key, -n));
+}
+
+/** Скільки місяців ще вміщує графік; довша історія показується по роках */
+export const MAX_MONTHLY_BARS = 18;
+
+/**
+ * Стовпчики графіка за весь час: місяці від першого запису до поточного, а якщо їх забагато для екрана, то роки.
+ * Без записів лишається один порожній поточний місяць.
+ */
+export function allTimeBuckets(firstDate: string | undefined, now = new Date()): { unit: 'month' | 'year'; keys: string[] } {
+  const last = currentMonth(now);
+  const first = firstDate && firstDate.slice(0, 7) < last ? firstDate.slice(0, 7) : last;
+  const months: string[] = [];
+  for (let m = first; m <= last; m = shiftMonth(m, 1)) months.push(m);
+  if (months.length <= MAX_MONTHLY_BARS) return { unit: 'month', keys: months };
+  const years: string[] = [];
+  for (let y = Number(first.slice(0, 4)); y <= Number(last.slice(0, 4)); y++) years.push(String(y));
+  return { unit: 'year', keys: years };
 }
 
 export function currentMonth(now = new Date()) {

@@ -6,7 +6,7 @@ import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { monthLabel, monthTitle } from '@/lib/date';
 import { formatMoney } from '@/lib/format';
-import type { MonthEntry } from '@/lib/reports';
+import type { PeriodEntries } from '@/lib/reports';
 
 import { ThemedText } from './themed-text';
 import { TransactionRow } from './transaction-row';
@@ -17,11 +17,11 @@ const CHART_HEIGHT = 120;
 
 const barHeight = (value: number, max: number) => (value > 0 ? Math.max(3, (value / max) * CHART_HEIGHT) : 0);
 
-/** Що саме було доходом і на що пішли витрати у вибраному місяці: записи цього місяця списком */
+/** Що саме було доходом і на що пішли витрати у вибраному стовпчику (місяць чи рік): його записи списком */
 function MonthEntries({ month, scope }: { month: string; scope?: ChartScope }) {
   const theme = useTheme();
-  const query = `month=${month}${scope?.carId ? `&carId=${scope.carId}` : ''}${scope?.dealId ? `&dealId=${scope.dealId}` : ''}`;
-  const { data, loading, error } = useReport<MonthEntry[]>(`/transactions/month?${query}`, { keepPrevious: true });
+  const query = `period=${month}${scope?.carId ? `&carId=${scope.carId}` : ''}${scope?.dealId ? `&dealId=${scope.dealId}` : ''}`;
+  const { data, loading, error } = useReport<PeriodEntries>(`/transactions/period?${query}`, { keepPrevious: true });
   // Назву авто показуємо лише там, де записи охоплюють кілька авто
   const showCar = !scope?.carId && !scope?.dealId;
 
@@ -34,17 +34,24 @@ function MonthEntries({ month, scope }: { month: string; scope?: ChartScope }) {
         <ThemedText type="small" themeColor="textSecondary">
           {error ?? (loading ? 'Завантажуємо…' : '')}
         </ThemedText>
-      ) : data.length === 0 ? (
+      ) : data.items.length === 0 ? (
         <ThemedText type="small" themeColor="textSecondary">
-          За цей місяць записів немає
+          За цей період записів немає
         </ThemedText>
       ) : (
-        data.map((tx, i) => (
-          <View key={tx.id}>
-            {i > 0 ? <View style={[styles.divider, { backgroundColor: theme.border }]} /> : null}
-            <TransactionRow tx={tx} car={showCar ? tx.car : undefined} />
-          </View>
-        ))
+        <>
+          {data.items.map((tx, i) => (
+            <View key={tx.id}>
+              {i > 0 ? <View style={[styles.divider, { backgroundColor: theme.border }]} /> : null}
+              <TransactionRow tx={tx} car={showCar ? tx.car : undefined} />
+            </View>
+          ))}
+          {data.total > data.items.length ? (
+            <ThemedText type="small" themeColor="textSecondary" style={styles.more}>
+              Показано {data.items.length} найновіших із {data.total}. Повний перелік є в експорті
+            </ThemedText>
+          ) : null}
+        </>
       )}
     </View>
   );
@@ -173,6 +180,7 @@ const styles = StyleSheet.create({
   labelCompact: { fontSize: 10, lineHeight: 14 },
   labelActive: { fontWeight: 700 },
   entries: { gap: 0 },
+  more: { paddingTop: Spacing.two },
   divider: { height: StyleSheet.hairlineWidth, marginLeft: 48 + Spacing.three },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: Spacing.two },
   legend: { flexDirection: 'row', gap: Spacing.three },

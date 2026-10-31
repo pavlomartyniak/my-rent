@@ -7,6 +7,7 @@ import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
 import { Transaction } from '../schemas/transaction.schema';
 import {
+  allTimeBuckets,
   bestWorst,
   categoryShares,
   currentMonth,
@@ -39,11 +40,12 @@ export class ReportsService {
     const period = this.period(periodKey);
     const owner = new Types.ObjectId(userId);
     const previousKey = previousPeriod(period);
-    const previous = parsePeriod(previousKey)!;
+    // За весь час порівнювати нема з чим: попередній період порожній
+    const previous = previousKey ? parsePeriod(previousKey) : null;
 
     const [now, before, series, categories, perCar, allCars, cars] = await Promise.all([
       this.totals(owner, period),
-      this.totals(owner, previous),
+      previous ? this.totals(owner, previous) : totalsOf(0, 0),
       this.series(owner, period),
       this.categories(owner, period),
       this.byCar(owner, period),
@@ -125,11 +127,12 @@ export class ReportsService {
     const period = this.period(periodKey);
     const renter = new Types.ObjectId(userId);
     const previousKey = previousPeriod(period);
-    const previous = parsePeriod(previousKey)!;
+    // За весь час порівнювати нема з чим: попередній період порожній
+    const previous = previousKey ? parsePeriod(previousKey) : null;
 
     const [now, before, series, categories, perDeal, allDeals, rentPaid, deals] = await Promise.all([
       this.totals(renter, period),
-      this.totals(renter, previous),
+      previous ? this.totals(renter, previous) : totalsOf(0, 0),
       this.series(renter, period),
       this.categories(renter, period),
       this.byKey(renter, 'dealId', period),
@@ -198,7 +201,7 @@ export class ReportsService {
 
   private period(key?: string): ParsedPeriod {
     const parsed = parsePeriod(key ?? currentMonth());
-    if (!parsed) throw new BadRequestException('Невірний період: очікується РРРР-ММ або РРРР');
+    if (!parsed) throw new BadRequestException('Невірний період: очікується РРРР-ММ, РРРР або all');
     return parsed;
   }
 
@@ -213,14 +216,22 @@ export class ReportsService {
     return totalsOf(sum('income'), sum('expense'));
   }
 
-  private monthRows(owner: Types.ObjectId, period?: Pick<ParsedPeriod, 'from' | 'to'>, extra?: Record<string, unknown>) {
+  /** Суми за місяць (7 символів дати) чи за рік (4) і тип запису */
+  private monthRows(owner: Types.ObjectId, period?: Pick<ParsedPeriod, 'from' | 'to'>, extra?: Record<string, unknown>, length = 7) {
     return this.txs.aggregate<MonthRow>([
       this.match(owner, period, extra),
-      { $group: { _id: { month: { $substrBytes: ['$date', 0, 7] }, type: '$type' }, sum: { $sum: '$amount' } } },
+      { $group: { _id: { month: { $substrBytes: ['$date', 0, length] }, type: '$type' }, sum: { $sum: '$amount' } } },
     ]);
   }
 
   private async series(owner: Types.ObjectId, period: ParsedPeriod, extra?: Record<string, unknown>) {
+    if (period.kind === 'all') {
+      // Від першого запису: місяцями, а довшу історію по роках, щоб стовпчики вміщались на екрані
+      const first = await this.txs.findOne({ userId: owner, ...extra }, 'date').sort({ date: 1 }).lean().exec();
+      const { unit, keys } = allTimeBuckets(first?.date);
+      const rows = await this.monthRows(owner, undefined, extra, unit === 'year' ? 4 : 7);
+      return fillSeries(keys, rows.map((r) => ({ month: r._id.month, type: r._id.type, sum: r.sum })));
+    }
     const months = seriesMonths(period);
     const range = { from: `${months[0]}-01`, to: `${months[months.length - 1]}-32` };
     const rows = await this.monthRows(owner, range, extra);

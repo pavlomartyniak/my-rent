@@ -30,6 +30,8 @@ export function lastMonths(n: number, from = new Date()) {
 const MONTHS_SHORT = ['січ', 'лют', 'бер', 'кві', 'тра', 'чер', 'лип', 'сер', 'вер', 'жов', 'лис', 'гру'];
 
 export function monthLabel(key: string) {
+  // Стовпчик року (графік за весь час) підписується самим роком
+  if (key.length === 4) return key;
   return MONTHS_SHORT[Number(key.slice(5, 7)) - 1];
 }
 
@@ -48,6 +50,7 @@ const MONTHS_FULL = ['Січень', 'Лютий', 'Березень', 'Квіт
 
 /** 'YYYY-MM' → 'Жовтень 2026' */
 export function monthTitle(key: string) {
+  if (key.length === 4) return key;
   return `${MONTHS_FULL[Number(key.slice(5, 7)) - 1]} ${key.slice(0, 4)}`;
 }
 

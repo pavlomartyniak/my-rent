@@ -1,6 +1,6 @@
 import { useReport } from '@/hooks/use-report';
 import { daysUntil } from '@/lib/date';
-import type { DealView, PaymentQuestion } from '@/lib/deals';
+import type { DealView, DepositQuestion, PaymentQuestion } from '@/lib/deals';
 import { formatMoney, plural } from '@/lib/format';
 import type { RentalView } from '@/lib/rentals';
 import type { WantedView } from '@/lib/wanted';
@@ -14,7 +14,8 @@ export type AttentionTarget =
   | { kind: 'car'; carId: string }
   | { kind: 'tab'; href: string; params?: Record<string, string> }
   | { kind: 'release'; deal: DealView }
-  | { kind: 'payment'; dealId: string; n: number };
+  | { kind: 'payment'; dealId: string; n: number }
+  | { kind: 'deposit'; dealId: string };
 
 export type AttentionItem = {
   key: string;
@@ -49,6 +50,7 @@ export function useAttention(role: 'owner' | 'renter' | null) {
   const offers = useReport<WantedView[]>(renter ? '/wanted/mine' : null, POLL).data ?? [];
   const release = useReport<DealView[]>(owner ? '/deals/awaiting-release' : null, POLL).data ?? [];
   const payments = useReport<PaymentQuestion[]>(role ? '/deals/awaiting-payment' : null, POLL).data ?? [];
+  const deposits = useReport<DepositQuestion[]>(role ? '/deals/awaiting-deposit' : null, POLL).data ?? [];
 
   const items: AttentionItem[] = [];
 
@@ -67,6 +69,20 @@ export function useAttention(role: 'owner' | 'renter' | null) {
       count: 1,
       tab: 'home',
       target: { kind: 'payment', dealId: p.dealId, n: p.n },
+    });
+  }
+  // Застава за договором: «ви внесли?» (орендар) чи «ви отримали?» (власник); вноситься разом із першим платежем
+  for (const d of deposits) {
+    items.push({
+      key: `dep-${d.dealId}`,
+      tone: 'urgent',
+      icon: 'shield-checkmark',
+      title: renter ? `Ви внесли заставу ${formatMoney(d.amount)}?` : `Ви отримали заставу ${formatMoney(d.amount)}?`,
+      text: `${d.title}. Підтвердьте, що застава ${renter ? 'передана' : 'отримана'}: вона повертається після оренди`,
+      action: 'Відповісти',
+      count: 1,
+      tab: 'home',
+      target: { kind: 'deposit', dealId: d.dealId },
     });
   }
   for (const d of termination) {

@@ -41,6 +41,7 @@ export function AttentionList({ role }: { role: 'owner' | 'renter' }) {
     const t = item.target;
     if (t.kind === 'contract') router.push({ pathname: '/contracts/[id]', params: { id: t.dealId } });
     else if (t.kind === 'payment') router.push({ pathname: '/payments/[id]', params: { id: t.dealId, n: String(t.n) } });
+    else if (t.kind === 'deposit') router.push({ pathname: '/deposit/[id]', params: { id: t.dealId } });
     else if (t.kind === 'deal') router.push({ pathname: '/deals/[id]', params: { id: t.dealId } });
     else if (t.kind === 'car') router.push({ pathname: '/car/[id]', params: { id: t.carId } });
     else if (t.kind === 'tab') router.navigate(t.params ? { pathname: t.href as '/requests', params: t.params } : (t.href as '/requests'));

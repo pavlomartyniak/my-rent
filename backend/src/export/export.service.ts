@@ -22,6 +22,7 @@ const CONTENT_TYPE: Record<ExportFormat, string> = {
 };
 
 const periodTitle = (key: string) => {
+  if (key === 'all') return 'весь час';
   const m = /^(\d{4})-(\d{2})$/.exec(key);
   return m ? `${m[2]}.${m[1]}` : `${key} рік`;
 };
@@ -72,7 +73,7 @@ export class ExportService {
     }
     if (opts.period) {
       const period = parsePeriod(opts.period);
-      if (!period) throw new BadRequestException('Невірний період: очікується РРРР-ММ або РРРР');
+      if (!period) throw new BadRequestException('Невірний період: очікується РРРР-ММ, РРРР або all');
       filter.date = { $gte: period.from, $lt: period.to };
       name += `-${period.key}`;
       subtitle += ` · ${periodTitle(period.key)}`;

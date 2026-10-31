@@ -96,8 +96,14 @@ export class Deal {
    * Застава за договором: чи підтвердила кожна сторона, що її внесено. Лише відмітка: повернення й утримання
    * сторони домовляються самі, застосунок їх не веде. Є лише в оренд із заставою.
    */
-  @Prop({ type: { renterPaid: Boolean, ownerReceived: Boolean }, _id: false })
-  deposit?: { renterPaid: boolean; ownerReceived: boolean };
+  @Prop({ type: { renterPaid: Boolean, ownerReceived: Boolean, renterLaterUntil: String, ownerLaterUntil: String }, _id: false })
+  deposit?: {
+    renterPaid: boolean;
+    ownerReceived: boolean;
+    /** Відповідь «ще ні» відкладає запитання до цієї дати (YYYY-MM-DD), як у платежів */
+    renterLaterUntil?: string;
+    ownerLaterUntil?: string;
+  };
 
   /** Власник відповів «оренда триває» на підказку звільнити авто після закінчення оренди */
   @Prop({ default: false })

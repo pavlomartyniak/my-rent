@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  allTimeBuckets,
   bestWorst,
   categoryShares,
   fillSeries,
@@ -63,6 +64,39 @@ describe('періоди', () => {
     assert.deepEqual(seriesMonths(parsePeriod('2026-02')!), ['2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02']);
     assert.equal(seriesMonths(parsePeriod('2026')!).length, 12);
     assert.equal(seriesMonths(parsePeriod('2026')!)[11], '2026-12');
+  });
+});
+
+describe('увесь час', () => {
+  it('період all охоплює будь-які дати й не має попереднього', () => {
+    const p = parsePeriod('all')!;
+    assert.equal(p.kind, 'all');
+    assert.ok(p.from < '1980-01-01' && p.to > '2100-12-31');
+    assert.equal(previousPeriod(p), null);
+  });
+  const now = new Date('2026-10-31T10:00:00Z');
+  it('до 18 місяців історії: стовпчики по місяцях від першого запису', () => {
+    const b = allTimeBuckets('2025-06-12', now);
+    assert.equal(b.unit, 'month');
+    assert.equal(b.keys.length, 17);
+    assert.deepEqual([b.keys[0], b.keys.at(-1)], ['2025-06', '2026-10']);
+  });
+  it('рівно 18 місяців ще по місяцях, 19 уже по роках', () => {
+    assert.equal(allTimeBuckets('2025-05-01', now).unit, 'month'); // 2025-05 … 2026-10 = 18
+    const years = allTimeBuckets('2025-04-01', now);
+    assert.equal(years.unit, 'year');
+    assert.deepEqual(years.keys, ['2025', '2026']);
+  });
+  it('довга історія: роки без пропусків', () => assert.deepEqual(allTimeBuckets('2023-02-01', now).keys, ['2023', '2024', '2025', '2026']));
+  it('без записів — один поточний місяць', () => assert.deepEqual(allTimeBuckets(undefined, now), { unit: 'month', keys: ['2026-10'] }));
+  it('перший запис у цьому місяці — один стовпчик', () => assert.deepEqual(allTimeBuckets('2026-10-03', now).keys, ['2026-10']));
+  it('графік за весь час додає записи в стовпчики років', () => {
+    const rows = [
+      { month: '2025', type: 'income', sum: 100 },
+      { month: '2026', type: 'income', sum: 50 },
+      { month: '2026', type: 'expense', sum: 20 },
+    ];
+    assert.deepEqual(fillSeries(['2024', '2025', '2026'], rows).map((x) => x.profit), [0, 100, 30]);
   });
 });
 

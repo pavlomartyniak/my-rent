@@ -390,13 +390,49 @@ export class DealsService {
     const c = this.requireContract(deal);
     if (!c.terms.deposit) throw new ConflictException('У цьому договорі немає застави');
     if (deal.status !== 'active') throw new ConflictException('Заставу підтверджують після підписання договору');
-    const state = { renterPaid: deal.deposit?.renterPaid ?? false, ownerReceived: deal.deposit?.ownerReceived ?? false };
-    if (user.role === 'renter') state.renterPaid = true;
-    else state.ownerReceived = true;
+    const state = { ...(deal.deposit ?? {}), renterPaid: deal.deposit?.renterPaid ?? false, ownerReceived: deal.deposit?.ownerReceived ?? false };
+    if (user.role === 'renter') {
+      state.renterPaid = true;
+      state.renterLaterUntil = undefined;
+    } else {
+      state.ownerReceived = true;
+      state.ownerLaterUntil = undefined;
+    }
     deal.deposit = state;
     await deal.save();
     this.pingOther(user, deal);
     return this.viewFor(user, deal);
+  }
+
+  /** «Ще ні» щодо застави: не питати про неї до завтра */
+  async postponeDeposit(user: AuthUser, id: string) {
+    const deal = await this.mine(user, id);
+    if (!this.requireContract(deal).terms.deposit) throw new ConflictException('У цьому договорі немає застави');
+    const state = { ...(deal.deposit ?? {}), renterPaid: deal.deposit?.renterPaid ?? false, ownerReceived: deal.deposit?.ownerReceived ?? false };
+    if (user.role === 'renter') state.renterLaterUntil = todayUtc();
+    else state.ownerLaterUntil = todayUtc();
+    deal.deposit = state;
+    await deal.save();
+    return this.viewFor(user, deal);
+  }
+
+  /**
+   * Застава, про яку треба спитати цього користувача: договір підписано, а його відмітка («вніс» чи «отримав») ще не
+   * поставлена й не відкладена на сьогодні. Так само, як запитання про платежі.
+   */
+  async awaitingDeposit(user: AuthUser) {
+    const today = todayUtc();
+    const as = user.role === 'renter' ? 'renter' : 'owner';
+    const items = await this.deals.find({ ...this.side(user), status: 'active', 'contract.signedAt': { $exists: true }, 'contract.terms.deposit': { $gt: 0 } }).limit(50).exec();
+    const people = await this.people(items.map((d) => (as === 'renter' ? d.ownerId : d.renterId)));
+    const out: { dealId: string; title: string; counterpart: string; amount: number }[] = [];
+    for (const d of items) {
+      const v = this.depositView(d, as);
+      const later = as === 'renter' ? d.deposit?.renterLaterUntil : d.deposit?.ownerLaterUntil;
+      if (!v || v.mine || later === today) continue;
+      out.push({ dealId: String(d._id), title: d.title, counterpart: this.view(d, as, people).counterpart.name, amount: v.amount });
+    }
+    return out;
   }
 
   /** «Ще ні»: не питати про цей платіж до завтра */
