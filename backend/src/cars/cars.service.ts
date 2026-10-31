@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, HttpException, HttpStatus, Inje
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 
-import { LISTING_PRICE_USD } from '../common/constants';
+import { FREE_LISTINGS, LISTING_PRICE_USD } from '../common/constants';
 import { normalize } from '../common/normalize';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
@@ -11,13 +11,13 @@ import { Offer } from '../schemas/offer.schema';
 import { RentalRequest } from '../schemas/rental-request.schema';
 import { Transaction } from '../schemas/transaction.schema';
 import type { CreateCarDto, ListingDto, UpdateCarDto } from './cars.dto';
-import { listingAccess } from './listing-access';
+import { freeSlot, listingAccess } from './listing-access';
 import { normalizePhotos } from './photos';
 
-/** Публікація цього авто ще не відкрита: перше авто вже зайняло безкоштовне місце. Клієнт за кодом показує оплату */
+/** Публікація цього авто ще не відкрита: безкоштовні місця вже зайняті іншими авто. Клієнт за кодом показує оплату */
 const paymentRequired = () =>
   new HttpException(
-    { statusCode: HttpStatus.PAYMENT_REQUIRED, error: 'Payment Required', code: 'LISTING_PAYMENT_REQUIRED', price: LISTING_PRICE_USD, message: `Перше авто публікується безкоштовно, кожне наступне коштує ${LISTING_PRICE_USD} $ разово. Сплатіть публікацію цього авто, щоб продовжити` },
+    { statusCode: HttpStatus.PAYMENT_REQUIRED, error: 'Payment Required', code: 'LISTING_PAYMENT_REQUIRED', price: LISTING_PRICE_USD, message: `Перші ${FREE_LISTINGS} авто публікуються безкоштовно, кожне наступне коштує ${LISTING_PRICE_USD} $ разово. Сплатіть публікацію цього авто, щоб продовжити` },
     HttpStatus.PAYMENT_REQUIRED,
   );
 
@@ -69,12 +69,16 @@ export class CarsService {
     const cityKey = normalize(dto.city);
     if (!cityKey) throw new BadRequestException('Вкажіть місто');
 
-    // Публікація вже відкрита (безкоштовно чи оплатою), або це перше авто й воно займає безкоштовне місце, або потрібна оплата
-    const freeTaken = !car.listingUnlock && !!(await this.cars.exists({ userId, listingUnlock: 'free', _id: { $ne: car._id } }));
-    const access = listingAccess(car.listingUnlock, freeTaken);
+    // Публікація вже відкрита (безкоштовно чи оплатою), або авто займає вільне безкоштовне місце, або потрібна оплата
+    const freeUsed = car.listingUnlock ? 0 : await this.cars.countDocuments({ userId, listingUnlock: 'free', _id: { $ne: car._id } });
+    const access = listingAccess(car.listingUnlock, freeUsed, FREE_LISTINGS);
     if (access === 'payment') throw paymentRequired();
     if (access === 'free') {
+      const taken = (await this.cars.find({ userId, listingFreeSlot: { $exists: true } }, 'listingFreeSlot').lean().exec()).map((c) => c.listingFreeSlot!);
+      const slot = freeSlot(taken, FREE_LISTINGS);
+      if (slot === null) throw paymentRequired();
       car.listingUnlock = 'free';
+      car.listingFreeSlot = slot;
       car.listingUnlockedAt = new Date();
     }
 
@@ -90,8 +94,8 @@ export class CarsService {
     try {
       return await car.save();
     } catch (e) {
-      // Унікальний індекс: інший запит встиг зайняти безкоштовне місце
-      if (access === 'free' && (e as { code?: number }).code === 11000) throw paymentRequired();
+      // Унікальний індекс: інший запит у цей же момент зайняв те саме безкоштовне місце
+      if (access === 'free' && (e as { code?: number }).code === 11000) throw new ConflictException('Не вдалося зайняти безкоштовне місце. Спробуйте ще раз');
       throw e;
     }
   }

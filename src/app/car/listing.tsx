@@ -12,7 +12,7 @@ import { NumberField } from '@/components/ui/number-field';
 import { Screen } from '@/components/ui/screen';
 import { api, ApiError } from '@/lib/api';
 import { useFleet } from '@/store/fleet';
-import { LISTING_PRICE } from '@/types';
+import { FREE_LISTINGS, LISTING_PRICE } from '@/types';
 
 /** Оголошення про оренду: місто, ціна за добу й опис. Його бачать усі орендарі, поки авто вільне. */
 export default function ListingScreen() {
@@ -20,8 +20,8 @@ export default function ListingScreen() {
   const router = useRouter();
   const { cars, reload } = useFleet();
   const car = cars.find((c) => c.id === id);
-  // Перше авто публікується безкоштовно; поки воно займає це місце, кожне наступне відкривається разовою оплатою
-  const needsPayment = !!car && !car.listingUnlock && cars.some((c) => c.id !== car.id && c.listingUnlock === 'free');
+  // Перші авто публікуються безкоштовно; коли всі безкоштовні місця зайняті, кожне наступне відкривається разовою оплатою
+  const needsPayment = !!car && !car.listingUnlock && cars.filter((c) => c.id !== car.id && c.listingUnlock === 'free').length >= FREE_LISTINGS;
 
   const [city, setCity] = useState(car?.listing?.city ?? '');
   const [price, setPrice] = useState(car?.listing ? String(car.listing.pricePerDay) : '');
@@ -106,7 +106,7 @@ export default function ListingScreen() {
             Публікація цього авто: {LISTING_PRICE} разово
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            Перше авто ви публікуєте безкоштовно, кожне наступне коштує {LISTING_PRICE} один раз за конкретне авто. Після оплати його можна знімати з публікації й публікувати знову без доплати. Облік безкоштовний і без обмежень. Оплату ще не підключено: це демо.
+            Перші {FREE_LISTINGS} авто ви публікуєте безкоштовно, кожне наступне коштує {LISTING_PRICE} один раз за конкретне авто. Після оплати його можна знімати з публікації й публікувати знову без доплати. Облік безкоштовний і без обмежень. Оплату ще не підключено: це демо.
           </ThemedText>
         </Card>
       ) : null}
