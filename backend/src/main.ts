@@ -2,6 +2,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { json } from 'express';
 import helmet from 'helmet';
 
 import { AppModule } from './app.module';
@@ -13,6 +14,8 @@ async function bootstrap() {
   // рахувались би на всіх користувачів разом
   app.set('trust proxy', 1);
   app.use(helmet());
+  // Вебхук WayForPay читаємо як JSON незалежно від заголовка Content-Type, який присилає платіжна система
+  app.use('/payments/wayforpay/webhook', json({ type: () => true, limit: '100kb' }));
   app.useBodyParser('json', { limit: '2mb' });
   // whitelist відкидає невідомі поля, transform приводить типи до DTO
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));

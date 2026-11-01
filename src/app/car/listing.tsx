@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 
@@ -29,6 +30,7 @@ export default function ListingScreen() {
   const [description, setDescription] = useState(car?.listing?.description ?? '');
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [waiting, setWaiting] = useState(false);
 
   if (!car) {
     return (
@@ -44,13 +46,39 @@ export default function ListingScreen() {
     price: Number(price) > 0 ? '' : 'Вкажіть ціну за добу',
   };
 
+  /**
+   * Оплата публікації: сервер створює рахунок WayForPay, застосунок відкриває сторінку оплати в браузері й чекає, поки платіжна система
+   * підтвердить гроші (сервер відкриє публікацію лише за підтвердженням, а не за натисканням «успіх»).
+   */
+  async function pay(carId: string) {
+    const start = await api<{ required: boolean; paid?: boolean; orderId?: string; pageUrl?: string }>('POST', `/payments/listing/${carId}`);
+    if (!start.required || start.paid) return true;
+    await WebBrowser.openBrowserAsync(start.pageUrl!);
+    setWaiting(true);
+    try {
+      for (let i = 0; i < 150; i++) {
+        const order = await api<{ status: string }>('GET', `/payments/orders/${start.orderId}`);
+        if (order.status === 'paid') return true;
+        if (order.status === 'failed') {
+          Alert.alert('Оплата не пройшла', 'Гроші не списано. Спробуйте ще раз.');
+          return false;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+      Alert.alert('Оплату ще не підтверджено', 'Якщо ви вже заплатили, зачекайте хвилину й натисніть кнопку ще раз: повторно платити не доведеться.');
+      return false;
+    } finally {
+      setWaiting(false);
+    }
+  }
+
   async function save() {
     if (saving || !car) return;
     setSubmitted(true);
     if (errors.city || errors.price) return;
     setSaving(true);
     try {
-      if (needsPayment) await api('POST', `/cars/${car.id}/listing/unlock`);
+      if (needsPayment && !(await pay(car.id))) return;
       await api('PUT', `/cars/${car.id}/listing`, { city: city.trim(), pricePerDay: Number(price), deposit: Number(deposit) || 0, description: description.trim() });
       reload();
       router.back();
@@ -106,12 +134,12 @@ export default function ListingScreen() {
             Публікація цього авто: {LISTING_PRICE} разово
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            Перші {FREE_LISTINGS} авто ви публікуєте безкоштовно, кожне наступне коштує {LISTING_PRICE} один раз за конкретне авто. Після оплати його можна знімати з публікації й публікувати знову без доплати. Облік безкоштовний і без обмежень. Оплату ще не підключено: це демо.
+            Перші {FREE_LISTINGS} авто ви публікуєте безкоштовно, кожне наступне коштує {LISTING_PRICE} один раз за конкретне авто. Оплата відкриється на захищеній сторінці платіжної системи. Після оплати авто можна знімати з публікації й публікувати знову без доплати. Облік безкоштовний і без обмежень.
           </ThemedText>
         </Card>
       ) : null}
       <Button
-        title={saving ? 'Публікуємо…' : needsPayment ? `Сплатити ${LISTING_PRICE} і опублікувати` : car.listing?.published ? 'Зберегти оголошення' : 'Опублікувати'}
+        title={waiting ? 'Чекаємо підтвердження оплати…' : saving ? 'Публікуємо…' : needsPayment ? `Сплатити ${LISTING_PRICE} і опублікувати` : car.listing?.published ? 'Зберегти оголошення' : 'Опублікувати'}
         icon="megaphone-outline"
         disabled={saving}
         onPress={save}

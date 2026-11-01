@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, HttpException, HttpStatus, Inje
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 
-import { FREE_LISTINGS, LISTING_PRICE_USD } from '../common/constants';
+import { FREE_LISTINGS, LISTING_PRICE_UAH } from '../common/constants';
 import { normalize } from '../common/normalize';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
@@ -17,7 +17,7 @@ import { normalizePhotos } from './photos';
 /** Публікація цього авто ще не відкрита: безкоштовні місця вже зайняті іншими авто. Клієнт за кодом показує оплату */
 const paymentRequired = () =>
   new HttpException(
-    { statusCode: HttpStatus.PAYMENT_REQUIRED, error: 'Payment Required', code: 'LISTING_PAYMENT_REQUIRED', price: LISTING_PRICE_USD, message: `Перші ${FREE_LISTINGS} авто публікуються безкоштовно, кожне наступне коштує ${LISTING_PRICE_USD} $ разово. Сплатіть публікацію цього авто, щоб продовжити` },
+    { statusCode: HttpStatus.PAYMENT_REQUIRED, error: 'Payment Required', code: 'LISTING_PAYMENT_REQUIRED', price: LISTING_PRICE_UAH, message: `Перші ${FREE_LISTINGS} авто публікуються безкоштовно, кожне наступне коштує ${LISTING_PRICE_UAH} ₴ разово. Сплатіть публікацію цього авто, щоб продовжити` },
     HttpStatus.PAYMENT_REQUIRED,
   );
 
@@ -100,9 +100,16 @@ export class CarsService {
     }
   }
 
+  /** Чи треба платити за публікацію цього авто: безкоштовні місця зайняті, а саме воно ще не відкрите */
+  async listingNeedsPayment(userId: string, id: string) {
+    const car = await this.get(userId, id);
+    const freeUsed = car.listingUnlock ? 0 : await this.cars.countDocuments({ userId, listingUnlock: 'free', _id: { $ne: car._id } });
+    return listingAccess(car.listingUnlock, freeUsed, FREE_LISTINGS) === 'payment';
+  }
+
   /**
-   * Відкриває публікацію цього авто разовою оплатою. Поки оплата не підключена, працює лише в демо-режимі (перевіряє
-   * контролер). Повторний виклик для вже відкритого авто нічого не змінює.
+   * Відкриває публікацію цього авто разовою оплатою. Викликається лише після підтвердженої оплати (вебхук WayForPay)
+   * чи в демо-режимі. Повторний виклик для вже відкритого авто нічого не змінює.
    */
   async unlockListing(userId: string, id: string) {
     const car = await this.get(userId, id);
