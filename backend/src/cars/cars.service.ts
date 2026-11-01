@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, HttpException, HttpStatus, Inje
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 
-import { FREE_LISTINGS, LISTING_PRICE_UAH } from '../common/constants';
+import { FREE_LISTINGS, formatUah, LISTING_PRICE_UAH } from '../common/constants';
 import { normalize } from '../common/normalize';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
@@ -17,7 +17,7 @@ import { normalizePhotos } from './photos';
 /** Публікація цього авто ще не відкрита: безкоштовні місця вже зайняті іншими авто. Клієнт за кодом показує оплату */
 const paymentRequired = () =>
   new HttpException(
-    { statusCode: HttpStatus.PAYMENT_REQUIRED, error: 'Payment Required', code: 'LISTING_PAYMENT_REQUIRED', price: LISTING_PRICE_UAH, message: `Перші ${FREE_LISTINGS} авто публікуються безкоштовно, кожне наступне коштує ${LISTING_PRICE_UAH} ₴ разово. Сплатіть публікацію цього авто, щоб продовжити` },
+    { statusCode: HttpStatus.PAYMENT_REQUIRED, error: 'Payment Required', code: 'LISTING_PAYMENT_REQUIRED', price: LISTING_PRICE_UAH, message: `Перші ${FREE_LISTINGS} авто публікуються безкоштовно, кожне наступне коштує ${formatUah(LISTING_PRICE_UAH)} ₴ разово. Сплатіть публікацію цього авто, щоб продовжити` },
     HttpStatus.PAYMENT_REQUIRED,
   );
 

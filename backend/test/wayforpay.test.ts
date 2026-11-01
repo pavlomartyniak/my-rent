@@ -47,6 +47,13 @@ describe('що робити з вебхуком', () => {
   it('успіх із правильною сумою відкриває публікацію', () => assert.equal(decideWebhook(order, hook({})), 'paid'));
   it('сума як рядок теж порівнюється числом', () => assert.equal(decideWebhook(order, hook({ amount: '249.00' })), 'paid'));
   it('повторний успіх для оплаченого замовлення знову дає paid (ідемпотентно)', () => assert.equal(decideWebhook({ ...order, status: 'paid' }, hook({})), 'paid'));
+  it('копійки: 0,30 ₴ збігаються незалежно від запису числа', () => {
+    const cheap: OrderState = { amount: 0.3, currency: 'UAH', status: 'created' };
+    assert.equal(decideWebhook(cheap, hook({ amount: 0.3 })), 'paid');
+    assert.equal(decideWebhook(cheap, hook({ amount: '0.30' })), 'paid');
+    assert.equal(decideWebhook(cheap, hook({ amount: 249 })), 'mismatch');
+  });
+  it('підпис рахує суму з копійками так само, як її бачить WayForPay', () => assert.equal(sign(['x', 0.3, 'UAH'], SECRET), md5('x;0.3;UAH')));
   it('менша сума не відкриває публікацію', () => assert.equal(decideWebhook(order, hook({ amount: 1 })), 'mismatch'));
   it('інша валюта не відкриває публікацію', () => assert.equal(decideWebhook(order, hook({ currency: 'USD' })), 'mismatch'));
   it('відмова й закінчений строк позначають замовлення невдалим', () => {

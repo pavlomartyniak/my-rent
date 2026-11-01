@@ -45,4 +45,7 @@ export const MAX_PHOTOS = 10;
 /** Публікація авто: перші авто безкоштовні, кожне наступне коштує стільки доларів разово за конкретне авто. Облік безкоштовний без ліміту */
 export const FREE_LISTINGS = 2;
 /** Ціна публікації одного авто, гривень (оплата через WayForPay у гривні) */
-export const LISTING_PRICE_UAH = 249;
+export const LISTING_PRICE_UAH = 0.3;
+
+/** Сума гривнями для людей: цілі без копійок, решта з двома знаками й комою (0,30) */
+export const formatUah = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ','));
