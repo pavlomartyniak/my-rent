@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { BarChart } from '@/components/bar-chart';
 import { CarPhoto } from '@/components/car-photo';
-import { CategoryBreakdown } from '@/components/category-breakdown';
+import { CategoryPanel } from '@/components/category-panel';
 import { ComparisonCard } from '@/components/comparison-card';
 import { ExportButton } from '@/components/export-sheet';
 import { PeriodSwitcher, usePeriod } from '@/components/period-switcher';
@@ -118,9 +118,9 @@ export default function ReportScreen() {
             })}
           </Card>
 
-          <SectionHeader title={`На що йдуть витрати · ${p.label}`} />
+          <SectionHeader title="На що йдуть витрати" />
           <Card>
-            <CategoryBreakdown items={data.categories} />
+            <CategoryPanel />
           </Card>
         </>
       )}
