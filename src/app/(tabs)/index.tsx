@@ -88,12 +88,12 @@ export default function HomeScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two }}>
             {cars.length > 1 ? <CarStatusFilter options={options} value={active} onChange={setFilter} sorts={SORTS} sort={sort} onSort={(v) => setSort(v as Sort)} /> : null}
             <View style={{ flex: 1, alignItems: 'flex-end' }}>
-              <PillButton title="+ Додати" onPress={addCar} />
+              <PillButton title="+ Додати авто" onPress={addCar} />
             </View>
           </View>
-          <View style={{ gap: Spacing.four }}>
-            {shown.map(({ car, profit }) => (
-              <CarCard key={car.id} car={car} profit={profit} />
+          <View style={{ gap: Spacing.three }}>
+            {shown.map(({ car }) => (
+              <CarCard key={car.id} car={car} pricePerDay={rentals?.find((d) => d.carId === car.id)?.pricePerDay} />
             ))}
           </View>
         </>
