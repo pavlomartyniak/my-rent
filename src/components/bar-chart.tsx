@@ -86,7 +86,8 @@ const SLOT = 44;
  * До 12 стовпчиків графік вміщується на екрані (можна й вести пальцем). Довшу історію можна гортати вбік: стовпчики
  * лишаються зручної ширини, вибраним стає місяць по центру, тож свайп сам змінює місяць, а дотик ставить його в центр.
  */
-export function BarChart({ data, scope, card }: { data: Point[]; scope?: ChartScope; /** Звіт: «Динаміка» із легендою зверху й записи місяця окремою карткою */ card?: boolean }) {
+export function BarChart({ data, scope, card, titled }: { data: Point[]; scope?: ChartScope; /** Звіт: «Динаміка» із легендою зверху й записи місяця окремою карткою */ card?: boolean; /** «Динаміка» із легендою зверху, записи лишаються під графіком */ titled?: boolean }) {
+  const head = card || titled;
   const theme = useTheme();
   const [selected, setSelected] = useState(data.length - 1);
   // Положення графіка на екрані: за ним переводимо дотик пальця в номер місяця (лише без гортання)
@@ -172,7 +173,7 @@ export function BarChart({ data, scope, card }: { data: Point[]; scope?: ChartSc
 
   const chart = (
     <View style={styles.wrap}>
-      {card ? (
+      {head ? (
         <View style={styles.footer}>
           <ThemedText type="default" style={styles.title}>
             Динаміка
@@ -232,8 +233,8 @@ export function BarChart({ data, scope, card }: { data: Point[]; scope?: ChartSc
         </View>
       )}
 
-      <View style={card ? styles.hint : styles.footer}>
-        {card ? null : (
+      <View style={head ? styles.hint : styles.footer}>
+        {head ? null : (
           <View style={styles.legend}>
             <Legend color={theme.positive} label="Доходи" />
             <Legend color={theme.negative} label="Витрати" />

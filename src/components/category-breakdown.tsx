@@ -8,15 +8,19 @@ import { formatMoney } from '@/lib/format';
 
 import { DonutChart } from './donut-chart';
 import { ThemedText } from './themed-text';
+import { Icon } from './ui/icon';
 
 /** На що йдуть витрати: кільцева діаграма із загальною сумою, а під нею категорії з кольором, сумою, смужкою й часткою */
 export function CategoryBreakdown({ items }: { items: CategoryShare[] }) {
   const theme = useTheme();
   if (!items.length) {
     return (
-      <ThemedText type="small" themeColor="textSecondary">
-        Витрат за цей період немає.
-      </ThemedText>
+      <View style={[styles.empty, { backgroundColor: theme.backgroundSelected }]}>
+        <View style={[styles.emptyIcon, { backgroundColor: theme.positiveSoft }]}>
+          <Icon name="checkmark" size={20} color="positive" />
+        </View>
+        <ThemedText type="default">Витрат за цей період немає.</ThemedText>
+      </View>
     );
   }
 
@@ -55,6 +59,8 @@ export function CategoryBreakdown({ items }: { items: CategoryShare[] }) {
 }
 
 const styles = StyleSheet.create({
+  empty: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.md },
+  emptyIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   wrap: { gap: Spacing.four },
   list: { gap: Spacing.three },
   name: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
