@@ -13,12 +13,12 @@ import { SummaryCard } from '@/components/summary-card';
 import { ScreenTitle } from '@/components/screen-title';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
-import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Radius, Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
+import { useTheme } from '@/hooks/use-theme';
 import { monthTitle } from '@/lib/date';
 import { formatMoney, formatMonths, formatPercent } from '@/lib/format';
 import type { SummaryReport } from '@/lib/reports';
@@ -32,6 +32,7 @@ const paybackRank = (months: number | null) => (months === null ? Infinity : mon
 
 export default function ReportScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const { cars } = useFleet();
   const p = usePeriod();
   const [criterion, setCriterion] = useState<Criterion>('Прибуток');
@@ -63,9 +64,17 @@ export default function ReportScreen() {
         <ReportStatus loading={loading} error={error} onRetry={retry} />
       ) : (
         <>
-          <SummaryCard title={`Прибуток · ${p.label}`} profit={data.totals.profit} income={data.totals.income} expense={data.totals.expense} />
-
-          <ExportButton filter={{ period: p.key }} subtitle={`Усі авто · ${p.label}`} title={`Експорт за ${p.label}`} />
+          <SummaryCard
+            title={`Прибуток · ${p.label}`}
+            profit={data.totals.profit}
+            income={data.totals.income}
+            expense={data.totals.expense}
+            change={data.previousPeriod ? data.change.profit : undefined}
+            margin={data.totals.margin}>
+            <View style={styles.export}>
+              <ExportButton filter={{ period: p.key }} subtitle={`Усі авто · ${p.label}`} title={`Експорт за ${p.label}`} />
+            </View>
+          </SummaryCard>
 
           {data.previousPeriod ? (
             <ComparisonCard
@@ -75,9 +84,7 @@ export default function ReportScreen() {
             />
           ) : null}
 
-          <Card>
-            <BarChart key={p.key} data={data.series} />
-          </Card>
+          <BarChart key={p.key} data={data.series} card />
 
           <SectionHeader title="Рейтинг авто" />
           <Segmented scroll options={CRITERIA} value={criterion} onChange={setCriterion} />
@@ -91,27 +98,39 @@ export default function ReportScreen() {
                     : all.paybackMonths === 0
                       ? { text: 'Окупилось', good: true }
                       : { text: all.paybackMonths ? `≈ ${formatMonths(all.paybackMonths)}` : '—', good: null };
+              // Смуга порівнює авто за вибраним показником; для окупності її немає
+              const value = criterion === 'Прибуток' ? period.profit : criterion === 'ROI' ? all.roi : null;
+              const top = Math.max(0, ...ranking.map((r) => (criterion === 'Прибуток' ? r.period.profit : r.all.roi)));
+              const share = value === null ? null : top > 0 ? Math.max(0, value) / top : 0;
               const sub = criterion === 'ROI' ? `Прибуток за весь час ${formatMoney(all.profit)}` : `ROI ${formatPercent(all.roi)}`;
 
               return (
                 <Pressable key={car.id} accessibilityRole="button" onPress={() => router.push({ pathname: '/car/analytics', params: { id: car.id } })}>
                   <View style={[styles.row, i > 0 && styles.rowBorder]}>
-                    <ThemedText type="smallBold" themeColor="textSecondary" style={styles.place}>
-                      {i + 1}
-                    </ThemedText>
+                    <View style={[styles.place, { backgroundColor: i === 0 ? theme.ink : theme.backgroundSelected }]}>
+                      <ThemedText type="smallBold" style={{ color: i === 0 ? theme.onInk : theme.textSecondary }}>
+                        {i + 1}
+                      </ThemedText>
+                    </View>
                     <CarPhoto uri={car.photoUri} style={styles.thumb} iconSize={22} />
                     <View style={styles.flex}>
-                      <ThemedText type="default" style={styles.bold} numberOfLines={1}>
-                        {car.brand} {car.model}
-                      </ThemedText>
+                      <View style={styles.top}>
+                        <ThemedText type="default" style={[styles.bold, styles.flex]} numberOfLines={1}>
+                          {car.brand} {car.model}
+                        </ThemedText>
+                        <ThemedText type="default" style={styles.bold} themeColor={main.good === null ? 'text' : main.good ? 'positive' : 'negative'}>
+                          {main.text}
+                        </ThemedText>
+                      </View>
+                      {share !== null ? (
+                        <View style={[styles.track, { backgroundColor: theme.backgroundSelected }]}>
+                          <View style={[styles.fill, { backgroundColor: main.good === false ? theme.negative : theme.positive, width: `${Math.round(share * 100)}%` }]} />
+                        </View>
+                      ) : null}
                       <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
                         {sub}
                       </ThemedText>
                     </View>
-                    <ThemedText type="default" style={styles.bold} themeColor={main.good === null ? 'text' : main.good ? 'positive' : 'negative'}>
-                      {main.text}
-                    </ThemedText>
-                    <Icon name="chevron-forward" size={18} color="textSecondary" />
                   </View>
                 </Pressable>
               );
@@ -132,8 +151,12 @@ const styles = StyleSheet.create({
   list: { paddingVertical: 0, gap: 0 },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.three },
   rowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128,128,128,0.3)' },
-  place: { width: 18, textAlign: 'center' },
-  thumb: { width: 44, height: 44, borderRadius: Radius.sm },
+  place: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  thumb: { width: 52, height: 52, borderRadius: Radius.md },
   flex: { flex: 1 },
+  top: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  track: { height: 6, borderRadius: 3, overflow: 'hidden', marginVertical: 4 },
+  fill: { height: 6, borderRadius: 3 },
+  export: { marginTop: Spacing.two },
   bold: { fontWeight: 700 },
 });

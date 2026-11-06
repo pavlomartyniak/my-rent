@@ -1,9 +1,11 @@
 import { StyleSheet, View } from 'react-native';
 
-import { Spacing, type ThemeColor } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { formatMoney } from '@/lib/format';
 import type { SummaryReport } from '@/lib/reports';
 
+import { DeltaChip } from './delta-chip';
 import { ThemedText } from './themed-text';
 import { Card } from './ui/card';
 
@@ -13,27 +15,6 @@ type Props = {
   previousLabel: string;
   report: Pick<SummaryReport, 'totals' | 'change'>;
 };
-
-/** Зміна у відсотках. `lowerIsBetter` — для витрат: зменшення тут добре. */
-function Delta({ change, lowerIsBetter }: { change: number | null; lowerIsBetter?: boolean }) {
-  if (change === null) {
-    return (
-      <ThemedText type="small" themeColor="textSecondary">
-        немає даних
-      </ThemedText>
-    );
-  }
-  const rounded = Math.round(change);
-  const good = lowerIsBetter ? rounded < 0 : rounded > 0;
-  const bad = lowerIsBetter ? rounded > 0 : rounded < 0;
-  const color: ThemeColor = good ? 'positive' : bad ? 'negative' : 'textSecondary';
-  return (
-    <ThemedText type="smallBold" themeColor={color}>
-      {rounded > 0 ? '▲ +' : rounded < 0 ? '▼ −' : '● '}
-      {Math.abs(rounded)}%
-    </ThemedText>
-  );
-}
 
 function Row({ label, value, delta, lowerIsBetter }: { label: string; value: string; delta: number | null; lowerIsBetter?: boolean }) {
   return (
@@ -45,7 +26,7 @@ function Row({ label, value, delta, lowerIsBetter }: { label: string; value: str
         {value}
       </ThemedText>
       <View style={styles.delta}>
-        <Delta change={delta} lowerIsBetter={lowerIsBetter} />
+        <DeltaChip change={delta} lowerIsBetter={lowerIsBetter} />
       </View>
     </View>
   );
@@ -55,6 +36,7 @@ function Row({ label, value, delta, lowerIsBetter }: { label: string; value: str
 export function ComparisonCard({ title, previousLabel, report }: Props) {
   const { totals: current, change } = report;
   const m = current.margin;
+  const theme = useTheme();
   const marginShift = change.marginPoints === null ? null : Math.round(change.marginPoints);
 
   return (
@@ -93,6 +75,11 @@ export function ComparisonCard({ title, previousLabel, report }: Props) {
           ) : null}
         </View>
       </View>
+      {m !== null ? (
+        <View style={[styles.track, { backgroundColor: theme.backgroundSelected }]}>
+          <View style={[styles.fill, { backgroundColor: m < 0 ? theme.negative : theme.positive, width: `${Math.max(0, Math.min(100, m))}%` }]} />
+        </View>
+      ) : null}
     </Card>
   );
 }
@@ -100,11 +87,13 @@ export function ComparisonCard({ title, previousLabel, report }: Props) {
 const styles = StyleSheet.create({
   card: { gap: Spacing.three },
   title: { fontWeight: 700 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingBottom: Spacing.three, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(128,128,128,0.3)' },
   label: { flex: 1, fontWeight: 600 },
   value: { fontWeight: 700 },
   delta: { minWidth: 82, alignItems: 'flex-end' },
-  margin: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingTop: Spacing.three, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128,128,128,0.3)' },
+  margin: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   flex: { flex: 1 },
+  track: { height: 6, borderRadius: Radius.pill, overflow: 'hidden', marginTop: -Spacing.one },
+  fill: { height: 6, borderRadius: Radius.pill },
   marginRight: { alignItems: 'flex-end' },
 });

@@ -10,6 +10,7 @@ import type { PeriodEntries } from '@/lib/reports';
 
 import { ThemedText } from './themed-text';
 import { TransactionRow } from './transaction-row';
+import { Card } from './ui/card';
 
 type Point = { month: string; income: number; expense: number };
 
@@ -20,7 +21,7 @@ const CALLOUT_HEIGHT = 60;
 const barHeight = (value: number, max: number) => (value > 0 ? Math.max(3, (value / max) * CHART_HEIGHT) : 0);
 
 /** Що саме було доходом і на що пішли витрати у вибраному стовпчику (місяць чи рік): його записи списком */
-function MonthEntries({ month, scope }: { month: string; scope?: ChartScope }) {
+function MonthEntries({ month, scope, titled }: { month: string; scope?: ChartScope; titled?: boolean }) {
   const theme = useTheme();
   const query = `period=${month}${scope?.carId ? `&carId=${scope.carId}` : ''}${scope?.dealId ? `&dealId=${scope.dealId}` : ''}`;
   const { data, loading, error } = useReport<PeriodEntries>(`/transactions/period?${query}`, { keepPrevious: true });
@@ -29,9 +30,21 @@ function MonthEntries({ month, scope }: { month: string; scope?: ChartScope }) {
 
   return (
     <View style={styles.entries}>
-      <ThemedText type="smallBold" themeColor="textSecondary">
-        Записи · {monthTitle(month)}
-      </ThemedText>
+      {titled ? (
+        <View style={styles.entriesHead}>
+          <ThemedText type="default" style={styles.title}>
+            Записи
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {monthTitle(month)}
+            {data ? ` · ${data.total}` : ''}
+          </ThemedText>
+        </View>
+      ) : (
+        <ThemedText type="smallBold" themeColor="textSecondary">
+          Записи · {monthTitle(month)}
+        </ThemedText>
+      )}
       {!data ? (
         <ThemedText type="small" themeColor="textSecondary">
           {error ?? (loading ? 'Завантажуємо…' : '')}
@@ -73,7 +86,7 @@ const SLOT = 44;
  * До 12 стовпчиків графік вміщується на екрані (можна й вести пальцем). Довшу історію можна гортати вбік: стовпчики
  * лишаються зручної ширини, вибраним стає місяць по центру, тож свайп сам змінює місяць, а дотик ставить його в центр.
  */
-export function BarChart({ data, scope }: { data: Point[]; scope?: ChartScope }) {
+export function BarChart({ data, scope, card }: { data: Point[]; scope?: ChartScope; /** Звіт: «Динаміка» із легендою зверху й записи місяця окремою карткою */ card?: boolean }) {
   const theme = useTheme();
   const [selected, setSelected] = useState(data.length - 1);
   // Положення графіка на екрані: за ним переводимо дотик пальця в номер місяця (лише без гортання)
@@ -157,8 +170,19 @@ export function BarChart({ data, scope }: { data: Point[]; scope?: ChartScope })
     );
   });
 
-  return (
+  const chart = (
     <View style={styles.wrap}>
+      {card ? (
+        <View style={styles.footer}>
+          <ThemedText type="default" style={styles.title}>
+            Динаміка
+          </ThemedText>
+          <View style={styles.legend}>
+            <Legend color={theme.positive} label="Доходи" />
+            <Legend color={theme.negative} label="Витрати" />
+          </View>
+        </View>
+      ) : null}
       <View style={[styles.callout, { backgroundColor: theme.backgroundSelected }]}>
         <ThemedText type="smallBold" numberOfLines={1}>
           {monthTitle(current.month)}
@@ -208,18 +232,30 @@ export function BarChart({ data, scope }: { data: Point[]; scope?: ChartScope })
         </View>
       )}
 
-      <View style={styles.footer}>
-        <View style={styles.legend}>
-          <Legend color={theme.positive} label="Доходи" />
-          <Legend color={theme.negative} label="Витрати" />
-        </View>
+      <View style={card ? styles.hint : styles.footer}>
+        {card ? null : (
+          <View style={styles.legend}>
+            <Legend color={theme.positive} label="Доходи" />
+            <Legend color={theme.negative} label="Витрати" />
+          </View>
+        )}
         <ThemedText type="small" themeColor="textSecondary">
-          {scrollable ? 'Гортайте графік або торкайтесь місяця' : 'Торкніться або ведіть пальцем'}
+          {scrollable ? 'Гортайте графік або торкайтесь місяця' : 'Торкніться стовпчика або ведіть пальцем'}
         </ThemedText>
       </View>
 
-      <MonthEntries month={entriesMonth || current.month} scope={scope} />
+      {card ? null : <MonthEntries month={entriesMonth || current.month} scope={scope} />}
     </View>
+  );
+
+  if (!card) return chart;
+  return (
+    <>
+      <Card>{chart}</Card>
+      <Card>
+        <MonthEntries month={entriesMonth || current.month} scope={scope} titled />
+      </Card>
+    </>
   );
 }
 
@@ -255,6 +291,9 @@ const styles = StyleSheet.create({
   labelActive: { fontWeight: 700 },
   yearLabel: { fontSize: 11, lineHeight: 14 },
   entries: { gap: 0 },
+  entriesHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: Spacing.one },
+  title: { fontWeight: 700, fontSize: 18 },
+  hint: { alignItems: 'center' },
   more: { paddingTop: Spacing.two },
   divider: { height: StyleSheet.hairlineWidth, marginLeft: 48 + Spacing.three },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: Spacing.two },

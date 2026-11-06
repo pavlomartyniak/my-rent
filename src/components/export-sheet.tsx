@@ -70,7 +70,7 @@ export function ExportButton({ filter, subtitle, title = 'Експорт' }: { f
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button title={title} icon="download-outline" variant="secondary" onPress={() => setOpen(true)} />
+      <Button title={title} icon="download-outline" variant="soft" onPress={() => setOpen(true)} />
       <ExportSheet visible={open} onClose={() => setOpen(false)} filter={filter} subtitle={subtitle} />
     </>
   );
