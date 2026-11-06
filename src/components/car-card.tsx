@@ -40,7 +40,8 @@ export function CarCard({ car, pricePerDay }: { car: Car; pricePerDay?: number }
   return (
     <Card style={styles.card}>
       <Link href={{ pathname: '/car/[id]', params: { id: car.id } }} asChild>
-        <Pressable accessibilityRole="button" style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+        <Pressable accessibilityRole="button">
+          <View style={styles.row}>
           <CarPhoto uri={car.photoUri} style={styles.photo} iconSize={30} />
           <View style={styles.flex}>
             <ThemedText type="default" style={styles.name} numberOfLines={1}>
@@ -62,6 +63,7 @@ export function CarCard({ car, pricePerDay }: { car: Car; pricePerDay?: number }
                 </ThemedText>
               ) : null}
             </View>
+          </View>
           </View>
         </Pressable>
       </Link>
