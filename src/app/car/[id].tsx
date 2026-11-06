@@ -1,4 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
+import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { PaybackCard } from '@/components/payback-card';
@@ -7,6 +9,7 @@ import { SummaryCard } from '@/components/summary-card';
 import { ThemedText } from '@/components/themed-text';
 import { CarPhoto } from '@/components/car-photo';
 import { PhotoGallery } from '@/components/photo-gallery';
+import { PhotoViewer } from '@/components/photo-viewer';
 import { PaymentsCard } from '@/components/payments-card';
 import { OwnerRentalCard } from '@/components/owner-rental-card';
 import { ReleasePrompt } from '@/components/release-prompt';
@@ -34,6 +37,7 @@ export default function CarScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const theme = useTheme();
+  const [viewer, setViewer] = useState(false);
   const { cars, reload } = useFleet();
   const car = cars.find((c) => c.id === id);
   // Показники за весь час рахує сервер
@@ -64,7 +68,8 @@ export default function CarScreen() {
 
   const add = (type: 'income' | 'expense') => router.push({ pathname: '/transaction/new', params: { carId: car.id, type } });
 
-  const aboutItems = [
+  type Tile = { label: string; value: string; wide?: boolean; right?: React.ReactNode };
+  const aboutItems = ([
     { label: 'Рік', value: String(car.year) },
     { label: 'Статус', value: car.status },
     car.driver ? { label: 'Водій', value: car.driver } : null,
@@ -73,8 +78,8 @@ export default function CarScreen() {
     { label: 'В оренді з', value: formatDate(car.rentStart) },
     { label: 'Вартість', value: formatMoney(car.price) },
     deal || car.listing?.pricePerDay ? { label: 'Ціна оренди', value: `${formatMoney(deal?.pricePerDay ?? car.listing!.pricePerDay)}/доба` } : null,
-    car.vin ? { label: 'VIN', value: car.vin, wide: true } : null,
-  ].filter((i): i is { label: string; value: string; wide?: boolean } => !!i);
+    car.vin ? { label: 'VIN', value: car.vin, wide: true, right: <CopyButton text={car.vin} /> } : null,
+  ] as (Tile | null)[]).filter((i): i is Tile => !!i);
 
   const [statusBg, statusFg] = {
     'В оренді': [theme.positiveSoft, theme.positive],
@@ -93,7 +98,12 @@ export default function CarScreen() {
           headerTransparent: true,
           headerBackVisible: false,
           headerLeft: () => <HeroButton icon="chevron-back" label="Назад" onPress={() => router.back()} />,
-          headerRight: () => <HeroButton icon="create-outline" label="Редагувати" onPress={() => router.push({ pathname: '/car/edit', params: { id: car.id } })} />,
+          headerRight: () => (
+            <View style={styles.headerRight}>
+              <HeroButton icon="create-outline" label="Редагувати" onPress={() => router.push({ pathname: '/car/edit', params: { id: car.id } })} />
+              {photos.length > 0 ? <HeroButton icon="expand-outline" label="Фото на весь екран" onPress={() => setViewer(true)} /> : null}
+            </View>
+          ),
         }}
       />
 
@@ -199,12 +209,13 @@ export default function CarScreen() {
       </Card>
 
       <DeleteCar carId={car.id} name={`${car.brand} ${car.model}`} />
+      {viewer ? <PhotoViewer photos={photos} startIndex={0} onClose={() => setViewer(false)} /> : null}
     </Screen>
   );
 }
 
 /** Кругла кнопка поверх фото: біла напівпрозора, щоб читалась на будь-якому знімку */
-function HeroButton({ icon, label, onPress }: { icon: 'chevron-back' | 'create-outline'; label: string; onPress: () => void }) {
+function HeroButton({ icon, label, onPress }: { icon: 'chevron-back' | 'create-outline' | 'expand-outline'; label: string; onPress: () => void }) {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} hitSlop={8} onPress={onPress} style={styles.heroButton}>
       <Icon name={icon} size={22} color="#222222" />
@@ -212,7 +223,29 @@ function HeroButton({ icon, label, onPress }: { icon: 'chevron-back' | 'create-o
   );
 }
 
+/** Копіює текст у буфер і на мить показує галочку */
+function CopyButton({ text }: { text: string }) {
+  const theme = useTheme();
+  const [done, setDone] = useState(false);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Копіювати"
+      hitSlop={8}
+      onPress={async () => {
+        await Clipboard.setStringAsync(text);
+        setDone(true);
+        setTimeout(() => setDone(false), 1500);
+      }}
+      style={[styles.copy, { backgroundColor: theme.backgroundSelected }]}>
+      <Icon name={done ? 'checkmark' : 'copy-outline'} size={18} color={done ? 'positive' : 'text'} />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  headerRight: { flexDirection: 'row', gap: Spacing.two },
+  copy: { width: 36, height: 36, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
   // Фото на всю ширину екрана: скасовуємо бічні поля Screen
   hero: { marginHorizontal: -20 },
   noPhoto: { width: '100%', aspectRatio: 1.2 },

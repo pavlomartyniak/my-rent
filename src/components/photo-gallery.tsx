@@ -31,7 +31,7 @@ export function PhotoGallery({ photos, bleed }: { photos: string[]; /** Фото
     return (
       <View style={[styles.wrap, bleed && styles.bleed]}>
         {open(0)}
-        <ExpandHint bleed={bleed} />
+        {bleed ? null : <ExpandHint />}
         {viewer}
       </View>
     );
@@ -59,7 +59,7 @@ export function PhotoGallery({ photos, bleed }: { photos: string[]; /** Фото
           {index + 1} / {photos.length}
         </ThemedText>
       </View>
-      <ExpandHint bleed={bleed} />
+      {bleed ? null : <ExpandHint />}
       <View style={[styles.dots, bleed && styles.dotsBleed]}>
         {photos.map((_, i) => (
           <View key={i} style={[styles.dot, { backgroundColor: i === index ? theme.accent : 'rgba(255,255,255,0.7)' }]} />
@@ -71,9 +71,9 @@ export function PhotoGallery({ photos, bleed }: { photos: string[]; /** Фото
 }
 
 /** Іконка в куті підказує, що фото можна відкрити на весь екран */
-function ExpandHint({ bleed }: { bleed?: boolean }) {
+function ExpandHint() {
   return (
-    <View style={[styles.expand, bleed && styles.expandBleed]} pointerEvents="none">
+    <View style={styles.expand} pointerEvents="none">
       <Icon name="expand-outline" size={16} color="#FFFFFF" />
     </View>
   );
@@ -86,7 +86,6 @@ const styles = StyleSheet.create({
   bleedPhoto: { aspectRatio: 1.2, borderRadius: 0 },
   counterBleed: { top: undefined, bottom: 44 + Spacing.two, right: Spacing.three },
   dotsBleed: { bottom: 44 },
-  expandBleed: { bottom: 44 + Spacing.two, right: Spacing.three },
   photo: { width: '100%', aspectRatio: 16 / 9, borderRadius: Radius.lg },
   counter: { position: 'absolute', top: Spacing.two, right: Spacing.two, paddingHorizontal: Spacing.two, paddingVertical: 2, borderRadius: Radius.pill, backgroundColor: 'rgba(0,0,0,0.55)' },
   counterText: { color: '#FFFFFF', fontSize: 12, lineHeight: 18, fontWeight: 600 },
