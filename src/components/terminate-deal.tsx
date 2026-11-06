@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -9,6 +9,7 @@ import { useFleet } from '@/store/fleet';
 
 import { ThemedText } from './themed-text';
 import { Button } from './ui/button';
+import { Icon } from './ui/icon';
 
 type Action = 'terminate' | 'terminate/withdraw' | 'terminate/accept' | 'terminate/decline';
 
@@ -40,18 +41,21 @@ export function TerminateDeal({ deal, as }: { deal: Pick<DealView, 'id' | 'termi
 
   if (!request) {
     return (
-      <Button
-        title="Запропонувати розірвати оренду"
-        icon="close-circle-outline"
-        variant="danger"
+      <Pressable
+        accessibilityRole="button"
         disabled={busy}
+        style={({ pressed }) => [styles.link, (pressed || busy) && { opacity: 0.6 }]}
         onPress={() =>
           Alert.alert('Запропонувати розірвати оренду?', `Оренда завершиться, лише якщо ${other} погодиться. Поки відповіді немає, оренда діє як раніше.`, [
             { text: 'Не пропонувати', style: 'cancel' },
             { text: 'Запропонувати', style: 'destructive', onPress: () => void run('terminate') },
           ])
-        }
-      />
+        }>
+        <Icon name="close-circle-outline" size={20} color="negative" />
+        <ThemedText type="default" themeColor="negative" style={styles.linkText}>
+          Запропонувати розірвати оренду
+        </ThemedText>
+      </Pressable>
     );
   }
 
@@ -101,5 +105,7 @@ export function TerminateDeal({ deal, as }: { deal: Pick<DealView, 'id' | 'termi
 const styles = StyleSheet.create({
   box: { gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md },
   row: { flexDirection: 'row', gap: Spacing.two },
+  link: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.two, minHeight: 44 },
+  linkText: { fontWeight: 600 },
   flex: { flex: 1 },
 });

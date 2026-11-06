@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
-import { daysUntil, formatDate } from '@/lib/date';
+import { daysUntil, formatDate, rentalProgress } from '@/lib/date';
 import { dealStage, type DealView } from '@/lib/deals';
 import { formatMoney, plural } from '@/lib/format';
 import { useTheme } from '@/hooks/use-theme';
@@ -63,7 +63,7 @@ export function CurrentRentals() {
                   </View>
                   {stage === 'active' ? (
                     <View style={[styles.track, { backgroundColor: theme.borderStrong }]}>
-                      <View style={[styles.fill, { backgroundColor: theme.accent, width: `${Math.round(progress(d.startDate, d.endDate) * 100)}%` }]} />
+                      <View style={[styles.fill, { backgroundColor: theme.accent, width: `${Math.round(rentalProgress(d.startDate, d.endDate) * 100)}%` }]} />
                     </View>
                   ) : null}
                   <View style={styles.between}>
@@ -80,12 +80,6 @@ export function CurrentRentals() {
       </View>
     </>
   );
-}
-
-/** Яку частку оренди вже минуло: 0…1 */
-function progress(start: string, end: string) {
-  const total = daysUntil(end) - daysUntil(start);
-  return total > 0 ? Math.min(1, Math.max(0, -daysUntil(start) / total)) : 1;
 }
 
 const styles = StyleSheet.create({

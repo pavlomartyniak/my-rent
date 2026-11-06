@@ -74,3 +74,9 @@ const WEEKDAYS_SHORT = ['нд', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
 export function weekdayShort(iso: string) {
   return WEEKDAYS_SHORT[fromISODate(iso).getDay()];
 }
+
+/** Яку частку оренди вже минуло: 0…1 */
+export function rentalProgress(start: string, end: string) {
+  const total = daysUntil(end) - daysUntil(start);
+  return total > 0 ? Math.min(1, Math.max(0, -daysUntil(start) / total)) : 1;
+}

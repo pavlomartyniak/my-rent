@@ -7,26 +7,24 @@ import { SummaryCard } from '@/components/summary-card';
 import { ThemedText } from '@/components/themed-text';
 import { CarPhoto } from '@/components/car-photo';
 import { PhotoGallery } from '@/components/photo-gallery';
-import { ContractCard } from '@/components/contract-card';
 import { PaymentsCard } from '@/components/payments-card';
-import { ContactChips } from '@/components/contact-chips';
-import { contactActions } from '@/lib/contact-actions';
+import { OwnerRentalCard } from '@/components/owner-rental-card';
 import { ReleasePrompt } from '@/components/release-prompt';
 import { ArchivedDeals } from '@/components/archived-deals';
 import { DeleteCar } from '@/components/delete-car';
-import { TerminateDeal } from '@/components/terminate-deal';
 import type { DealView } from '@/lib/deals';
 import { HistoryList } from '@/components/history-list';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { InfoRow, InfoRows } from '@/components/ui/info-rows';
+import { InfoGrid } from '@/components/ui/info-rows';
+import { Icon } from '@/components/ui/icon';
 import { EmptyState } from '@/components/ui/empty-state';
-import { IconButton } from '@/components/ui/icon-button';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Radius, Spacing } from '@/constants/theme';
 import { formatDate } from '@/lib/date';
 import { useReport } from '@/hooks/use-report';
+import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
 import type { CarReport } from '@/lib/reports';
 import { formatKm, formatMoney, formatMonths } from '@/lib/format';
@@ -35,6 +33,7 @@ import { useFleet } from '@/store/fleet';
 export default function CarScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const theme = useTheme();
   const { cars, reload } = useFleet();
   const car = cars.find((c) => c.id === id);
   // Показники за весь час рахує сервер
@@ -65,78 +64,104 @@ export default function CarScreen() {
 
   const add = (type: 'income' | 'expense') => router.push({ pathname: '/transaction/new', params: { carId: car.id, type } });
 
+  const aboutItems = [
+    { label: 'Рік', value: String(car.year) },
+    { label: 'Статус', value: car.status },
+    car.driver ? { label: 'Водій', value: car.driver } : null,
+    car.fuel ? { label: 'Паливо', value: car.fuel } : null,
+    car.mileage ? { label: 'Пробіг', value: formatKm(car.mileage) } : null,
+    { label: 'В оренді з', value: formatDate(car.rentStart) },
+    { label: 'Вартість', value: formatMoney(car.price) },
+    deal || car.listing?.pricePerDay ? { label: 'Ціна оренди', value: `${formatMoney(deal?.pricePerDay ?? car.listing!.pricePerDay)}/доба` } : null,
+    car.vin ? { label: 'VIN', value: car.vin, wide: true } : null,
+  ].filter((i): i is { label: string; value: string; wide?: boolean } => !!i);
+
+  const [statusBg, statusFg] = {
+    'В оренді': [theme.positiveSoft, theme.positive],
+    Вільне: [theme.accentSoft, theme.accent],
+    'На сервісі': [theme.warningSoft, theme.warning],
+    Заброньоване: [theme.warningSoft, theme.warning],
+  }[car.status] ?? [theme.backgroundSelected, theme.textSecondary];
+  const subtitle = [String(car.year), car.fuel, car.mileage ? formatKm(car.mileage) : ''].filter(Boolean).join(' · ');
+
   return (
-    <Screen>
+    // Фото йде під прозорий хедер на всю ширину, тож системні відступи й бічні поля Screen скасовуємо
+    <Screen contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingTop: 0 }}>
       <Stack.Screen
         options={{
-          title: `${car.brand} ${car.model}`,
-          headerRight: () => (
-            <IconButton icon="create-outline" label="Редагувати" size={36} onPress={() => router.push({ pathname: '/car/edit', params: { id: car.id } })} />
-          ),
+          title: '',
+          headerTransparent: true,
+          headerBackVisible: false,
+          headerLeft: () => <HeroButton icon="chevron-back" label="Назад" onPress={() => router.back()} />,
+          headerRight: () => <HeroButton icon="create-outline" label="Редагувати" onPress={() => router.push({ pathname: '/car/edit', params: { id: car.id } })} />,
         }}
       />
 
-      {photos.length > 0 ? (
-        // Фото гортаються пальцем, тап відкриває їх на весь екран; змінити їх можна в редагуванні (олівець угорі)
-        <PhotoGallery photos={photos} />
-      ) : (
-        <Pressable accessibilityRole="button" accessibilityLabel="Додати фото" onPress={() => router.push({ pathname: '/car/edit', params: { id: car.id } })}>
-          <CarPhoto style={styles.photo} iconSize={44} placeholder="Додати фото" />
-        </Pressable>
-      )}
+      <View style={styles.hero}>
+        {photos.length > 0 ? (
+          // Фото гортаються пальцем, тап відкриває їх на весь екран; змінити їх можна в редагуванні (олівець угорі)
+          <PhotoGallery photos={photos} bleed />
+        ) : (
+          <Pressable accessibilityRole="button" accessibilityLabel="Додати фото" onPress={() => router.push({ pathname: '/car/edit', params: { id: car.id } })}>
+            <CarPhoto style={styles.noPhoto} iconSize={44} placeholder="Додати фото" />
+          </Pressable>
+        )}
+      </View>
 
-      <View style={styles.titleBlock}>
-        <ThemedText type="subtitle" style={styles.carTitle} numberOfLines={2}>
-          {car.brand} {car.model}
-        </ThemedText>
+      <View style={[styles.sheet, { backgroundColor: theme.background }]}>
+        <View style={styles.titleRow}>
+          <ThemedText type="subtitle" style={[styles.carTitle, styles.flex]} numberOfLines={2}>
+            {car.brand} {car.model}
+          </ThemedText>
+          <View style={[styles.status, { backgroundColor: statusBg }]}>
+            <ThemedText type="small" style={[styles.statusText, { color: statusFg }]}>
+              {car.status}
+            </ThemedText>
+          </View>
+        </View>
         <ThemedText type="default" themeColor="textSecondary">
-          {car.year} · {car.status}
-          {car.driver ? ` · ${car.driver}` : ''}
+          {subtitle}
         </ThemedText>
       </View>
 
       {report ? (
-        <>
-          <SummaryCard title="Прибуток за весь час" profit={report.overview.profit} income={report.overview.income} expense={report.overview.expense} />
+        <SummaryCard title="Прибуток за весь час" profit={report.overview.profit} income={report.overview.income} expense={report.overview.expense}>
           <PaybackCard
+            bare
             profit={report.overview.profit}
             price={car.price}
             eta={report.overview.paybackMonths ? `≈ ${formatMonths(report.overview.paybackMonths)}` : undefined}
           />
-        </>
+          <Button
+            title="Аналітика й окупність"
+            icon="stats-chart"
+            variant="soft"
+            style={styles.analytics}
+            onPress={() => router.push({ pathname: '/car/analytics', params: { id: car.id } })}
+          />
+        </SummaryCard>
       ) : (
         <ReportStatus loading={loading} error={error} onRetry={retry} />
       )}
 
       <View style={styles.buttons}>
-        <Button title="Дохід" icon="add" variant="positive" style={styles.flex} onPress={() => add('income')} />
-        <Button title="Витрата" icon="remove" variant="danger" style={styles.flex} onPress={() => add('expense')} />
+        <Button title="Дохід" icon="add" variant="positiveSolid" style={styles.flex} onPress={() => add('income')} />
+        <Button title="Витрата" icon="remove" variant="dangerSolid" style={styles.flex} onPress={() => add('expense')} />
       </View>
 
       <ReleasePrompt carId={car.id} />
 
-      {deal ? (
-        <Card>
-          <View style={styles.rentHead}>
-            <ThemedText type="default" style={[styles.bold, styles.flex]}>
-              {deal.status === 'awaiting' ? 'Домовленість: чекаємо підписання договору' : 'Зараз в оренді'}
-            </ThemedText>
-          </View>
-          <ThemedText type="small" themeColor="textSecondary">
-            {deal.counterpart.name} · {formatDate(deal.startDate)} – {formatDate(deal.endDate)} · {formatMoney(deal.pricePerDay)} за добу
-          </ThemedText>
-          <ContactChips actions={contactActions({ chat: { dealId: deal.id }, contract: deal.contract ? () => router.push({ pathname: '/contracts/[id]', params: { id: deal.id } }) : undefined })} />
-          <ContractCard deal={deal} as="owner" />
-          {deal.status === 'awaiting' ? null : <TerminateDeal deal={deal} as="owner" />}
-        </Card>
-      ) : null}
+      {deal ? <OwnerRentalCard deal={deal} /> : null}
 
-      <Button
-        title="Аналітика й окупність"
-        icon="stats-chart"
-        variant="soft"
-        onPress={() => router.push({ pathname: '/car/analytics', params: { id: car.id } })}
-      />
+      {deal ? <PaymentsCard deal={deal} as="owner" /> : null}
+
+      <SectionHeader title="Історія" />
+      <HistoryList carId={car.id} />
+
+      <ArchivedDeals carId={car.id} />
+
+      <SectionHeader title="Про авто" />
+      <InfoGrid items={aboutItems} />
 
       <SectionHeader title="Оголошення для орендарів" />
       <Card>
@@ -164,44 +189,43 @@ export default function CarScreen() {
             <Button title="Опублікувати для орендарів" icon="megaphone-outline" onPress={() => router.push({ pathname: '/car/listing', params: { id: car.id } })} />
           </>
         ) : (
-          <ThemedText type="small" themeColor="textSecondary">
-            Оголошення доступне лише для авто зі статусом «Вільне». Змініть статус у редагуванні авто.
-          </ThemedText>
+          <View style={styles.note}>
+            <Icon name="information-circle-outline" size={20} color="textSecondary" />
+            <ThemedText type="small" themeColor="textSecondary" style={styles.flex}>
+              Оголошення доступне лише для авто зі статусом «Вільне». Змініть статус у редагуванні авто.
+            </ThemedText>
+          </View>
         )}
       </Card>
-
-      <SectionHeader title="Історія" />
-      <HistoryList carId={car.id} />
-
-      <ArchivedDeals carId={car.id} />
-
-      <SectionHeader title="Про авто" />
-      <Card>
-        <InfoRows>
-        <InfoRow label="Рік" value={String(car.year)} />
-        <InfoRow label="Статус" value={car.status} />
-        {car.driver ? <InfoRow label="Водій" value={car.driver} /> : null}
-        {car.fuel ? <InfoRow label="Паливо" value={car.fuel} /> : null}
-        {car.mileage ? <InfoRow label="Пробіг" value={formatKm(car.mileage)} /> : null}
-        {car.vin ? <InfoRow label="VIN" value={car.vin} /> : null}
-        <InfoRow label="В оренді з" value={formatDate(car.rentStart)} />
-        <InfoRow label="Вартість" value={formatMoney(car.price)} />
-        </InfoRows>
-      </Card>
-
-      {deal ? <PaymentsCard deal={deal} as="owner" /> : null}
 
       <DeleteCar carId={car.id} name={`${car.brand} ${car.model}`} />
     </Screen>
   );
 }
 
+/** Кругла кнопка поверх фото: біла напівпрозора, щоб читалась на будь-якому знімку */
+function HeroButton({ icon, label, onPress }: { icon: 'chevron-back' | 'create-outline'; label: string; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={label} hitSlop={8} onPress={onPress} style={styles.heroButton}>
+      <Icon name={icon} size={22} color="#222222" />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  rentHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  // Фото на всю ширину екрана: скасовуємо бічні поля Screen
+  hero: { marginHorizontal: -20 },
+  noPhoto: { width: '100%', aspectRatio: 1.2 },
+  // Лист із назвою заходить на фото закругленим верхом (мінус проміжок між блоками й сам захід)
+  sheet: { marginHorizontal: -20, marginTop: -48, paddingHorizontal: 20, paddingTop: 20, borderTopLeftRadius: 28, borderTopRightRadius: 28, gap: 2 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  status: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: Radius.pill },
+  statusText: { fontSize: 13, lineHeight: 18, fontWeight: 600 },
+  heroButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.92)' },
+  analytics: { marginTop: Spacing.two },
+  note: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },
   bold: { fontWeight: 600 },
-  titleBlock: { gap: 2 },
   carTitle: { fontSize: 28, lineHeight: 34 },
-  photo: { width: '100%', aspectRatio: 16 / 9, borderRadius: Radius.lg },
   buttons: { flexDirection: 'row', gap: Spacing.two },
   flex: { flex: 1 },
 });

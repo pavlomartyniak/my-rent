@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -9,6 +9,7 @@ import { dealStage } from '@/lib/deals';
 
 import { ThemedText } from './themed-text';
 import { Button } from './ui/button';
+import { Icon } from './ui/icon';
 
 /**
  * Стан договору в оренді: чекаємо підпису (кнопка «Підписати»), чекаємо другу сторону чи вже підписано.
@@ -43,20 +44,31 @@ export function ContractCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
     );
   }
 
+  const terminated = deal.status === 'terminated';
   return (
-    <View style={[styles.box, { backgroundColor: theme.backgroundSelected, borderColor: 'transparent' }]}>
-      <ThemedText type="smallBold" themeColor={deal.status === 'terminated' ? 'textSecondary' : 'positive'}>
-        {deal.status === 'terminated' ? 'Договір' : '✓ Договір підписано обома сторонами'}
-      </ThemedText>
-      <ThemedText type="small" themeColor="textSecondary">
-        № {c.number}
-        {dealStage(deal) === 'upcoming' ? ' · оренда почнеться в день початку' : ''}
-      </ThemedText>
-      <Button title="Переглянути договір" icon="document-text-outline" variant="secondary" onPress={open} />
-    </View>
+    <Pressable accessibilityRole="button" accessibilityLabel="Переглянути договір" onPress={open}>
+      <View style={[styles.panel, { backgroundColor: terminated ? theme.backgroundSelected : theme.positiveSoft }]}>
+        <View style={[styles.iconBox, { backgroundColor: theme.backgroundElement }]}>
+          <Icon name="document-text-outline" size={20} color={terminated ? 'textSecondary' : 'positive'} />
+        </View>
+        <View style={styles.text}>
+          <ThemedText type="smallBold" themeColor={terminated ? 'textSecondary' : 'positive'}>
+            {terminated ? 'Договір' : 'Договір підписано обома сторонами'}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            № {c.number}
+            {dealStage(deal) === 'upcoming' ? ' · оренда почнеться в день початку' : ' · Переглянути'}
+          </ThemedText>
+        </View>
+        <Icon name="chevron-forward" size={18} color="textSecondary" />
+      </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  panel: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.md },
+  iconBox: { width: 40, height: 40, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
+  text: { flex: 1, gap: 2 },
   box: { gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md, borderWidth: 0 },
 });

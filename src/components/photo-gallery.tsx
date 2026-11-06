@@ -10,7 +10,7 @@ import { ThemedText } from './themed-text';
 import { Icon } from './ui/icon';
 
 /** Галерея фото з гортанням пальцем, лічильником і крапками; тап відкриває фото на весь екран */
-export function PhotoGallery({ photos }: { photos: string[] }) {
+export function PhotoGallery({ photos, bleed }: { photos: string[]; /** Фото на всю ширину екрана без округлення, під прозорим хедером; лічильник і крапки вище, бо знизу їх перекриває лист із назвою */ bleed?: boolean }) {
   const theme = useTheme();
   const [width, setWidth] = useState(0);
   const [index, setIndex] = useState(0);
@@ -19,26 +19,26 @@ export function PhotoGallery({ photos }: { photos: string[] }) {
 
   const viewer = viewing !== null ? <PhotoViewer photos={photos} startIndex={viewing} onClose={() => setViewing(null)} /> : null;
 
-  if (photos.length === 0) return <CarPhoto style={styles.photo} iconSize={44} />;
+  if (photos.length === 0) return <CarPhoto style={[styles.photo, bleed && styles.bleedPhoto]} iconSize={44} />;
 
   const open = (i: number) => (
     <Pressable key={i} accessibilityRole="button" accessibilityLabel="Відкрити фото на весь екран" onPress={() => setViewing(i)}>
-      <CarPhoto uri={photos[i]} style={[styles.photo, width > 0 && photos.length > 1 && { width }]} iconSize={44} />
+      <CarPhoto uri={photos[i]} style={[styles.photo, bleed && styles.bleedPhoto, width > 0 && photos.length > 1 && { width }]} iconSize={44} />
     </Pressable>
   );
 
   if (photos.length === 1) {
     return (
-      <View style={styles.wrap}>
+      <View style={[styles.wrap, bleed && styles.bleed]}>
         {open(0)}
-        <ExpandHint />
+        <ExpandHint bleed={bleed} />
         {viewer}
       </View>
     );
   }
 
   return (
-    <View onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)} style={styles.wrap}>
+    <View onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)} style={[styles.wrap, bleed && styles.bleed]}>
       {width > 0 ? (
         <FlatList
           data={photos}
@@ -54,13 +54,13 @@ export function PhotoGallery({ photos }: { photos: string[] }) {
       ) : (
         <View style={styles.photo} />
       )}
-      <View style={styles.counter}>
+      <View style={[styles.counter, bleed && styles.counterBleed]}>
         <ThemedText type="small" style={styles.counterText}>
           {index + 1} / {photos.length}
         </ThemedText>
       </View>
-      <ExpandHint />
-      <View style={styles.dots}>
+      <ExpandHint bleed={bleed} />
+      <View style={[styles.dots, bleed && styles.dotsBleed]}>
         {photos.map((_, i) => (
           <View key={i} style={[styles.dot, { backgroundColor: i === index ? theme.accent : 'rgba(255,255,255,0.7)' }]} />
         ))}
@@ -71,9 +71,9 @@ export function PhotoGallery({ photos }: { photos: string[] }) {
 }
 
 /** Іконка в куті підказує, що фото можна відкрити на весь екран */
-function ExpandHint() {
+function ExpandHint({ bleed }: { bleed?: boolean }) {
   return (
-    <View style={styles.expand} pointerEvents="none">
+    <View style={[styles.expand, bleed && styles.expandBleed]} pointerEvents="none">
       <Icon name="expand-outline" size={16} color="#FFFFFF" />
     </View>
   );
@@ -82,6 +82,11 @@ function ExpandHint() {
 const styles = StyleSheet.create({
   wrap: { width: '100%', aspectRatio: 16 / 9, borderRadius: Radius.lg, overflow: 'hidden' },
   list: { flex: 1 },
+  bleed: { aspectRatio: 1.2, borderRadius: 0 },
+  bleedPhoto: { aspectRatio: 1.2, borderRadius: 0 },
+  counterBleed: { top: undefined, bottom: 44 + Spacing.two, right: Spacing.three },
+  dotsBleed: { bottom: 44 },
+  expandBleed: { bottom: 44 + Spacing.two, right: Spacing.three },
   photo: { width: '100%', aspectRatio: 16 / 9, borderRadius: Radius.lg },
   counter: { position: 'absolute', top: Spacing.two, right: Spacing.two, paddingHorizontal: Spacing.two, paddingVertical: 2, borderRadius: Radius.pill, backgroundColor: 'rgba(0,0,0,0.55)' },
   counterText: { color: '#FFFFFF', fontSize: 12, lineHeight: 18, fontWeight: 600 },

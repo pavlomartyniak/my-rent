@@ -53,9 +53,16 @@ export function PaymentsCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
 
   return (
     <Card>
-      <ThemedText type="default" style={styles.bold}>
-        Платежі за договором · {planLabel(deal.paymentPlan)}
-      </ThemedText>
+      <View style={styles.head}>
+        <ThemedText type="default" style={[styles.bold, { flex: 1 }]}>
+          Платежі за договором
+        </ThemedText>
+        <View style={[styles.plan, { backgroundColor: theme.backgroundSelected }]}>
+          <ThemedText type="small" themeColor="textSecondary" style={styles.planText}>
+            {planLabel(deal.paymentPlan)}
+          </ThemedText>
+        </View>
+      </View>
       {!signed ? (
         <ThemedText type="small" themeColor="textSecondary">
           Підтверджувати платежі можна після підписання договору.
@@ -87,9 +94,35 @@ export function PaymentsCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
       ) : null}
 
       {payments.length > 1 ? (
-        <ThemedText type="small" themeColor="textSecondary">
-          Ви {mineVerb} {formatMoney(paid)} з {formatMoney(total)}
-        </ThemedText>
+        <View style={styles.progress}>
+          <View style={styles.head}>
+            <ThemedText type="small" themeColor="textSecondary" style={{ flex: 1 }}>
+              {as === 'renter' ? 'Сплачено' : 'Отримано'} <ThemedText type="smallBold">{formatMoney(paid)}</ThemedText>
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              з {formatMoney(total)} · {payments.filter(done).length} з {payments.length}
+            </ThemedText>
+          </View>
+          <View style={[styles.track, { backgroundColor: theme.backgroundSelected }]}>
+            <View style={[styles.fill, { backgroundColor: theme.positive, width: `${total > 0 ? Math.round((paid / total) * 100) : 0}%` }]} />
+          </View>
+        </View>
+      ) : null}
+
+      {signed && payments.length > 1 && payments[cur] && !done(payments[cur]) ? (
+        <View style={[styles.next, { backgroundColor: theme.accentSoft }]}>
+          <View style={[styles.nextIcon, { backgroundColor: theme.backgroundElement }]}>
+            <Icon name="calendar-outline" size={20} color="accent" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <ThemedText type="small" themeColor="accent" style={styles.planText}>
+              Наступний платіж
+            </ThemedText>
+            <ThemedText type="default" style={styles.amount}>
+              {formatDate(payments[cur].dueDate)} · {formatMoney(payments[cur].amount)}
+            </ThemedText>
+          </View>
+        </View>
       ) : null}
 
       {shown.map((p) => (
@@ -141,7 +174,14 @@ export function PaymentsCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
 }
 
 const styles = StyleSheet.create({
-  bold: { fontWeight: 600, fontSize: 18 },
+  bold: { fontWeight: 700, fontSize: 18 },
+  plan: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.pill },
+  planText: { fontSize: 12, lineHeight: 18, fontWeight: 600 },
+  progress: { gap: Spacing.one },
+  track: { height: 6, borderRadius: 3, overflow: 'hidden' },
+  fill: { height: 6, borderRadius: 3 },
+  next: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.md },
+  nextIcon: { width: 40, height: 40, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
   amount: { fontWeight: 700 },
   check: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   row: { gap: Spacing.two, paddingTop: Spacing.three, borderTopWidth: StyleSheet.hairlineWidth },

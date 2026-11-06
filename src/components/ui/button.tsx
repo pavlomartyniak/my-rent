@@ -8,7 +8,7 @@ import { Icon, type IconName } from './icon';
 
 type Props = Omit<PressableProps, 'children'> & {
   title: string;
-  variant?: 'primary' | 'secondary' | 'soft' | 'danger' | 'positive';
+  variant?: 'primary' | 'secondary' | 'soft' | 'danger' | 'positive' | 'positiveSolid' | 'dangerSolid';
   icon?: IconName;
 };
 
@@ -25,6 +25,8 @@ export function Button({ title, variant = 'primary', icon, disabled, style, ...r
     soft: { bg: theme.backgroundSelected, fg: theme.text, border: 'transparent' },
     positive: { bg: theme.positiveSoft, fg: theme.positive, border: 'transparent' },
     danger: { bg: theme.negativeSoft, fg: theme.negative, border: 'transparent' },
+    positiveSolid: { bg: theme.positive, fg: theme.onInk, border: theme.positive },
+    dangerSolid: { bg: theme.negative, fg: theme.onInk, border: theme.negative },
   }[variant];
 
   return (
