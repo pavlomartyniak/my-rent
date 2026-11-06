@@ -35,6 +35,11 @@ export function monthLabel(key: string) {
   return MONTHS_SHORT[Number(key.slice(5, 7)) - 1];
 }
 
+/** «5 жов»: день і скорочена назва місяця (для підписів, де рік зайвий) */
+export function dayMonth(iso: string) {
+  return `${Number(iso.slice(8, 10))} ${MONTHS_SHORT[Number(iso.slice(5, 7)) - 1]}`;
+}
+
 export function formatDate(iso: string) {
   const [y, m, d] = iso.split('-');
   return `${d}.${m}.${y}`;

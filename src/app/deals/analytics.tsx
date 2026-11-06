@@ -2,7 +2,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { BarChart } from '@/components/bar-chart';
-import { CategoryBreakdown } from '@/components/category-breakdown';
+import { CategoryPanel } from '@/components/category-panel';
 import { PeriodSwitcher, usePeriod } from '@/components/period-switcher';
 import { ReportStatus } from '@/components/report-status';
 import { SummaryCard } from '@/components/summary-card';
@@ -39,9 +39,9 @@ export default function DealAnalyticsScreen() {
             <BarChart key={p.key} data={data.series} scope={{ dealId: id }} />
           </Card>
 
-          <SectionHeader title={`На що йдуть витрати · ${p.label}`} />
+          <SectionHeader title="На що йдуть витрати" />
           <Card>
-            <CategoryBreakdown items={data.categories} />
+            <CategoryPanel dealId={id} />
           </Card>
 
           <SectionHeader title="За весь час оренди" />
@@ -54,11 +54,6 @@ export default function DealAnalyticsScreen() {
             <Stat label="Прибуток на добу" value={formatMoney(o.avgProfitPerDay)} color={o.avgProfitPerDay >= 0 ? 'positive' : 'negative'} />
             <Stat label="Баланс платежів" value={o.rentBalance === 0 ? 'Все сплачено' : `${o.rentBalance > 0 ? 'Борг' : 'Переплата'} ${formatMoney(Math.abs(o.rentBalance))}`} color={o.rentBalance > 0 ? 'negative' : 'positive'} />
           </View>
-
-          <SectionHeader title="Витрати за весь час" />
-          <Card>
-            <CategoryBreakdown items={data.allCategories} />
-          </Card>
         </>
       )}
     </Screen>

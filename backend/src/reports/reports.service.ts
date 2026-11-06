@@ -197,6 +197,17 @@ export class ReportsService {
     };
   }
 
+  /**
+   * Витрати за категоріями за вибраний період (місяць, рік чи весь час): для блоку діаграми, який сам обирає період.
+   * Без `carId`/`dealId` — усі записи користувача, з ними — лише це авто чи ця оренда. Чужих записів тут не буває:
+   * вибірка завжди обмежена власником.
+   */
+  async categoriesReport(userId: string, target: { carId?: string; dealId?: string }, periodKey?: string) {
+    const period = this.period(periodKey);
+    const extra = target.carId ? { carId: new Types.ObjectId(target.carId) } : target.dealId ? { dealId: new Types.ObjectId(target.dealId) } : undefined;
+    return { period: period.key, categories: await this.categories(new Types.ObjectId(userId), period, extra) };
+  }
+
   // ---- агрегації ----
 
   private period(key?: string): ParsedPeriod {

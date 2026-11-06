@@ -1,5 +1,5 @@
 import { Controller, Get, Header, Param, Query } from '@nestjs/common';
-import { IsOptional, Matches } from 'class-validator';
+import { IsMongoId, IsOptional, Matches } from 'class-validator';
 
 import { type AuthUser, CurrentUser, Roles } from '../common/current-user';
 import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
@@ -10,6 +10,16 @@ class PeriodQuery {
   @IsOptional()
   @Matches(/^(all|\d{4}(-\d{2})?)$/, { message: 'Період має бути у форматі РРРР-ММ, РРРР або all' })
   period?: string;
+}
+
+class CategoriesQuery extends PeriodQuery {
+  @IsOptional()
+  @IsMongoId()
+  carId?: string;
+
+  @IsOptional()
+  @IsMongoId()
+  dealId?: string;
 }
 
 // Звіти залежать від даних, що змінюються в будь-який момент, тож не кешуються
@@ -33,6 +43,13 @@ export class ReportsController {
   @Get('cars/:id')
   car(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Query() { period }: PeriodQuery) {
     return this.reports.car(user.id, id, period);
+  }
+
+  /** Витрати за категоріями за вибраний період (для обох ролей); `carId` чи `dealId` звужують вибірку */
+  @Header('Cache-Control', NO_CACHE)
+  @Get('categories')
+  categories(@CurrentUser() user: AuthUser, @Query() { period, carId, dealId }: CategoriesQuery) {
+    return this.reports.categoriesReport(user.id, { carId, dealId }, period);
   }
 
   /** Звіт орендаря за період */

@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { BarChart } from '@/components/bar-chart';
 import { CarPhoto } from '@/components/car-photo';
-import { CategoryBreakdown } from '@/components/category-breakdown';
+import { CategoryPanel } from '@/components/category-panel';
 import { PaybackCard } from '@/components/payback-card';
 import { ExportButton } from '@/components/export-sheet';
 import { PeriodSwitcher, usePeriod } from '@/components/period-switcher';
@@ -71,9 +71,9 @@ function CarReportView({ report, carId, price, periodLabel, periodKey }: { repor
         <BarChart key={periodKey} data={report.series} scope={{ carId }} />
       </Card>
 
-      <SectionHeader title={`На що йдуть витрати · ${periodLabel}`} />
+      <SectionHeader title="На що йдуть витрати" />
       <Card>
-        <CategoryBreakdown items={report.categories} />
+        <CategoryPanel carId={carId} />
       </Card>
 
       <View style={styles.divider} />
@@ -115,11 +115,6 @@ function CarReportView({ report, carId, price, periodLabel, periodKey }: { repor
             </ThemedText>
           </View>
         ))}
-      </Card>
-
-      <SectionHeader title="Витрати за весь час" />
-      <Card>
-        <CategoryBreakdown items={report.allCategories} />
       </Card>
     </>
   );
