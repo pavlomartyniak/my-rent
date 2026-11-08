@@ -4,7 +4,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { uploadPhotos } from '@/lib/media';
+import { discardPhotos, uploadPhotos } from '@/lib/media';
 import { plural } from '@/lib/format';
 
 import { CarPhoto } from './car-photo';
@@ -69,7 +69,11 @@ export function PhotoPicker({ value, onChange, error }: Props) {
   }
 
   const makeCover = (i: number) => onChange([value[i], ...value.filter((_, k) => k !== i)]);
-  const remove = (i: number) => onChange(value.filter((_, k) => k !== i));
+  const remove = (i: number) => {
+    // Якщо фото щойно завантажене й ще не збережене, сервер прибере його з хмари; збережене лишається до збереження форми
+    discardPhotos([value[i]!]);
+    onChange(value.filter((_, k) => k !== i));
+  };
 
   return (
     <View style={styles.wrap}>

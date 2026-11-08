@@ -4,6 +4,7 @@ import type { Model } from 'mongoose';
 
 import { FREE_LISTINGS, formatUah, LISTING_PRICE_UAH } from '../common/constants';
 import { normalize } from '../common/normalize';
+import { MediaService } from '../media/media.service';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
 import { Reminder } from '../schemas/reminder.schema';
@@ -30,6 +31,7 @@ export class CarsService {
     @InjectModel(RentalRequest.name) private readonly rentals: Model<RentalRequest>,
     @InjectModel(Offer.name) private readonly offers: Model<Offer>,
     @InjectModel(Deal.name) private readonly deals: Model<Deal>,
+    private readonly media: MediaService,
   ) {}
 
   list(userId: string) {
@@ -48,8 +50,14 @@ export class CarsService {
   }
 
   async update(userId: string, id: string, dto: UpdateCarDto) {
+    // Фото до зміни: те, чого в новому наборі немає, прибираємо з Cloudinary
+    const before = await this.cars.findOne({ _id: id, userId }, 'photoUri photos').lean().exec();
     const car = await this.cars.findOneAndUpdate({ _id: id, userId }, { $set: normalizePhotos(dto) }, { new: true, runValidators: true }).exec();
     if (!car) throw new NotFoundException('Авто не знайдено');
+    if (before) {
+      const kept = new Set([car.photoUri, ...(car.photos ?? [])]);
+      void this.media.release([before.photoUri, ...(before.photos ?? [])].filter((u) => u && !kept.has(u)));
+    }
 
     // Авто, яке вже не вільне, не може лишатись в оголошеннях
     if (dto.status && dto.status !== 'Вільне' && car.listing?.published) {
@@ -144,5 +152,7 @@ export class CarsService {
       this.rentals.deleteMany({ carId: id }),
       this.offers.deleteMany({ carId: id }),
     ]);
+    // Фото авто більше нікому не потрібні, якщо на них не лишилось посилань в оренд, запитах і чатах
+    void this.media.release([car.photoUri, ...(car.photos ?? [])]);
   }
 }

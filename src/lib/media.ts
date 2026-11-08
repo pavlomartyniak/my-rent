@@ -2,6 +2,7 @@ import { File } from 'expo-file-system';
 
 import { api, ApiError } from './api';
 
+/** Підпис завантаження: з `items` кожне фото має свій публічний ідентифікатор (так сервер знає, чиє воно, і може його прибрати) */
 type Signature = {
   cloudName: string;
   apiKey: string;
@@ -9,14 +10,15 @@ type Signature = {
   folder: string;
   signature: string;
   uploadUrl: string;
+  items?: { publicId: string; timestamp: number; signature: string }[];
 };
 
 /** Помилка, коли на сервері не налаштований Cloudinary (503): тоді фото лишаються лише на пристрої */
 export class UploadUnavailableError extends Error {}
 
-async function getSignature(): Promise<Signature> {
+async function getSignature(count: number): Promise<Signature> {
   try {
-    return await api<Signature>('POST', '/media/upload-signature');
+    return await api<Signature>('POST', '/media/upload-signature', { count });
   } catch (e) {
     if (e instanceof ApiError && e.status === 503) throw new UploadUnavailableError();
     throw e;
@@ -28,13 +30,22 @@ async function getSignature(): Promise<Signature> {
  * Глобальний fetch у SDK 57 — це expo/fetch: частиною FormData має бути справжній файл (`File`),
  * а не об'єкт {uri, name, type}, як було в старому React Native.
  */
-async function uploadOne(sig: Signature, localUri: string): Promise<string> {
+async function uploadOne(sig: Signature, index: number, localUri: string): Promise<string> {
   const form = new FormData();
   form.append('file', new File(localUri) as unknown as Blob);
   form.append('api_key', sig.apiKey);
-  form.append('timestamp', String(sig.timestamp));
-  form.append('folder', sig.folder);
-  form.append('signature', sig.signature);
+  const item = sig.items?.[index];
+  if (item) {
+    // Власний ідентифікатор: за ним сервер знає, чиє фото, і може його прибрати
+    form.append('timestamp', String(item.timestamp));
+    form.append('public_id', item.publicId);
+    form.append('signature', item.signature);
+  } else {
+    // Старий сервер без окремих підписів: фото йдуть в одну папку
+    form.append('timestamp', String(sig.timestamp));
+    form.append('folder', sig.folder);
+    form.append('signature', sig.signature);
+  }
 
   const res = await fetch(sig.uploadUrl, { method: 'POST', body: form });
   const data = (await res.json().catch(() => null)) as { secure_url?: string; error?: { message?: string } } | null;
@@ -54,7 +65,7 @@ export type UploadResult = {
 export async function uploadPhotos(localUris: string[], onProgress?: (done: number, total: number) => void): Promise<UploadResult> {
   let sig: Signature;
   try {
-    sig = await getSignature();
+    sig = await getSignature(localUris.length);
   } catch (e) {
     if (e instanceof UploadUnavailableError) return { urls: [], failed: 0, unavailable: true };
     throw e;
@@ -65,13 +76,23 @@ export async function uploadPhotos(localUris: string[], onProgress?: (done: numb
   for (const [i, uri] of localUris.entries()) {
     onProgress?.(i, localUris.length);
     try {
-      urls.push(await uploadOne(sig, uri));
+      urls.push(await uploadOne(sig, i, uri));
     } catch {
       failed += 1;
     }
   }
   onProgress?.(localUris.length, localUris.length);
   return { urls, failed, unavailable: false };
+}
+
+/**
+ * Просить сервер прибрати з хмари щойно завантажені фото, які користувач видалив із форми до збереження. Сервер видаляє лише
+ * ті з них, що лежать у папці користувача й ніде не збережені. Помилки не показуємо: це прибирання, а не дія користувача.
+ */
+export function discardPhotos(urls: string[]) {
+  const remote = urls.filter((u) => u.startsWith('https://res.cloudinary.com/'));
+  if (!remote.length) return;
+  api('POST', '/media/discard', { urls: remote }).catch(() => {});
 }
 
 /** Зменшена копія фото для списків: Cloudinary сам стискає й міняє розмір (f_auto, q_auto, ширина) */
