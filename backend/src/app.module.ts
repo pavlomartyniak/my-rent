@@ -5,6 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { AuthModule } from './auth/auth.module';
+import { envFilePaths, resolveAppEnv } from './config/env-files';
 import { CarsModule } from './cars/cars.module';
 import { LifecycleModule } from './lifecycle/lifecycle.module';
 import { RealtimeModule } from './realtime/realtime.service';
@@ -30,6 +31,8 @@ import { WantedModule } from './wanted/wanted.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      // .env.development чи .env.production за APP_ENV; на Render файлів немає, змінні беруться з панелі
+      envFilePath: envFilePaths(resolveAppEnv()),
       validate: (env: Record<string, unknown>) => {
         if (!env.MONGODB_URI) throw new Error('Не задано MONGODB_URI');
         if (typeof env.JWT_SECRET !== 'string' || env.JWT_SECRET.length < 32) {

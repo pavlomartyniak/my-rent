@@ -1,4 +1,7 @@
-export const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000';
+// У розробці без адреси використовуємо локальний сервер. У production адреса обов'язкова: тихе повернення до localhost
+// дало б збірку, що не працює, і без пояснень.
+if (!process.env.EXPO_PUBLIC_API_URL && !__DEV__) throw new Error('Не задано EXPO_PUBLIC_API_URL: вкажіть адресу API в .env.production');
+export const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
 // Безкоштовний хостинг «засинає» без запитів і прокидається до хвилини, тому ліміт великий
 const TIMEOUT_MS = 60_000;
 

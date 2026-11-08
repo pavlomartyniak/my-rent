@@ -6,8 +6,9 @@
   "scripts": {
     "build": "nest build",
     "start": "nest start",
-    "start:dev": "nest start --watch",
+    "start:dev": "APP_ENV=development nest start --watch",
     "start:prod": "node dist/main",
+    "start:local-prod": "APP_ENV=production node dist/main",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test test/*.test.ts"
   },

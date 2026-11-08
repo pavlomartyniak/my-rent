@@ -50,7 +50,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "api": "npm --prefix backend run start:dev"
+    "start:prod": "expo start --no-dev --minify",
+    "api": "npm --prefix backend run start:dev",
+    "api:local-prod": "npm --prefix backend run start:local-prod"
   },
   "private": true
 }

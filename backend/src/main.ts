@@ -6,6 +6,7 @@ import { json } from 'express';
 import helmet from 'helmet';
 
 import { AppModule } from './app.module';
+import { describeTarget, resolveAppEnv } from './config/env-files';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -22,7 +23,12 @@ async function bootstrap() {
 
   const port = app.get(ConfigService).get<number>('PORT') ?? 3000;
   await app.listen(port, '0.0.0.0');
-  Logger.log(`API запущено на порту ${port}`, 'Bootstrap');
+  const appEnv = resolveAppEnv();
+  Logger.log(`API запущено на порту ${port}. Середовище: ${appEnv}, ${describeTarget(process.env)}`, 'Bootstrap');
+  // Локальний запуск проти бази проду небезпечний: будь-яка дія змінює справжні дані
+  if (appEnv === 'production' && !process.env.RENDER) {
+    Logger.warn('УВАГА: сервер запущено ЛОКАЛЬНО із налаштуваннями PRODUCTION. Усе, що ви робите, змінює справжні дані.', 'Bootstrap');
+  }
 }
 
 void bootstrap();
