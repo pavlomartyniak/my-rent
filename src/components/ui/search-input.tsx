@@ -34,5 +34,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: Spacing.three,
   },
-  input: { flex: 1, fontSize: 16, minHeight: 48 },
+  // letterSpacing: 0 задано явно, щоб плейсхолдер не малювався з розрідженими літерами
+  input: { flex: 1, fontSize: 16, minHeight: 48, letterSpacing: 0 },
 });

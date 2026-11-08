@@ -41,5 +41,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: Spacing.three,
     fontSize: 16,
+    letterSpacing: 0,
   },
 });
