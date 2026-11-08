@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { ClientSession, Model } from 'mongoose';
 
+import { MediaService } from '../media/media.service';
 import { Car } from '../schemas/car.schema';
 import { Reminder } from '../schemas/reminder.schema';
 import { Conversation } from '../schemas/conversation.schema';
@@ -26,6 +27,7 @@ export class DataService {
     @InjectModel(Deal.name) private readonly deals: Model<Deal>,
     @InjectModel(Conversation.name) private readonly conversations: Model<Conversation>,
     @InjectModel(Message.name) private readonly messages: Model<Message>,
+    private readonly media: MediaService,
   ) {}
 
   /** Профіль, авто й нагадування одним запитом — для старту застосунку */
@@ -42,15 +44,24 @@ export class DataService {
 
   /** Видаляє авто, записи й нагадування; акаунт залишається */
   async clear(userId: string, session?: ClientSession) {
+    const photos = await this.carPhotos(userId);
     await this.cars.deleteMany({ userId }, { session });
     await this.transactions.deleteMany({ userId }, { session });
     await this.reminders.deleteMany({ userId }, { session });
     // Запити на оренду авто, які щойно видалили
     await this.rentals.deleteMany({ ownerId: userId }, { session });
     await this.offers.deleteMany({ ownerId: userId }, { session });
+    void this.media.release(photos);
+  }
+
+  /** Усі фото авто користувача: після видалення їх треба прибрати з Cloudinary */
+  private async carPhotos(userId: string) {
+    const cars = await this.cars.find({ userId }, 'photoUri photos').lean().exec();
+    return cars.flatMap((c) => [c.photoUri, ...(c.photos ?? [])]).filter((u): u is string => !!u);
   }
 
   async deleteAccount(userId: string) {
+    const photos = await this.carPhotos(userId);
     await this.clear(userId);
     await this.rentals.deleteMany({ $or: [{ renterId: userId }, { ownerId: userId }] });
     // Заявки орендаря разом із пропозиціями на них; пропозиції власника
@@ -64,5 +75,7 @@ export class DataService {
     await this.messages.deleteMany({ conversationId: { $in: chats.map((c) => c._id) } });
     await this.conversations.deleteMany({ _id: { $in: chats.map((c) => c._id) } });
     await this.users.deleteOne({ _id: userId });
+    // Оренди, запити й чати, що тримали посилання на ці фото, вже видалено: тепер їх можна прибрати остаточно
+    void this.media.release(photos);
   }
 }
