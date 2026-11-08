@@ -1,5 +1,5 @@
 /** Тексти юридичних документів, що показуються в застосунку. Контактну пошту й назву оператора замініть на свої. */
-export const LEGAL_CONTACT = 'support@kolo.app';
+export const LEGAL_CONTACT = 'kolo.rentapp@gmail.com';
 export const LEGAL_UPDATED = '27.10.2026';
 
 export type LegalDoc = { title: string; sections: { title: string; paragraphs: string[] }[] };
