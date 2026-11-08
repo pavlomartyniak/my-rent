@@ -7,7 +7,7 @@ import { openChat } from '@/lib/chat';
 import { contactActions } from '@/lib/contact-actions';
 import { daysUntil, formatDate } from '@/lib/date';
 import { dealStage, type DealOverview, type DealView } from '@/lib/deals';
-import { formatMoney, plural } from '@/lib/format';
+import { formatMoney, plural, splitTitle } from '@/lib/format';
 import type { Totals } from '@/lib/reports';
 
 import { CarPhoto } from './car-photo';
@@ -24,12 +24,6 @@ type Props = {
   month?: Totals;
   overview?: DealOverview;
 };
-
-/** «Volkswagen Golf 2011» → назва й рік окремо; без року в кінці лишається вся назва */
-function splitTitle(title: string) {
-  const m = title.match(/^(.*\S)\s+(\d{4})$/);
-  return m ? { name: m[1]!, year: m[2]! } : { name: title, year: '' };
-}
 
 /** Кнопка дії: іконка й підпис в один рядок; без підпису (`label` лише для скрінрідерів) вона вужча й квадратна */
 function Action({ icon, title, tone, label, onPress }: { icon: IconName; title?: string; tone: 'positive' | 'negative' | 'accent'; label?: string; onPress: () => void }) {

@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
 });
 
 /** Дрібні плитки «підпис — значення» по дві в рядку; `wide` розтягує плитку на весь рядок */
-export function InfoGrid({ items }: { items: { label: string; value: string; wide?: boolean; right?: ReactNode }[] }) {
+export function InfoGrid({ items }: { items: { label: string; value: string; wide?: boolean; right?: ReactNode; note?: string }[] }) {
   const theme = useTheme();
   return (
     <View style={grid.wrap}>
@@ -58,6 +58,11 @@ export function InfoGrid({ items }: { items: { label: string; value: string; wid
             <ThemedText type="default" style={grid.value} numberOfLines={2}>
               {item.value}
             </ThemedText>
+            {item.note ? (
+              <ThemedText type="small" themeColor="textSecondary" style={grid.label}>
+                {item.note}
+              </ThemedText>
+            ) : null}
           </View>
           {item.right}
         </View>

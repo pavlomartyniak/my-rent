@@ -2,11 +2,9 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Alert, StyleSheet, View } from 'react-native';
 
 import { CarPhoto } from '@/components/car-photo';
-import { ContractCard } from '@/components/contract-card';
 import { PaymentsCard } from '@/components/payments-card';
-import { ContactChips } from '@/components/contact-chips';
-import { contactActions } from '@/lib/contact-actions';
-import { TerminateDeal } from '@/components/terminate-deal';
+import { HeroButton } from '@/components/hero-button';
+import { RenterDealCard } from '@/components/renter-deal-card';
 import { HistoryList } from '@/components/history-list';
 import { ReportStatus } from '@/components/report-status';
 import { StatusBadge } from '@/components/status-badge';
@@ -14,22 +12,24 @@ import { SummaryCard } from '@/components/summary-card';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { InfoRow, InfoRows } from '@/components/ui/info-rows';
+import { Icon } from '@/components/ui/icon';
+import { InfoGrid } from '@/components/ui/info-rows';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Radius, Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
+import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
 import { useFleet } from '@/store/fleet';
-import { formatDate } from '@/lib/date';
 import { dealStage, type DealReport, type DealView } from '@/lib/deals';
-import { formatMoney } from '@/lib/format';
+import { formatMoney, splitTitle } from '@/lib/format';
 
 /** Одна оренда: умови, баланс платежів власнику, прибуток і історія записів */
 export default function DealScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const theme = useTheme();
   const { invalidate } = useFleet();
   const deal = useReport<DealView>(`/deals/${id}`);
   const report = useReport<DealReport>(`/reports/renter/deals/${id}`);
@@ -65,80 +65,103 @@ export default function DealScreen() {
 
   const add = (type: 'income' | 'expense') => router.push({ pathname: '/transaction/new', params: { dealId: d.id, type } });
 
+  const { name, year } = splitTitle(d.title);
+  const subtitle = [year, d.city].filter(Boolean);
+  const balance = o?.rentBalance ?? 0;
+  const debt = balance > 0;
+
   return (
-    <Screen>
-      <Stack.Screen options={{ title: d.title }} />
+    // Фото йде під прозорий хедер на всю ширину, тож системні відступи й бічні поля Screen скасовуємо
+    <Screen contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingTop: 0 }}>
+      <Stack.Screen options={{ title: '', headerTransparent: true, headerBackVisible: false, headerLeft: () => <HeroButton icon="chevron-back" label="Назад" onPress={() => router.back()} /> }} />
 
-      <CarPhoto uri={d.photoUri} style={styles.photo} iconSize={36} />
+      <View style={styles.hero}>
+        <CarPhoto uri={d.photoUri} style={styles.photo} iconSize={44} />
+      </View>
 
-      <Card>
-        <View style={styles.head}>
-          <View style={styles.flex}>
-            <ThemedText type="default" style={styles.bold}>
-              {d.title}
+      <View style={[styles.sheet, { backgroundColor: theme.background }]}>
+        <View style={styles.titleRow}>
+          <ThemedText type="subtitle" style={[styles.carTitle, styles.flex]} numberOfLines={2}>
+            {name}
+          </ThemedText>
+          <StatusBadge status={stage} dot />
+        </View>
+        <View style={styles.sub}>
+          {year ? (
+            <ThemedText type="default" themeColor="textSecondary">
+              {year}
             </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
+          ) : null}
+          {subtitle.length > 1 ? (
+            <ThemedText type="default" themeColor="textSecondary">
+              ·
+            </ThemedText>
+          ) : null}
+          {d.city ? <Icon name="location-outline" size={16} color="textSecondary" /> : null}
+          {d.city ? (
+            <ThemedText type="default" themeColor="textSecondary">
               {d.city}
             </ThemedText>
-          </View>
-          <StatusBadge status={dealStage(d)} />
+          ) : null}
         </View>
-        <InfoRows>
-          <InfoRow label="Оренда" value={`${formatDate(d.startDate)} – ${formatDate(d.endDate)}`} />
-          <InfoRow label="Ціна за добу" value={formatMoney(d.pricePerDay)} />
-          <InfoRow label="Власник" value={d.counterpart.name} />
-        </InfoRows>
-        <ContactChips actions={contactActions({ chat: { dealId: d.id }, contract: d.contract ? () => router.push({ pathname: '/contracts/[id]', params: { id: d.id } }) : undefined })} />
-        {stage === 'terminated' ? (
-          <ThemedText type="small" themeColor="negative">
-            Оренду розірвано достроково за згодою сторін (ініціатор: {d.terminatedBy === 'owner' ? 'власник' : 'ви'})
-            {d.terminatedAt ? ` ${formatDate(d.terminatedAt.slice(0, 10))}` : ''}. Розрахунок з власником лишається за вами: сплачені суми видно нижче.
-          </ThemedText>
-        ) : null}
-        {stage === 'upcoming' || stage === 'active' ? <TerminateDeal deal={d} as="renter" /> : null}
-      </Card>
-
-      <ContractCard deal={d} as="renter" />
+      </View>
 
       {stage === 'signing' ? null : (
         <View style={styles.actions}>
-          <Button title="Заробіток" icon="add-circle-outline" variant="positive" style={styles.flex} onPress={() => add('income')} />
-          <Button title="Витрата" icon="remove-circle-outline" variant="secondary" style={styles.flex} onPress={() => add('expense')} />
+          <Button title="Заробіток" icon="add" variant="positiveSolid" style={styles.flex} onPress={() => add('income')} />
+          <Button title="Витрата" icon="remove" variant="dangerSolid" style={styles.flex} onPress={() => add('expense')} />
         </View>
       )}
 
+      <RenterDealCard deal={d} overview={o} />
 
       {!o ? (
         <ReportStatus loading={report.loading} error={report.error} onRetry={report.retry} />
       ) : (
         <>
-          <SummaryCard title="Прибуток за весь час" profit={o.profit} income={o.income} expense={o.expense} note={o.elapsedDays > 0 ? `≈ ${formatMoney(o.avgProfitPerDay)} на добу` : undefined} />
+          <SummaryCard title="Прибуток за весь час" profit={o.profit} income={o.income} expense={o.expense} caption={o.elapsedDays > 0 ? `≈ ${formatMoney(o.avgProfitPerDay)} на добу` : undefined}>
+            <Button
+              title="Детальна аналітика"
+              icon="stats-chart"
+              variant="soft"
+              style={styles.analytics}
+              onPress={() => router.push({ pathname: '/deals/analytics', params: { id: d.id } })}
+            />
+          </SummaryCard>
 
-          <Card>
-            <ThemedText type="default" style={styles.bold}>
+          <Card style={styles.rentCard}>
+            <ThemedText type="default" style={styles.cardTitle}>
               Платежі за оренду
             </ThemedText>
-            <InfoRows>
-              <InfoRow label={`Минуло ${o.elapsedDays} з ${o.totalDays} діб`} value={`${formatMoney(o.rentDue)} до сплати`} />
-              <InfoRow label="Сплачено власнику" value={formatMoney(o.rentPaid)} />
-              <InfoRow
-                label={o.rentBalance > 0 ? 'Борг перед власником' : o.rentBalance < 0 ? 'Оплачено наперед' : 'Розрахунок'}
-                value={o.rentBalance === 0 ? 'Все сплачено' : formatMoney(Math.abs(o.rentBalance))}
-                tone={o.rentBalance > 0 ? 'negative' : 'positive'}
-              />
-              <InfoRow label="Інші витрати (паливо, мийка…)" value={formatMoney(o.otherExpenses)} />
-              <InfoRow label="За весь період за договором" value={formatMoney(o.plannedRent)} strong />
-            </InfoRows>
+            <View style={[styles.due, { backgroundColor: debt ? theme.warningSoft : theme.accentSoft }]}>
+              <View>
+                <ThemedText type="smallBold" themeColor={debt ? 'warning' : 'accent'}>
+                  {debt ? 'До сплати зараз' : 'Нараховано за оренду'}
+                </ThemedText>
+                <ThemedText style={styles.dueValue} themeColor={debt ? 'warning' : 'accent'}>
+                  {formatMoney(debt ? balance : o.rentDue)}
+                </ThemedText>
+              </View>
+              <ThemedText type="small" themeColor="textSecondary">
+                за {o.elapsedDays} з {o.totalDays} діб
+              </ThemedText>
+            </View>
+            <InfoGrid
+              items={[
+                { label: 'Сплачено власнику', value: formatMoney(o.rentPaid) },
+                { label: debt ? 'Борг перед власником' : balance < 0 ? 'Оплачено наперед' : 'Розрахунок', value: balance === 0 ? 'Все сплачено' : formatMoney(Math.abs(balance)) },
+                { label: 'Інші витрати', value: formatMoney(o.otherExpenses), note: 'паливо, мийка…' },
+                { label: 'За весь період за договором', value: formatMoney(o.plannedRent) },
+              ]}
+            />
           </Card>
-
-          <Button title="Детальна аналітика" icon="stats-chart-outline" variant="soft" onPress={() => router.push({ pathname: '/deals/analytics', params: { id: d.id } })} />
         </>
       )}
 
+      <PaymentsCard deal={d} as="renter" />
+
       <SectionHeader title="Історія" />
       <HistoryList dealId={d.id} />
-
-      <PaymentsCard deal={d} as="renter" />
 
       {stage === 'terminated' || stage === 'finished' ? <Button title="Видалити оренду" icon="trash-outline" variant="danger" onPress={confirmDelete} /> : null}
     </Screen>
@@ -146,9 +169,19 @@ export default function DealScreen() {
 }
 
 const styles = StyleSheet.create({
-  photo: { width: '100%', aspectRatio: 16 / 10, borderRadius: Radius.lg },
-  head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  // Фото на всю ширину екрана: скасовуємо бічні поля Screen
+  hero: { marginHorizontal: -20 },
+  photo: { width: '100%', aspectRatio: 1.2, borderRadius: 0 },
+  // Лист із назвою заходить на фото закругленим верхом (мінус проміжок між блоками й сам захід)
+  sheet: { marginHorizontal: -20, marginTop: -48, paddingHorizontal: 20, paddingTop: 20, borderTopLeftRadius: 28, borderTopRightRadius: 28, gap: 2 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  sub: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  carTitle: { fontSize: 28, lineHeight: 34 },
   flex: { flex: 1 },
-  bold: { fontWeight: 600, fontSize: 18 },
   actions: { flexDirection: 'row', gap: Spacing.two },
+  analytics: { marginTop: Spacing.two },
+  rentCard: { gap: Spacing.three },
+  cardTitle: { fontWeight: 700, fontSize: 18 },
+  due: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two, borderRadius: Radius.md, padding: Spacing.three },
+  dueValue: { fontSize: 28, lineHeight: 34, fontWeight: 700 },
 });

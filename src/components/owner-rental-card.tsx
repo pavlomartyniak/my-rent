@@ -5,22 +5,13 @@ import { useTheme } from '@/hooks/use-theme';
 import { openChat } from '@/lib/chat';
 import { daysUntil, formatDate, rentalProgress } from '@/lib/date';
 import { dealStage, type DealView } from '@/lib/deals';
-import { formatMoney, plural } from '@/lib/format';
+import { formatMoney, initials, plural } from '@/lib/format';
 
 import { ContractCard } from './contract-card';
 import { TerminateDeal } from './terminate-deal';
 import { ThemedText } from './themed-text';
 import { Card } from './ui/card';
 import { IconButton } from './ui/icon-button';
-
-/** Ініціали для аватара: перші літери двох перших слів */
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]!.toUpperCase())
-    .join('');
 
 /**
  * Оренда авто на сторінці власника: орендар з аватаром і кнопкою чату, дати з прогресом і днями, що лишились,

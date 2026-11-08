@@ -35,3 +35,18 @@ export function formatMonths(n: number) {
   const months = n % 12;
   return [years ? `${years} р.` : '', months ? `${months} міс` : ''].filter(Boolean).join(' ') || '< 1 міс';
 }
+
+/** Ініціали для аватара: перші літери двох перших слів імені */
+export const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join('');
+
+/** «Volkswagen Golf 2011» → назва й рік окремо; без року в кінці лишається вся назва */
+export function splitTitle(title: string) {
+  const m = title.match(/^(.*\S)\s+(\d{4})$/);
+  return m ? { name: m[1]!, year: m[2]! } : { name: title, year: '' };
+}

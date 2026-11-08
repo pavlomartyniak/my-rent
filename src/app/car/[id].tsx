@@ -9,6 +9,7 @@ import { SummaryCard } from '@/components/summary-card';
 import { ThemedText } from '@/components/themed-text';
 import { CarPhoto } from '@/components/car-photo';
 import { PhotoGallery } from '@/components/photo-gallery';
+import { HeroButton } from '@/components/hero-button';
 import { PhotoViewer } from '@/components/photo-viewer';
 import { PaymentsCard } from '@/components/payments-card';
 import { OwnerRentalCard } from '@/components/owner-rental-card';
@@ -214,15 +215,6 @@ export default function CarScreen() {
   );
 }
 
-/** Кругла кнопка поверх фото: біла напівпрозора, щоб читалась на будь-якому знімку */
-function HeroButton({ icon, label, onPress }: { icon: 'chevron-back' | 'create-outline' | 'expand-outline'; label: string; onPress: () => void }) {
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} hitSlop={8} onPress={onPress} style={styles.heroButton}>
-      <Icon name={icon} size={22} color="#222222" />
-    </Pressable>
-  );
-}
-
 /** Копіює текст у буфер і на мить показує галочку */
 function CopyButton({ text }: { text: string }) {
   const theme = useTheme();
@@ -254,7 +246,6 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   status: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: Radius.pill },
   statusText: { fontSize: 13, lineHeight: 18, fontWeight: 600 },
-  heroButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.92)' },
   analytics: { marginTop: Spacing.two },
   note: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },
   bold: { fontWeight: 600 },

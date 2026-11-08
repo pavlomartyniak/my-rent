@@ -19,6 +19,8 @@ type Props = {
   change?: number | null;
   /** Маржа, %: під сумою пояснюємо, яка частина доходу стала прибутком */
   margin?: number | null;
+  /** Короткий рядок під сумою, якщо маржі немає, напр. «≈ 35 408 ₴ на добу» */
+  caption?: string;
   /** Те, що стоїть під плашками всередині картки, напр. кнопка експорту */
   children?: React.ReactNode;
 };
@@ -48,8 +50,10 @@ function Chip({ label, value, tone, icon }: { label: string; value: number; tone
 }
 
 /** Головне число екрана: прибуток (з дельтою й поясненням маржі), а під ним доходи й витрати двома плашками */
-export function SummaryCard({ title, profit, income, expense, note, change, margin, children }: Props) {
+export function SummaryCard({ title, profit, income, expense, note, change, margin, caption, children }: Props) {
   const marginNote = margin === null || margin === undefined ? null : margin >= 100 ? 'Маржа 100% — уся сума доходу стала прибутком' : `Маржа ${Math.round(margin)}% — стільки доходу стає прибутком`;
+
+  const line = marginNote ?? caption;
 
   return (
     <Card style={styles.card}>
@@ -62,9 +66,9 @@ export function SummaryCard({ title, profit, income, expense, note, change, marg
         </ThemedText>
         {change !== undefined ? <DeltaChip change={change} /> : null}
       </View>
-      {marginNote ? (
+      {line ? (
         <ThemedText type="small" themeColor="textSecondary">
-          {marginNote}
+          {line}
         </ThemedText>
       ) : null}
       <View style={styles.row}>
