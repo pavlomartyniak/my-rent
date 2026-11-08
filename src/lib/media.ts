@@ -10,7 +10,7 @@ type Signature = {
   folder: string;
   signature: string;
   uploadUrl: string;
-  items?: { publicId: string; timestamp: number; transformation: string; signature: string }[];
+  items?: { publicId: string; timestamp: number; signature: string }[];
 };
 
 /** Помилка, коли на сервері не налаштований Cloudinary (503): тоді фото лишаються лише на пристрої */
@@ -36,10 +36,9 @@ async function uploadOne(sig: Signature, index: number, localUri: string): Promi
   form.append('api_key', sig.apiKey);
   const item = sig.items?.[index];
   if (item) {
-    // Власний ідентифікатор і зменшення до 1600 px: у хмарі не лежать оригінали з телефона
+    // Власний ідентифікатор: за ним сервер знає, чиє фото, і може його прибрати
     form.append('timestamp', String(item.timestamp));
     form.append('public_id', item.publicId);
-    form.append('transformation', item.transformation);
     form.append('signature', item.signature);
   } else {
     // Старий сервер без окремих підписів: фото йдуть в одну папку

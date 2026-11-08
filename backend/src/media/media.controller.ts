@@ -10,9 +10,6 @@ import { DiscardDto, UploadSignatureDto } from './media.dto';
 import { MediaService } from './media.service';
 import { signUpload } from './signature';
 
-/** Фото при завантаженні зменшується до цих розмірів, щоб у хмарі не лежали оригінали з телефона на десятки мегабайтів */
-export const UPLOAD_TRANSFORMATION = 'c_limit,h_1600,w_1600';
-
 @Controller('media')
 export class MediaController {
   constructor(
@@ -44,7 +41,7 @@ export class MediaController {
     if (!dto.count) return legacy;
     const items = Array.from({ length: dto.count }, () => {
       const publicId = `${folder}/${randomBytes(9).toString('hex')}`;
-      return { publicId, timestamp, transformation: UPLOAD_TRANSFORMATION, signature: signUpload({ public_id: publicId, timestamp, transformation: UPLOAD_TRANSFORMATION }, apiSecret) };
+      return { publicId, timestamp, signature: signUpload({ public_id: publicId, timestamp }, apiSecret) };
     });
     return { ...legacy, items };
   }

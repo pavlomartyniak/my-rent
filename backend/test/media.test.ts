@@ -27,10 +27,10 @@ describe('chunk', () => {
 });
 
 describe('signUpload з публічним ідентифікатором', () => {
-  it('підпис залежить від public_id і transformation', () => {
-    const a = signUpload({ public_id: 'my-rent/u1/a', timestamp: 1, transformation: 'c_limit,h_1600,w_1600' }, 's');
-    assert.notEqual(a, signUpload({ public_id: 'my-rent/u1/b', timestamp: 1, transformation: 'c_limit,h_1600,w_1600' }, 's'));
-    assert.notEqual(a, signUpload({ public_id: 'my-rent/u1/a', timestamp: 1, transformation: 'c_limit,h_800,w_800' }, 's'));
+  it('підпис залежить від public_id і часу', () => {
+    const a = signUpload({ public_id: 'my-rent/u1/a', timestamp: 1 }, 's');
+    assert.notEqual(a, signUpload({ public_id: 'my-rent/u1/b', timestamp: 1 }, 's'));
+    assert.notEqual(a, signUpload({ public_id: 'my-rent/u1/a', timestamp: 2 }, 's'));
   });
 });
 
