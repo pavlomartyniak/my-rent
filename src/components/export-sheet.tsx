@@ -76,7 +76,27 @@ export function ExportButton({ filter, subtitle, title = 'Експорт' }: { f
   );
 }
 
+/** Кругла кнопка «Експорт» в заголовку екрана: відкриває той самий лист вибору формату */
+export function ExportIconButton({ filter, subtitle }: { filter?: ExportFilter; subtitle?: string }) {
+  const theme = useTheme();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Експорт"
+        hitSlop={8}
+        onPress={() => setOpen(true)}
+        style={({ pressed }) => [styles.icon, { backgroundColor: theme.backgroundElement, borderColor: theme.border }, pressed && { opacity: 0.7 }]}>
+        <Icon name="download-outline" size={22} color="text" />
+      </Pressable>
+      <ExportSheet visible={open} onClose={() => setOpen(false)} filter={filter} subtitle={subtitle} />
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
+  icon: { width: 44, height: 44, borderRadius: Radius.pill, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   sheet: { borderTopLeftRadius: Radius.lg, borderTopRightRadius: Radius.lg, paddingHorizontal: Spacing.three, paddingTop: Spacing.three, gap: 2 },
   heading: { fontWeight: 700, fontSize: 18 },

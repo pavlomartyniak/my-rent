@@ -21,7 +21,7 @@ const CALLOUT_HEIGHT = 60;
 const barHeight = (value: number, max: number) => (value > 0 ? Math.max(3, (value / max) * CHART_HEIGHT) : 0);
 
 /** Що саме було доходом і на що пішли витрати у вибраному стовпчику (місяць чи рік): його записи списком */
-function MonthEntries({ month, scope, titled }: { month: string; scope?: ChartScope; titled?: boolean }) {
+function MonthEntries({ month, scope, titled, carFirst }: { month: string; scope?: ChartScope; titled?: boolean; carFirst?: boolean }) {
   const theme = useTheme();
   const query = `period=${month}${scope?.carId ? `&carId=${scope.carId}` : ''}${scope?.dealId ? `&dealId=${scope.dealId}` : ''}`;
   const { data, loading, error } = useReport<PeriodEntries>(`/transactions/period?${query}`, { keepPrevious: true });
@@ -58,7 +58,7 @@ function MonthEntries({ month, scope, titled }: { month: string; scope?: ChartSc
           {data.items.map((tx, i) => (
             <View key={tx.id}>
               {i > 0 ? <View style={[styles.divider, { backgroundColor: theme.border }]} /> : null}
-              <TransactionRow tx={tx} car={showCar ? tx.car : undefined} />
+              <TransactionRow tx={tx} car={showCar ? tx.car : undefined} carFirst={carFirst} />
             </View>
           ))}
           {data.total > data.items.length ? (
@@ -86,7 +86,7 @@ const SLOT = 44;
  * До 12 стовпчиків графік вміщується на екрані (можна й вести пальцем). Довшу історію можна гортати вбік: стовпчики
  * лишаються зручної ширини, вибраним стає місяць по центру, тож свайп сам змінює місяць, а дотик ставить його в центр.
  */
-export function BarChart({ data, scope, card, titled }: { data: Point[]; scope?: ChartScope; /** Звіт: «Динаміка» із легендою зверху й записи місяця окремою карткою */ card?: boolean; /** «Динаміка» із легендою зверху, записи лишаються під графіком */ titled?: boolean }) {
+export function BarChart({ data, scope, card, titled, carFirst }: { data: Point[]; scope?: ChartScope; /** Записи місяця показують назву авто заголовком (звіт орендаря) */ carFirst?: boolean; /** Звіт: «Динаміка» із легендою зверху й записи місяця окремою карткою */ card?: boolean; /** «Динаміка» із легендою зверху, записи лишаються під графіком */ titled?: boolean }) {
   const head = card || titled;
   const theme = useTheme();
   const [selected, setSelected] = useState(data.length - 1);
@@ -245,7 +245,7 @@ export function BarChart({ data, scope, card, titled }: { data: Point[]; scope?:
         </ThemedText>
       </View>
 
-      {card ? null : <MonthEntries month={entriesMonth || current.month} scope={scope} />}
+      {card ? null : <MonthEntries month={entriesMonth || current.month} scope={scope} carFirst={carFirst} />}
     </View>
   );
 
@@ -254,7 +254,7 @@ export function BarChart({ data, scope, card, titled }: { data: Point[]; scope?:
     <>
       <Card>{chart}</Card>
       <Card>
-        <MonthEntries month={entriesMonth || current.month} scope={scope} titled />
+        <MonthEntries month={entriesMonth || current.month} scope={scope} titled carFirst={carFirst} />
       </Card>
     </>
   );

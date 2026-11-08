@@ -11,12 +11,12 @@ import type { Transaction } from '@/types';
 import { ThemedText } from './themed-text';
 
 /** Рядок історії: іконка категорії в колі (зелене для доходу, червоне для витрати), категорія, підпис з датою, сума */
-export function TransactionRow({ tx, car }: { tx: Transaction; /** Назва авто: показується, коли список охоплює кілька авто */ car?: string }) {
+export function TransactionRow({ tx, car, carFirst }: { tx: Transaction; /** Назва авто: показується, коли список охоплює кілька авто */ car?: string; /** Назва авто стає заголовком рядка, а категорія йде першою в підписі (звіт орендаря) */ carFirst?: boolean }) {
   const theme = useTheme();
   const income = tx.type === 'income';
   const tone = income ? 'positive' : 'negative';
   // Дата йде в підпис: рядок не залежить від групування, тож день видно і в історії, і під графіком
-  const details = [`${dayMonth(tx.date)}, ${weekdayShort(tx.date)}`, car, tx.driver, tx.note].filter(Boolean).join(' · ');
+  const details = (carFirst && car ? [tx.category, `${dayMonth(tx.date)}, ${weekdayShort(tx.date)}`, tx.driver, tx.note] : [`${dayMonth(tx.date)}, ${weekdayShort(tx.date)}`, car, tx.driver, tx.note]).filter(Boolean).join(' · ');
 
   return (
     <Link href={{ pathname: '/transaction/[id]', params: { id: tx.id } }} asChild>
@@ -29,7 +29,7 @@ export function TransactionRow({ tx, car }: { tx: Transaction; /** Назва а
 
           <View style={styles.flex}>
             <ThemedText type="default" style={styles.title}>
-              {tx.category}
+              {carFirst && car ? car : tx.category}
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
               {details}

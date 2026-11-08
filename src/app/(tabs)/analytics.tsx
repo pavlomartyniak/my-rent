@@ -6,7 +6,7 @@ import { BarChart } from '@/components/bar-chart';
 import { CarPhoto } from '@/components/car-photo';
 import { CategoryPanel } from '@/components/category-panel';
 import { ComparisonCard } from '@/components/comparison-card';
-import { ExportButton } from '@/components/export-sheet';
+import { ExportButton, ExportIconButton } from '@/components/export-sheet';
 import { PeriodSwitcher, usePeriod } from '@/components/period-switcher';
 import { ReportStatus } from '@/components/report-status';
 import { SummaryCard } from '@/components/summary-card';
@@ -56,7 +56,7 @@ export default function ReportScreen() {
 
   return (
     <Screen tabs>
-      <ScreenTitle>Звіт</ScreenTitle>
+      <ScreenTitle actions={<ExportIconButton filter={{ period: p.key }} subtitle={`Усі авто · ${p.label}`} />}>Звіт</ScreenTitle>
 
       <PeriodSwitcher state={p} />
 

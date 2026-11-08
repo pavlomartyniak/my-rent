@@ -5,7 +5,7 @@ import { BarChart } from '@/components/bar-chart';
 import { CarPhoto } from '@/components/car-photo';
 import { CategoryPanel } from '@/components/category-panel';
 import { ComparisonCard } from '@/components/comparison-card';
-import { ExportButton } from '@/components/export-sheet';
+import { ExportButton, ExportIconButton } from '@/components/export-sheet';
 import { PeriodSwitcher, usePeriod } from '@/components/period-switcher';
 import { ReportStatus } from '@/components/report-status';
 import { SummaryCard } from '@/components/summary-card';
@@ -18,6 +18,7 @@ import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Radius, Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
+import { useTheme } from '@/hooks/use-theme';
 import { monthTitle } from '@/lib/date';
 import type { DealView, RenterSummary } from '@/lib/deals';
 import { formatMoney } from '@/lib/format';
@@ -25,6 +26,7 @@ import { formatMoney } from '@/lib/format';
 /** Звіт орендаря: скільки заробив, скільки витратив і платить власникам, прибуток по кожній оренді */
 export default function RenterReportScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const p = usePeriod();
   const { data, loading, error, retry } = useReport<RenterSummary>(`/reports/renter/summary?period=${p.key}`);
   const deals = useReport<DealView[]>('/deals');
@@ -37,9 +39,13 @@ export default function RenterReportScreen() {
     })
     .sort((a, b) => b.period.profit - a.period.profit);
 
+  // Пояснення під сумою, коли доходу немає, а витрати є (зазвичай це оплата оренди)
+  const noIncomeNote =
+    data && data.totals.income === 0 && data.totals.expense > 0 ? `Доходу ${p.all ? 'за весь час' : monthly ? 'цього місяця' : 'цього року'} ще немає — лише витрати на оренду` : undefined;
+
   return (
     <Screen tabs>
-      <ScreenTitle>Звіт</ScreenTitle>
+      <ScreenTitle actions={<ExportIconButton filter={{ period: p.key }} subtitle={`Усі оренди · ${p.label}`} />}>Звіт</ScreenTitle>
 
       <PeriodSwitcher state={p} />
 
@@ -49,9 +55,18 @@ export default function RenterReportScreen() {
         <EmptyState icon="stats-chart-outline" title="Поки що нічого рахувати" text="Звіт з’явиться, коли у вас буде оренда й перші записи." />
       ) : (
         <>
-          <SummaryCard title={`Прибуток · ${p.label}`} profit={data.totals.profit} income={data.totals.income} expense={data.totals.expense} />
-
-          <ExportButton filter={{ period: p.key }} subtitle={`Усі оренди · ${p.label}`} title={`Експорт за ${p.label}`} />
+          <SummaryCard
+            title={`Прибуток · ${p.label}`}
+            profit={data.totals.profit}
+            income={data.totals.income}
+            expense={data.totals.expense}
+            change={data.previousPeriod ? data.change.profit : undefined}
+            margin={data.totals.margin}
+            caption={noIncomeNote}>
+            <View style={styles.export}>
+              <ExportButton filter={{ period: p.key }} subtitle={`Усі оренди · ${p.label}`} title={`Експорт за ${p.label}`} />
+            </View>
+          </SummaryCard>
 
           {data.previousPeriod ? (
             <ComparisonCard
@@ -61,17 +76,18 @@ export default function RenterReportScreen() {
             />
           ) : null}
 
-          <Card>
-            <BarChart key={p.key} data={data.series} />
-          </Card>
+          <BarChart key={p.key} data={data.series} card carFirst />
 
-          <Card>
-            <ThemedText type="small" themeColor="textSecondary">
-              Сплачено власникам за оренду за весь час
-            </ThemedText>
-            <ThemedText type="default" style={styles.bold}>
-              {formatMoney(data.rentPaidTotal)}
-            </ThemedText>
+          <Card style={styles.paid}>
+            <View style={[styles.paidIcon, { backgroundColor: theme.accentSoft }]}>
+              <Icon name="key-outline" size={22} color="accent" />
+            </View>
+            <View style={styles.flex}>
+              <ThemedText type="small" themeColor="textSecondary">
+                Сплачено власникам за весь час
+              </ThemedText>
+              <ThemedText style={styles.paidValue}>{formatMoney(data.rentPaidTotal)}</ThemedText>
+            </View>
           </Card>
 
           <SectionHeader title="Прибуток по орендах" />
@@ -81,16 +97,25 @@ export default function RenterReportScreen() {
                 <View style={[styles.row, i > 0 && styles.rowBorder]}>
                   <CarPhoto uri={deal.photoUri} style={styles.thumb} iconSize={22} />
                   <View style={styles.flex}>
-                    <ThemedText type="default" style={styles.bold} numberOfLines={1}>
-                      {deal.title}
-                    </ThemedText>
+                    <View style={styles.top}>
+                      <ThemedText type="default" style={[styles.bold, styles.flex]} numberOfLines={1}>
+                        {deal.title}
+                      </ThemedText>
+                      <ThemedText type="default" style={styles.bold} themeColor={period.profit >= 0 ? 'positive' : 'negative'}>
+                        {formatMoney(period.profit)}
+                      </ThemedText>
+                    </View>
                     <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                      Дохід {formatMoney(period.income)} · Витрати {formatMoney(period.expense)}
+                      Дохід{' '}
+                      <ThemedText type="smallBold" themeColor="positive">
+                        {formatMoney(period.income)}
+                      </ThemedText>
+                      {'  ·  '}Витрати{' '}
+                      <ThemedText type="smallBold" themeColor="negative">
+                        {formatMoney(period.expense)}
+                      </ThemedText>
                     </ThemedText>
                   </View>
-                  <ThemedText type="default" style={styles.bold} themeColor={period.profit >= 0 ? 'positive' : 'negative'}>
-                    {formatMoney(period.profit)}
-                  </ThemedText>
                   <Icon name="chevron-forward" size={18} color="textSecondary" />
                 </View>
               </Pressable>
@@ -109,9 +134,14 @@ export default function RenterReportScreen() {
 
 const styles = StyleSheet.create({
   list: { paddingVertical: 0, gap: 0 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.three },
+  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.three },
   rowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128,128,128,0.3)' },
-  thumb: { width: 44, height: 44, borderRadius: Radius.sm },
+  thumb: { width: 52, height: 52, borderRadius: Radius.md },
+  top: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   flex: { flex: 1 },
   bold: { fontWeight: 700 },
+  export: { marginTop: Spacing.two },
+  paid: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  paidIcon: { width: 48, height: 48, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  paidValue: { fontSize: 26, lineHeight: 32, fontWeight: 700 },
 });
