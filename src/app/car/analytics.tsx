@@ -1,24 +1,24 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Stack, useLocalSearchParams } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BarChart } from '@/components/bar-chart';
-import { CarPhoto } from '@/components/car-photo';
+import { AnalyticsHeader } from '@/components/analytics-header';
 import { CategoryPanel } from '@/components/category-panel';
 import { PaybackCard } from '@/components/payback-card';
 import { ExportButton } from '@/components/export-sheet';
 import { PeriodSwitcher, usePeriod } from '@/components/period-switcher';
 import { ReportStatus } from '@/components/report-status';
+import { SplitBar } from '@/components/split-bar';
 import { SummaryCard } from '@/components/summary-card';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
-import { Icon } from '@/components/ui/icon';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
-import { Radius, Spacing, type ThemeColor } from '@/constants/theme';
+import { Spacing, type ThemeColor } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
-import { useTheme } from '@/hooks/use-theme';
 import { formatDate, monthLabel } from '@/lib/date';
 import { formatMoney, formatMonths } from '@/lib/format';
 import type { CarReport } from '@/lib/reports';
@@ -28,8 +28,6 @@ const monthName = (m: string) => `${monthLabel(m)} ${m.slice(0, 4)}`;
 
 export default function CarAnalyticsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
-  const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { cars } = useFleet();
   const p = usePeriod();
@@ -50,20 +48,7 @@ export default function CarAnalyticsScreen() {
     <Screen contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingTop: insets.top + Spacing.two }}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.header}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Назад" hitSlop={8} onPress={() => router.back()} style={[styles.back, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-          <Icon name="chevron-back" size={22} />
-        </Pressable>
-        <CarPhoto uri={car.photoUri} style={styles.thumb} iconSize={24} />
-        <View style={styles.flex}>
-          <ThemedText type="default" style={styles.title} numberOfLines={1}>
-            {car.brand} {car.model}
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            Аналітика й окупність
-          </ThemedText>
-        </View>
-      </View>
+      <AnalyticsHeader photoUri={car.photoUri} title={`${car.brand} ${car.model}`} subtitle="Аналітика й окупність" />
 
       <PeriodSwitcher state={p} />
 
@@ -92,9 +77,8 @@ function CarReportView({ report, carId, price, periodLabel, periodKey, exportSub
         <BarChart key={periodKey} data={report.series} scope={{ carId }} titled />
       </Card>
 
-      <SectionHeader title="На що йдуть витрати" />
       <Card>
-        <CategoryPanel carId={carId} />
+        <CategoryPanel carId={carId} title="На що йдуть витрати" />
       </Card>
 
       <View style={styles.divider} />
@@ -159,18 +143,6 @@ function CarReportView({ report, carId, price, periodLabel, periodKey, exportSub
   );
 }
 
-/** Смужка «дохід / витрати» однієї довжини: зелена частка доходу, червона витрат */
-function SplitBar({ income, expense }: { income: number; expense: number }) {
-  const theme = useTheme();
-  const total = income + expense;
-  const share = total > 0 ? (income / total) * 100 : 0;
-  return (
-    <View style={[styles.bar, { backgroundColor: total > 0 ? theme.negative : theme.backgroundSelected }]}>
-      <View style={{ width: `${share}%`, height: 6, backgroundColor: theme.positive }} />
-    </View>
-  );
-}
-
 function Stat({ label, value, note, color, icon }: { label: string; value: string; note?: string; color?: ThemeColor; icon?: 'trending-up' | 'trending-down' }) {
   return (
     <Card style={styles.stat}>
@@ -193,14 +165,9 @@ function Stat({ label, value, note, color, icon }: { label: string; value: strin
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  back: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  thumb: { width: 56, height: 56, borderRadius: Radius.md },
-  title: { fontWeight: 700, fontSize: 22, letterSpacing: -0.3 },
   export: { marginTop: Spacing.two },
   since: { marginTop: Spacing.one },
   share: { gap: Spacing.two, marginTop: Spacing.two },
-  bar: { height: 6, borderRadius: 3, overflow: 'hidden', flexDirection: 'row' },
   grid: { flexDirection: 'row', gap: Spacing.two },
   stat: { flex: 1, gap: Spacing.one },
   statHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
