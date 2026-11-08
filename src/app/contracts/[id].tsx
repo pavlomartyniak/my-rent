@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
 import { ReportStatus } from '@/components/report-status';
+import { SignSheet } from '@/components/sign-sheet';
 
 import { StatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
@@ -25,7 +26,8 @@ export default function ContractScreen() {
   const theme = useTheme();
   const { invalidate, reload, role } = useFleet();
   const { data, loading, error, retry } = useReport<ContractView>(`/deals/${id}/contract`, { useCache: false, refetchOnFocus: true });
-  const [busy, setBusy] = useState<'sign' | 'pdf' | 'cancel' | null>(null);
+  const [busy, setBusy] = useState<'pdf' | 'cancel' | null>(null);
+  const [signing, setSigning] = useState(false);
 
   if (!data) {
     return (
@@ -40,7 +42,7 @@ export default function ContractScreen() {
   const state = data.signing.state;
   const canSign = awaiting && !data.mySigned && state === 'open';
 
-  async function run(kind: 'sign' | 'cancel', fn: () => Promise<unknown>, failTitle: string) {
+  async function run(kind: 'cancel', fn: () => Promise<unknown>, failTitle: string) {
     setBusy(kind);
     try {
       await fn();
@@ -54,16 +56,6 @@ export default function ContractScreen() {
       setBusy(null);
     }
   }
-
-  const confirmSign = () =>
-    Alert.alert(
-      'Підписати договір?',
-      'Підписуйте договір під час зустрічі, коли власник передає авто й ключі, а орендар — гроші. Підписуючи, ви підтверджуєте, що ознайомились із текстом і погоджуєтесь з умовами. Після підпису застосунок спитає, чи сплачено платіж (орендаря) і чи отримано (власника): кожна відповідь записується в облік.',
-      [
-        { text: 'Скасувати', style: 'cancel' },
-        { text: 'Підписати', onPress: () => void run('sign', () => api('POST', `/deals/${id}/sign`), 'Не вдалося підписати') },
-      ],
-    );
 
   const confirmCancel = () =>
     Alert.alert('Скасувати домовленість?', 'Договір не буде підписано, авто знову стане вільним, а друга сторона побачить скасування.', [
@@ -125,7 +117,7 @@ export default function ContractScreen() {
               Підписуйте, коли зустрінетесь: власник передає авто й ключі, орендар — гроші. Кожна сторона підписує зі свого телефону.
             </ThemedText>
           </Card>
-          <Button title="Підписати договір" icon="create-outline" disabled={busy !== null} onPress={confirmSign} />
+          <Button title="Підписати договір" icon="create-outline" disabled={busy !== null} onPress={() => setSigning(true)} />
         </>
       ) : awaiting && !data.mySigned ? (
         <Card style={{ backgroundColor: theme.warningSoft }}>
@@ -169,6 +161,19 @@ export default function ContractScreen() {
       </ThemedText>
 
       {awaiting ? <Button title="Скасувати домовленість" variant="danger" disabled={busy !== null} onPress={confirmCancel} /> : null}
+
+      <SignSheet
+        visible={signing}
+        dealId={data.dealId}
+        number={data.number}
+        onClose={() => setSigning(false)}
+        onSigned={() => {
+          setSigning(false);
+          invalidate();
+          reload();
+          retry();
+        }}
+      />
     </Screen>
   );
 }
@@ -189,7 +194,8 @@ function SignatureRow({ label, name, signature, you }: { label: string; name: st
               Підписано {formatDate(signature.at.slice(0, 10))} {signature.at.slice(11, 16)} UTC
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              {METHOD_LABEL(signature.method)} · ID {signature.signatureId}
+              {METHOD_LABEL(signature.method)}
+              {signature.email ? ` (${signature.email})` : ''} · ID {signature.signatureId}
             </ThemedText>
           </>
         ) : (

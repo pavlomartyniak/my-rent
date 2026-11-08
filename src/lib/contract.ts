@@ -5,7 +5,7 @@ import { BASE_URL, getApiToken } from './api';
 
 /** Відповідь /deals/:id/contract */
 export type ContractSection = { title: string; paragraphs: string[] };
-export type ContractSignature = { at: string; method: string; signatureId: string } | null;
+export type ContractSignature = { at: string; method: string; signatureId: string; /** Частково прихована пошта, на яку приходив код */ email?: string } | null;
 
 export type ContractView = {
   dealId: string;
@@ -32,7 +32,7 @@ export type ContractView = {
   signing: { opensAt: string; closesAt: string; state: 'early' | 'open' | 'late' };
 };
 
-export const METHOD_LABEL = (method: string) => (method === 'demo' ? 'підтвердження в застосунку (демо)' : method);
+export const METHOD_LABEL = (method: string) => (method === 'email_otp' ? 'підтвердження кодом з e-mail' : method === 'demo' ? 'підтвердження в застосунку' : method);
 
 /**
  * Завантажує PDF договору з сервера (з токеном) у кеш пристрою й відкриває системне вікно «Поділитись»:

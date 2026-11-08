@@ -1,10 +1,13 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import type { ClientSession, Connection, Model } from 'mongoose';
 
 import type { AuthUser } from '../common/current-user';
 import { renderContractPdf } from '../contract/contract.pdf';
+import { checkCode, generateCode, hashCode, maskEmail, OTP_MAX_ATTEMPTS, OTP_MINUTES, OTP_RESEND_SECONDS, resendWait } from '../contract/contract.otp';
 import { signContract } from '../contract/contract.signing';
+import { MailService } from '../mail/mail.service';
 import { buildSections } from '../contract/contract.terms';
 import { RealtimeService } from '../realtime/realtime.service';
 import { settledAmount } from './deal-payments';
@@ -30,6 +33,8 @@ export class DealsService {
     @InjectModel(Offer.name) private readonly offers: Model<Offer>,
     @InjectConnection() private readonly connection: Connection,
     private readonly realtime: RealtimeService,
+    private readonly mail: MailService,
+    private readonly config: ConfigService,
   ) {}
 
   /** Усі оренди орендаря, новіші першими */
@@ -272,11 +277,73 @@ export class DealsService {
     return { pdf, filename: `${c.terms.number}.pdf` };
   }
 
+  /** Договір, який сторона зараз може підписати: перевірки, спільні для запиту коду й самого підпису */
+  private async signable(user: AuthUser, id: string) {
+    const deal = await this.deals.findOne({ _id: id, ...this.side(user) }).exec();
+    if (!deal) throw new NotFoundException('Оренду не знайдено');
+    const c = this.requireContract(deal);
+    if (deal.status !== 'awaiting') throw new ConflictException(deal.status === 'terminated' ? 'Домовленість скасована' : 'Договір уже підписано обома сторонами');
+    const state = signingState(todayUtc(), deal.startDate);
+    if (state === 'early') {
+      throw new ConflictException(`Підписання відкриється ${signingWindow(deal.startDate).opensAt.split('-').reverse().join('.')}: підписуйте договір під час зустрічі, коли передаєте авто, ключі й гроші`);
+    }
+    if (state === 'late') throw new ConflictException('Час на підписання минув. Домовтесь про нову оренду');
+    if (c.signatures?.[user.role]) throw new ConflictException('Ви вже підписали цей договір');
+    return { deal, contract: c };
+  }
+
   /**
-   * Підпис договору стороною. Зараз це підтвердження в застосунку; пізніше тут підключається BankID чи Дія.Підпис.
-   * Коли підписали обидві сторони, оренда активується: авто стає «В оренді» (чи лишається «Заброньованим» до дати початку).
+   * Надсилає на пошту сторони шестизначний код для підписання. Код дійсний кілька хвилин, прив'язаний до цього договору,
+   * а новий можна попросити не частіше ніж раз на хвилину.
    */
-  async sign(user: AuthUser, id: string) {
+  async requestSignCode(user: AuthUser, id: string) {
+    const { deal, contract: c } = await this.signable(user, id);
+    const wait = resendWait(c.otp?.[user.role]);
+    if (wait > 0) throw new ConflictException(`Код уже надіслано. Новий можна попросити через ${wait} с`);
+    const account = await this.users.findById(user.id).exec();
+    if (!account?.email) throw new ConflictException('У профілі немає адреси електронної пошти');
+
+    const code = generateCode();
+    const now = new Date();
+    await this.deals.updateOne(
+      { _id: deal._id },
+      { $set: { [`contract.otp.${user.role}`]: { hash: hashCode(code, String(deal._id), user.role, c.hash), expiresAt: new Date(now.getTime() + OTP_MINUTES * 60_000), attempts: 0, sentAt: now } } },
+    );
+    const sent = await this.mail.send(
+      account.email,
+      `Код підтвердження підпису: ${code}`,
+      `Ваш код для підписання договору № ${c.terms.number}: ${code}\n\nКод дійсний ${OTP_MINUTES} хвилин. Нікому його не повідомляйте. Якщо ви не підписуєте договір, просто проігноруйте цей лист.`,
+    );
+    // Локально (DEMO_MODE) лист лише потрапляє в журнал сервера, тож відсутність пошти там не є помилкою
+    if (!sent && this.config.get('DEMO_MODE') !== 'true') throw new ServiceUnavailableException('Не вдалося надіслати код на пошту. Спробуйте за хвилину');
+    return { email: maskEmail(account.email), expiresInMinutes: OTP_MINUTES, resendInSeconds: OTP_RESEND_SECONDS };
+  }
+
+  /**
+   * Підпис договору стороною за кодом з пошти (простий електронний підпис). Підпис зберігається разом із доказами:
+   * частково прихованою поштою, IP та пристроєм. Коли підписали обидві сторони, оренда активується: авто стає «В оренді»
+   * (чи лишається «Заброньованим» до дати початку).
+   */
+  async sign(user: AuthUser, id: string, code: string, evidence: { ip?: string; userAgent?: string }) {
+    const { deal: seen, contract: c0 } = await this.signable(user, id);
+    const pending = c0.otp?.[user.role];
+    const check = checkCode(pending, code, { dealId: String(seen._id), role: user.role, contractHash: c0.hash });
+    if (!check.ok) {
+      if (check.reason === 'wrong') await this.deals.updateOne({ _id: seen._id }, { $inc: { [`contract.otp.${user.role}.attempts`]: 1 } });
+      throw new BadRequestException(
+        {
+          missing: 'Спершу отримайте код на пошту',
+          expired: 'Код прострочено. Запросіть новий',
+          locked: `Забагато невдалих спроб (${OTP_MAX_ATTEMPTS}). Запросіть новий код`,
+          wrong: `Невірний код. Залишилось спроб: ${check.attemptsLeft}`,
+        }[check.reason],
+      );
+    }
+    // Код одноразовий: списуємо його атомарно, щоб два паралельні запити не підписали двічі
+    const consumed = await this.deals.findOneAndUpdate({ _id: seen._id, [`contract.otp.${user.role}.hash`]: pending!.hash }, { $unset: { [`contract.otp.${user.role}`]: '' } }).exec();
+    if (!consumed) throw new ConflictException('Код уже використано. Запросіть новий');
+    const account = await this.users.findById(user.id).exec();
+
     const session = await this.connection.startSession();
     let result: DealDocument | null = null;
     try {
@@ -285,16 +352,17 @@ export class DealsService {
         if (!deal) throw new NotFoundException('Оренду не знайдено');
         const c = this.requireContract(deal);
         if (deal.status !== 'awaiting') throw new ConflictException(deal.status === 'terminated' ? 'Домовленість скасована' : 'Договір уже підписано обома сторонами');
-        const state = signingState(todayUtc(), deal.startDate);
-        if (state === 'early') {
-          throw new ConflictException(`Підписання відкриється ${signingWindow(deal.startDate).opensAt.split('-').reverse().join('.')}: підписуйте договір під час зустрічі, коли передаєте авто, ключі й гроші`);
-        }
-        if (state === 'late') throw new ConflictException('Час на підписання минув. Домовтесь про нову оренду');
         // Порожній об'єкт Mongoose не зберігає, тож створюємо його, коли підписує перший
         c.signatures ??= {};
         if (c.signatures[user.role]) throw new ConflictException('Ви вже підписали цей договір');
 
-        c.signatures[user.role] = signContract({ contractHash: c.hash, userId: user.id, role: user.role });
+        const signature = signContract({ contractHash: c.hash, userId: user.id, role: user.role });
+        c.signatures[user.role] = {
+          ...signature,
+          ...(account?.email ? { email: maskEmail(account.email) } : {}),
+          ...(evidence.ip ? { ip: evidence.ip.slice(0, 64) } : {}),
+          ...(evidence.userAgent ? { userAgent: evidence.userAgent.slice(0, 200) } : {}),
+        };
         if (c.signatures.owner && c.signatures.renter) {
           deal.status = 'active';
           c.signedAt = new Date();
@@ -600,7 +668,8 @@ export class DealsService {
 
   private signaturesView(deal: DealDocument) {
     const s = deal.contract?.signatures ?? {};
-    const one = (v?: { at: Date; method: string; signatureId: string }) => (v ? { at: v.at, method: v.method, signatureId: v.signatureId } : null);
+    // IP й пристрій лишаються в базі як докази й другій стороні не показуються
+    const one = (v?: { at: Date; method: string; signatureId: string; email?: string }) => (v ? { at: v.at, method: v.method, signatureId: v.signatureId, ...(v.email ? { email: v.email } : {}) } : null);
     return { owner: one(s.owner), renter: one(s.renter) };
   }
 

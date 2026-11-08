@@ -1,4 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import type { PendingCode } from '../contract/contract.otp';
+import type { Signature } from '../contract/contract.signing';
 import type { ContractTerms } from '../contract/contract.terms';
 import { type HydratedDocument, Schema as MongooseSchema, type Types } from 'mongoose';
 
@@ -71,7 +73,9 @@ export class Deal {
   contract?: {
     terms: ContractTerms;
     hash: string;
-    signatures: { owner?: { at: Date; method: string; signatureId: string }; renter?: { at: Date; method: string; signatureId: string } };
+    signatures: { owner?: Signature; renter?: Signature };
+    /** Код підтвердження підпису, що чекає введення, для кожної зі сторін */
+    otp?: { owner?: PendingCode; renter?: PendingCode };
     signedAt?: Date;
   };
 

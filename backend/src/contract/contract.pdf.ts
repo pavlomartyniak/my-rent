@@ -49,7 +49,7 @@ export function renderContractPdf(terms: ContractTerms, hash: string, signatures
       doc.font(BOLD).fontSize(10.5).text(`${label}: ${name}`);
       if (sig) {
         doc.font(REGULAR).fontSize(10).fillColor('#0A7A3E').text(`Підписано електронно ${stamp(sig.at)}`);
-        doc.fillColor('#333333').text(`Спосіб: ${methodLabel(sig.method)}. Ідентифікатор підпису: ${sig.signatureId}`);
+        doc.fillColor('#333333').text(`Спосіб: ${methodLabel(sig.method)}${sig.email ? ` (${sig.email})` : ''}. Ідентифікатор підпису: ${sig.signatureId}`);
       } else {
         doc.font(REGULAR).fontSize(10).fillColor('#B45309').text('Очікує підпису');
       }
