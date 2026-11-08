@@ -43,7 +43,7 @@ function Action({ icon, title, tone, label, onPress }: { icon: IconName; title?:
       style={({ pressed }) => [styles.action, !title && styles.actionIcon, { backgroundColor: bg }, pressed && styles.pressed]}>
       <Icon name={icon} size={title ? 20 : 24} color={fg} />
       {title ? (
-        <ThemedText type="default" style={{ color: fg, fontWeight: 700, fontSize: 16 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+        <ThemedText type="default" style={{ color: fg, fontWeight: 600, fontSize: 15 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
           {title}
         </ThemedText>
       ) : null}
