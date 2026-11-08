@@ -120,10 +120,17 @@ export class AuthService {
     return generateCode();
   }
 
+  /**
+   * Надсилає лист із кодом. Якщо лист не пішов, «надіслано» скасовується: інакше користувач, який бачить помилку, не міг би
+   * повторити спробу ще хвилину, хоча жодного коду не отримав.
+   */
   private async deliver(email: string, code: string) {
     const sent = await this.mail.send(email, `Kolo: код підтвердження пошти ${code}`, `Ваш код для підтвердження пошти в Kolo: ${code}\n\nКод дійсний ${OTP_MINUTES} хвилин. Нікому його не повідомляйте. Якщо ви не реєструвались у Kolo, просто проігноруйте цей лист.`);
     // Локально (DEMO_MODE) лист лише потрапляє в журнал сервера, тож відсутність пошти там не є помилкою
-    if (!sent && this.config.get('DEMO_MODE') !== 'true') throw new ServiceUnavailableException('Не вдалося надіслати лист із кодом. Перевірте адресу й спробуйте за хвилину');
+    if (!sent && this.config.get('DEMO_MODE') !== 'true') {
+      await this.pending.updateOne({ email }, { $set: { sentAt: new Date(0) }, $inc: { sends: -1 } });
+      throw new ServiceUnavailableException('Не вдалося надіслати лист із кодом. Перевірте адресу й спробуйте ще раз');
+    }
   }
 
   async login(dto: LoginDto) {

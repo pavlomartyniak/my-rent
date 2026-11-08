@@ -16,12 +16,12 @@ function fakePending() {
   return {
     docs,
     findOne: (q: Record<string, unknown>) => exec(docs.find((d) => match(d, q)) ?? null),
-    updateOne: async (q: Record<string, unknown>, u: { $set?: Record<string, unknown>; $inc?: { attempts?: number } }, o?: { upsert?: boolean }) => {
+    updateOne: async (q: Record<string, unknown>, u: { $set?: Record<string, unknown>; $inc?: Record<string, number> }, o?: { upsert?: boolean }) => {
       let d = docs.find((x) => match(x, q));
       if (!d && o?.upsert) docs.push((d = { _id: ++id, ...q } as Doc));
       if (!d) return;
       Object.assign(d, u.$set ?? {});
-      if (u.$inc?.attempts) d.attempts += u.$inc.attempts;
+      for (const [k, n] of Object.entries(u.$inc ?? {})) (d as Record<string, unknown>)[k] = ((d as Record<string, unknown>)[k] as number) + n;
     },
     findOneAndDelete: (q: Record<string, unknown>) => {
       const i = docs.findIndex((x) => match(x, q));
@@ -44,11 +44,12 @@ function setup(opts: { mailOk?: boolean; existingEmail?: string } = {}) {
     toPublic: (u: unknown) => u,
   };
   const jwt = { signAsync: async () => 'token' };
-  const mail = { send: async (to: string, _s: string, text: string) => (outbox.push({ to, text }), opts.mailOk ?? true) };
+  const state = { mailOk: opts.mailOk ?? true };
+  const mail = { send: async (to: string, _s: string, text: string) => (outbox.push({ to, text }), state.mailOk) };
   const config = { get: () => undefined };
   const auth = new AuthService(users as never, jwt as never, mail as never, config as never, pending as never);
   const lastCode = () => /(\d{6})/.exec(outbox.at(-1)!.text)![1]!;
-  return { auth, pending, created, outbox, lastCode };
+  return { auth, pending, created, outbox, lastCode, state };
 }
 
 const form = { email: 'Pavlo@Example.com', password: 'password123', firstName: 'Павло', lastName: 'Мартиняк', phone: '', role: 'renter' };
@@ -146,6 +147,23 @@ describe('реєстрація з підтвердженням пошти', () =
   it('якщо лист не пішов, повертається помилка', async () => {
     const { auth } = setup({ mailOk: false });
     await assert.rejects(auth.register(form), (e: unknown) => e instanceof HttpException && e.getStatus() === 503);
+  });
+
+  it('після невдалої відправки повторити можна одразу, а не чекати хвилину', async () => {
+    const { auth, state, created, lastCode } = setup({ mailOk: false });
+    await assert.rejects(auth.register(form), (e: unknown) => e instanceof HttpException && e.getStatus() === 503);
+    state.mailOk = true; // пошту налаштували
+    await auth.register(form); // без 429 «Код уже надіслано»
+    await auth.verifyRegistration({ email: form.email, code: lastCode() });
+    assert.equal(created.length, 1);
+  });
+
+  it('невдалі відправки не з’їдають годинний ліміт листів', async () => {
+    const { auth, state, pending } = setup({ mailOk: false });
+    for (let i = 0; i < 7; i++) await assert.rejects(auth.register(form), (e: unknown) => e instanceof HttpException && e.getStatus() === 503);
+    state.mailOk = true;
+    await auth.register(form);
+    assert.equal(pending.docs[0]!.sends, 1);
   });
 
   it('повторне надсилання без форми — помилка', async () => {
