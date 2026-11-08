@@ -5,7 +5,7 @@ import { monthTitle, shiftMonth, todayISO } from '@/lib/date';
 
 import { ThemedText } from './themed-text';
 import { IconButton } from './ui/icon-button';
-import { Segmented } from './ui/segmented';
+import { SwitchTabs } from './ui/switch-tabs';
 
 const PERIODS = ['Місяць', 'Рік', 'Весь час'] as const;
 type Period = (typeof PERIODS)[number];
@@ -42,7 +42,7 @@ export function usePeriod() {
 export function PeriodSwitcher({ state }: { state: ReturnType<typeof usePeriod> }) {
   return (
     <View style={styles.wrap}>
-      <Segmented options={PERIODS} value={state.period} onChange={state.setPeriod} />
+      <SwitchTabs options={PERIODS} value={state.period} onChange={state.setPeriod} />
       {state.all ? null : (
         <View style={styles.stepper}>
           <IconButton icon="chevron-back" label="Назад" onPress={state.prev} />
