@@ -181,7 +181,7 @@ function CatalogList({ request }: { request: Exclude<PickerRequest, { kind: 'yea
         <SearchInput
           value={query}
           onChangeText={setQuery}
-          placeholder={request.kind === 'brand' ? 'Пошук марки: Skoda, шкода…' : 'Пошук моделі'}
+          placeholder={request.kind === 'brand' ? 'Пошук марки' : 'Пошук моделі'}
           autoFocus
         />
       </View>
@@ -289,7 +289,7 @@ function PlaceList({ request }: { request: Extract<PickerRequest, { kind: 'place
       <PickerHeader title={region ? region.name : request.allowRegion ? 'Місто або область' : 'Оберіть місто'} />
 
       <View style={styles.search}>
-        <SearchInput value={query} onChangeText={setQuery} placeholder={region ? `Пошук у ${region.name}` : 'Пошук міста: Львів, Біла Церква…'} />
+        <SearchInput value={query} onChangeText={setQuery} placeholder={region ? 'Пошук міста в області' : 'Пошук міста'} />
       </View>
 
       {!current ? (
