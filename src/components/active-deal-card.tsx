@@ -41,9 +41,9 @@ function Action({ icon, title, tone, label, onPress }: { icon: IconName; title?:
       accessibilityLabel={title ?? label}
       onPress={onPress}
       style={({ pressed }) => [styles.action, !title && styles.actionIcon, { backgroundColor: bg }, pressed && styles.pressed]}>
-      <Icon name={icon} size={22} color={fg} />
+      <Icon name={icon} size={title ? 20 : 24} color={fg} />
       {title ? (
-        <ThemedText type="default" style={{ color: fg, fontWeight: 700 }} numberOfLines={1}>
+        <ThemedText type="default" style={{ color: fg, fontWeight: 700, fontSize: 16 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
           {title}
         </ThemedText>
       ) : null}
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   stat: { flex: 1, borderRadius: Radius.lg, padding: Spacing.three, gap: 2 },
   statValue: { fontSize: 26, lineHeight: 32, fontWeight: 700 },
   actions: { flexDirection: 'row', gap: Spacing.two },
-  action: { flex: 1, minHeight: 56, borderRadius: Radius.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.two },
-  actionIcon: { flex: 0, width: 96 },
+  action: { flex: 1, minHeight: 56, borderRadius: Radius.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: Spacing.two },
+  actionIcon: { flex: 0, width: 56, paddingHorizontal: 0 },
   pressed: { opacity: 0.7, transform: [{ scale: 0.97 }] },
 });
