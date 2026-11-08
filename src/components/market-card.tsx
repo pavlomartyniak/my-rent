@@ -9,20 +9,8 @@ import type { MarketCar } from '@/lib/rentals';
 import { CarPhoto } from './car-photo';
 import { ThemedText } from './themed-text';
 import { Card } from './ui/card';
-import { Icon, type IconName } from './ui/icon';
-
-/** Дрібна характеристика авто: іконка й текст у сірій пігулці */
-function Chip({ icon, text }: { icon: IconName; text: string }) {
-  const theme = useTheme();
-  return (
-    <View style={[styles.chip, { backgroundColor: theme.backgroundSelected }]}>
-      <Icon name={icon} size={15} color="textSecondary" />
-      <ThemedText type="smallBold" numberOfLines={1}>
-        {text}
-      </ThemedText>
-    </View>
-  );
-}
+import { SpecChip } from './spec-chip';
+import { Icon } from './ui/icon';
 
 /** Оголошення в пошуку: велике фото з ціною за добу, назва з роком, місто, паливо й пробіг пігулками, застава */
 export function MarketCard({ car }: { car: MarketCar }) {
@@ -67,9 +55,9 @@ export function MarketCard({ car }: { car: MarketCar }) {
           </View>
 
           <View style={styles.chips}>
-            {car.city ? <Chip icon="location-outline" text={car.city} /> : null}
-            {car.fuel ? <Chip icon="color-fill-outline" text={car.fuel} /> : null}
-            {car.mileage ? <Chip icon="speedometer-outline" text={formatKm(car.mileage)} /> : null}
+            {car.city ? <SpecChip icon="location-outline" text={car.city} /> : null}
+            {car.fuel ? <SpecChip icon="color-fill-outline" text={car.fuel} /> : null}
+            {car.mileage ? <SpecChip icon="speedometer-outline" text={formatKm(car.mileage)} /> : null}
           </View>
 
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
@@ -104,7 +92,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   title: { fontWeight: 700, fontSize: 22, lineHeight: 28 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: Radius.pill },
   divider: { height: StyleSheet.hairlineWidth },
   deposit: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   bold: { fontWeight: 700 },
