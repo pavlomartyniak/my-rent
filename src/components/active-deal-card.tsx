@@ -41,9 +41,9 @@ function Action({ icon, title, tone, label, onPress }: { icon: IconName; title?:
       accessibilityLabel={title ?? label}
       onPress={onPress}
       style={({ pressed }) => [styles.action, !title && styles.actionIcon, { backgroundColor: bg }, pressed && styles.pressed]}>
-      <Icon name={icon} size={title ? 20 : 24} color={fg} />
+      <Icon name={icon} size={title ? 18 : 22} color={fg} />
       {title ? (
-        <ThemedText type="default" style={{ color: fg, fontWeight: 600, fontSize: 15 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+        <ThemedText type="default" style={{ color: fg, fontWeight: 600, fontSize: 14 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
           {title}
         </ThemedText>
       ) : null}
@@ -89,7 +89,7 @@ export function ActiveDealCard({ deal, month, overview }: Props) {
                 </Pill>
                 {days !== undefined && (stage === 'active' || stage === 'upcoming') ? (
                   <Pill>
-                    <ThemedText type="smallBold" themeColor="accent">
+                    <ThemedText type="smallBold" themeColor="accent" style={styles.pillText}>
                       {stage === 'upcoming' ? 'через' : 'ще'} {days} {plural(days, 'доба', 'доби', 'діб')}
                     </ThemedText>
                   </Pill>
@@ -103,7 +103,7 @@ export function ActiveDealCard({ deal, month, overview }: Props) {
                   {name}
                 </ThemedText>
                 {year ? (
-                  <ThemedText type="default" themeColor="textSecondary">
+                  <ThemedText type="small" themeColor="textSecondary">
                     {year}
                   </ThemedText>
                 ) : null}
@@ -113,7 +113,7 @@ export function ActiveDealCard({ deal, month, overview }: Props) {
                   <View style={[styles.fill, { backgroundColor: theme.accent, width: `${Math.max(2, Math.round(progress * 100))}%` }]} />
                 </View>
               ) : null}
-              <ThemedText type="default" themeColor="textSecondary">
+              <ThemedText type="small" themeColor="textSecondary">
                 {formatDate(deal.startDate)} – {formatDate(deal.endDate)}
               </ThemedText>
             </View>
@@ -165,18 +165,19 @@ const styles = StyleSheet.create({
   // Закруглюємо лише верх фото: overflow: hidden на картці прибрав би її тінь
   photo: { width: '100%', aspectRatio: 1.9, borderTopLeftRadius: 27, borderTopRightRadius: 27, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
   pills: { position: 'absolute', top: 14, left: 14, right: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  pill: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: Radius.pill },
+  pillText: { fontSize: 13, lineHeight: 18 },
+  pill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: Radius.pill },
   body: { paddingHorizontal: Spacing.three, gap: Spacing.three },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, marginTop: Spacing.three },
   flex: { flex: 1 },
-  title: { fontWeight: 700, fontSize: 24, lineHeight: 30 },
+  title: { fontWeight: 700, fontSize: 20, lineHeight: 26 },
   track: { height: 8, borderRadius: 4, overflow: 'hidden' },
   fill: { height: 8, borderRadius: 4 },
   stats: { flexDirection: 'row', gap: Spacing.two },
-  stat: { flex: 1, borderRadius: Radius.lg, padding: Spacing.three, gap: 2 },
-  statValue: { fontSize: 26, lineHeight: 32, fontWeight: 700 },
+  stat: { flex: 1, borderRadius: Radius.md, paddingVertical: Spacing.two + 4, paddingHorizontal: Spacing.three, gap: 2 },
+  statValue: { fontSize: 22, lineHeight: 28, fontWeight: 700 },
   actions: { flexDirection: 'row', gap: Spacing.two },
-  action: { flex: 1, minHeight: 56, borderRadius: Radius.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: Spacing.two },
-  actionIcon: { flex: 0, width: 56, paddingHorizontal: 0 },
+  action: { flex: 1, minHeight: 48, borderRadius: Radius.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: Spacing.two },
+  actionIcon: { flex: 0, width: 48, paddingHorizontal: 0 },
   pressed: { opacity: 0.7, transform: [{ scale: 0.97 }] },
 });

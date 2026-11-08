@@ -18,15 +18,15 @@ export function Screen({ tabs, gap = 20, contentContainerStyle, children, ...res
   // На iOS у екранах з хедером системні відступи додає сам ScrollView (automatic);
   // у табах хедера немає, тому там відступи рахуємо вручну, щоб не подвоювати їх.
   const ios = Platform.OS === 'ios';
-  const paddingTop = tabs ? insets.top + Spacing.three : Spacing.three;
-  const paddingBottom = tabs
-    ? BottomTabInset + insets.bottom + Spacing.three
-    : Spacing.five + (ios ? 0 : insets.bottom);
+  // iOS: у табах відступи (статус-бар угорі, таб-бар унизу) теж додає сам ScrollView: ручний відступ на першій вкладці
+  // подвоювався, і «Головна» виглядала опущеною нижче за інші вкладки
+  const paddingTop = tabs && !ios ? insets.top + Spacing.three : Spacing.three;
+  const paddingBottom = tabs ? (ios ? Spacing.five : BottomTabInset + insets.bottom + Spacing.three) : Spacing.five + (ios ? 0 : insets.bottom);
 
   return (
     <ScrollView
       style={{ backgroundColor: theme.background }}
-      contentInsetAdjustmentBehavior={tabs ? 'never' : 'automatic'}
+      contentInsetAdjustmentBehavior="automatic"
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
       // iOS: при відкритій клавіатурі додає знизу відступ і прокручує екран до активного поля, щоб його не закривало
