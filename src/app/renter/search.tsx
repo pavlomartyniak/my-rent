@@ -94,7 +94,7 @@ export default function SearchScreen() {
             {summary}
           </ThemedText>
         </View>
-        <Icon name={open ? 'chevron-up' : 'options-outline'} size={20} color="textSecondary" />
+        <Icon name={open ? 'chevron-up' : 'options-outline'} size={20} color="text" />
       </Pressable>
 
       {open ? (
@@ -125,15 +125,17 @@ export default function SearchScreen() {
         </Card>
       ) : null}
 
-      <Pressable accessibilityRole="button" onPress={() => router.push('/wanted/new')} style={[styles.ask, { backgroundColor: theme.backgroundSelected }]}>
-        <Icon name="create-outline" size={22} color="text" />
+      <Pressable accessibilityRole="button" onPress={() => router.push('/wanted/new')} style={[styles.ask, { backgroundColor: theme.accentSoft }]}>
+        <View style={[styles.askIcon, { backgroundColor: theme.backgroundElement }]}>
+          <Icon name="create-outline" size={22} color="accent" />
+        </View>
         <View style={styles.flex}>
-          <ThemedText type="smallBold">Не знайшли?</ThemedText>
+          <ThemedText type="smallBold">Не знайшли потрібне авто?</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            Опишіть авто, а власники самі запропонують
+            Опишіть його — власники самі запропонують
           </ThemedText>
         </View>
-        <Icon name="chevron-forward" size={18} color="textSecondary" />
+        <Icon name="chevron-forward" size={20} color="accent" />
       </Pressable>
 
       {error ? (
@@ -146,7 +148,7 @@ export default function SearchScreen() {
         />
       ) : (
         <>
-          <ThemedText type="small" themeColor="textSecondary">
+          <ThemedText type="smallBold" themeColor="textSecondary" style={styles.found}>
             Знайдено {total} {plural(total, 'оголошення', 'оголошення', 'оголошень')}
           </ThemedText>
           <View style={{ gap: Spacing.three }}>
@@ -166,5 +168,7 @@ const styles = StyleSheet.create({
   bar: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, borderRadius: Radius.pill, borderWidth: 1, paddingVertical: 12, paddingHorizontal: Spacing.three },
   shadow: { shadowColor: '#000000', shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   ask: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, borderRadius: Radius.lg, padding: Spacing.three },
+  askIcon: { width: 48, height: 48, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  found: { paddingHorizontal: Spacing.one },
   flex: { flex: 1 },
 });
