@@ -78,4 +78,4 @@ export type Reminder = {
 
 /** Публікація авто: перші авто безкоштовні, кожне наступне — разово за конкретне авто. Облік безкоштовний без ліміту */
 export const FREE_LISTINGS = 2;
-export const LISTING_PRICE = '1 ₴';
+export const LISTING_PRICE = '249 ₴';
