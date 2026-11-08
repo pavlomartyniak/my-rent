@@ -113,12 +113,7 @@ export default function DealScreen() {
         </View>
       )}
 
-      <RenterDealCard deal={d} overview={o} />
-
-      {!o ? (
-        <ReportStatus loading={report.loading} error={report.error} onRetry={report.retry} />
-      ) : (
-        <>
+      {o ? (
           <SummaryCard title="Прибуток за весь час" profit={o.profit} income={o.income} expense={o.expense} caption={o.elapsedDays > 0 ? `≈ ${formatMoney(o.avgProfitPerDay)} на добу` : undefined}>
             <Button
               title="Детальна аналітика"
@@ -128,7 +123,13 @@ export default function DealScreen() {
               onPress={() => router.push({ pathname: '/deals/analytics', params: { id: d.id } })}
             />
           </SummaryCard>
+      ) : (
+        <ReportStatus loading={report.loading} error={report.error} onRetry={report.retry} />
+      )}
 
+      <RenterDealCard deal={d} overview={o} />
+
+      {o ? (
           <Card style={styles.rentCard}>
             <ThemedText type="default" style={styles.cardTitle}>
               Платежі за оренду
@@ -155,8 +156,7 @@ export default function DealScreen() {
               ]}
             />
           </Card>
-        </>
-      )}
+      ) : null}
 
       <PaymentsCard deal={d} as="renter" />
 
