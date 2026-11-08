@@ -39,6 +39,22 @@ export class RegisterDto {
   password: string;
 }
 
+/** Підтвердження реєстрації кодом із листа */
+export class VerifyRegistrationDto {
+  @IsEmail({}, { message: 'Невірний формат email' })
+  @MaxLength(254)
+  email: string;
+
+  @Matches(/^\d{6}$/, { message: 'Код складається з 6 цифр' })
+  code: string;
+}
+
+export class ResendRegistrationDto {
+  @IsEmail({}, { message: 'Невірний формат email' })
+  @MaxLength(254)
+  email: string;
+}
+
 export class LoginDto {
   @IsEmail({}, { message: 'Невірний формат email' })
   email: string;

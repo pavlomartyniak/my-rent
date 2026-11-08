@@ -24,7 +24,7 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [doc, setDoc] = useState<'privacy' | 'terms' | null>(null);
-  const { login, register } = useAuth();
+  const { login, register, confirmRegistration, resendRegistration } = useAuth();
 
   const [mode, setMode] = useState<(typeof MODES)[number]>('Вхід');
   const [roleLabel, setRoleLabel] = useState<(typeof ROLES)[number]>(ROLES[0]);
@@ -36,6 +36,10 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [slow, setSlow] = useState(false);
+  // Після форми реєстрації: чекаємо код із листа
+  const [awaitingCode, setAwaitingCode] = useState(false);
+  const [code, setCode] = useState('');
+  const [wait, setWait] = useState(0);
 
   const signingUp = mode === 'Реєстрація';
   const validProfile = !!firstName.trim() && !!lastName.trim() && isValidPhone(phone);
@@ -51,13 +55,103 @@ export default function LoginScreen() {
     };
   }, [busy]);
 
+  // Лічильник до можливості надіслати код ще раз
+  useEffect(() => {
+    if (wait <= 0) return;
+    const timer = setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [wait]);
+
   async function submit() {
     if (!valid || busy) return;
     setBusy(true);
     setError(null);
-    const message = signingUp ? await register(email, password, { firstName, lastName, phone }, roleLabel === ROLES[0] ? 'owner' : 'renter') : await login(email, password);
+    if (signingUp) {
+      const res = await register(email, password, { firstName, lastName, phone }, roleLabel === ROLES[0] ? 'owner' : 'renter');
+      setBusy(false);
+      if (res.error) return setError(res.error);
+      setWait(res.resendInSeconds ?? 60);
+      setCode('');
+      setAwaitingCode(true);
+      return;
+    }
+    const message = await login(email, password);
     setBusy(false);
     if (message) setError(message);
+  }
+
+  async function confirmCode() {
+    if (code.length !== 6 || busy) return;
+    setBusy(true);
+    setError(null);
+    const message = await confirmRegistration(email, code);
+    setBusy(false);
+    if (message) setError(message);
+  }
+
+  async function resendCode() {
+    if (wait > 0 || busy) return;
+    setBusy(true);
+    setError(null);
+    const res = await resendRegistration(email);
+    setBusy(false);
+    if (res.error) return setError(res.error);
+    setWait(res.resendInSeconds ?? 60);
+    setCode('');
+  }
+
+  if (awaitingCode) {
+    return (
+      <Screen contentContainerStyle={{ paddingTop: insets.top + Spacing.four }} gap={Spacing.three}>
+        <View style={styles.header}>
+          <View style={styles.brand}>
+            <Image source={require('@/assets/images/kolo-mark.png')} style={styles.mark} accessibilityLabel="Kolo" />
+            <ThemedText type="subtitle" style={styles.wordmark}>
+              Kolo
+            </ThemedText>
+          </View>
+          <ThemedText type="subtitle" style={styles.hero}>
+            Підтвердіть пошту
+          </ThemedText>
+          <ThemedText type="default" themeColor="textSecondary">
+            Ми надіслали код на {email.trim()}. Акаунт створиться, щойно ви введете його. Перевірте також «Спам».
+          </ThemedText>
+        </View>
+
+        <Field
+          label="Код із листа"
+          value={code}
+          onChangeText={(t) => setCode(t.replace(/\D/g, '').slice(0, 6))}
+          keyboardType="number-pad"
+          textContentType="oneTimeCode"
+          autoComplete="one-time-code"
+          maxLength={6}
+          placeholder="000000"
+          autoFocus
+          style={styles.codeInput}
+          onSubmitEditing={() => void confirmCode()}
+        />
+        {error ? (
+          <ThemedText type="small" themeColor="negative" accessibilityRole="alert">
+            {error}
+          </ThemedText>
+        ) : null}
+        <Button title={busy ? 'Перевіряємо…' : 'Підтвердити й створити акаунт'} disabled={code.length !== 6 || busy} onPress={() => void confirmCode()} />
+        <Button title={wait > 0 ? `Надіслати код ще раз (${wait} с)` : 'Надіслати код ще раз'} variant="soft" disabled={wait > 0 || busy} onPress={() => void resendCode()} />
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            setAwaitingCode(false);
+            setError(null);
+          }}
+          hitSlop={8}
+          style={{ alignSelf: 'center' }}>
+          <ThemedText type="smallBold" themeColor="accent">
+            Змінити пошту чи дані
+          </ThemedText>
+        </Pressable>
+      </Screen>
+    );
   }
 
   return (
@@ -209,4 +303,5 @@ const styles = StyleSheet.create({
   roles: { flexDirection: 'row', gap: Spacing.two },
   roleCard: { flex: 1, borderRadius: Radius.lg, padding: Spacing.three, gap: 4 },
   center: { textAlign: 'center' },
+  codeInput: { fontSize: 28, letterSpacing: 8, textAlign: 'center', fontWeight: '700' },
 });

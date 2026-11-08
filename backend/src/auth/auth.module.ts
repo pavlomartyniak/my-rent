@@ -2,6 +2,9 @@ import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
+import { MongooseModule } from '@nestjs/mongoose';
+
+import { PendingRegistration, PendingRegistrationSchema } from '../schemas/pending-registration.schema';
 
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
@@ -12,6 +15,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 @Module({
   imports: [
     UsersModule,
+    MongooseModule.forFeature([{ name: PendingRegistration.name, schema: PendingRegistrationSchema }]),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
