@@ -64,7 +64,11 @@ export function SummaryCard({ title, profit, income, expense, note, change, marg
         <ThemedText style={styles.value} themeColor={profit >= 0 ? 'positive' : 'negative'} numberOfLines={1} adjustsFontSizeToFit>
           {formatMoney(profit)}
         </ThemedText>
-        {change !== undefined ? <DeltaChip change={change} /> : null}
+        {change !== undefined ? (
+          <View style={styles.delta}>
+            <DeltaChip change={change} />
+          </View>
+        ) : null}
       </View>
       {line ? (
         <ThemedText type="small" themeColor="textSecondary">
@@ -87,6 +91,7 @@ export function SummaryCard({ title, profit, income, expense, note, change, marg
 
 const styles = StyleSheet.create({
   card: { gap: Spacing.one, paddingVertical: Spacing.four, paddingHorizontal: Spacing.four },
+  delta: { alignSelf: 'center' },
   valueRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   value: { fontSize: 44, lineHeight: 52, fontWeight: 700, letterSpacing: -1, flexShrink: 1 },
   row: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.two },

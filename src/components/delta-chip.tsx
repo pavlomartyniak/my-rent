@@ -19,7 +19,7 @@ export function DeltaChip({ change, lowerIsBetter }: { change: number | null; lo
   return (
     <View style={[styles.chip, { backgroundColor: bg }]}>
       <ThemedText type="smallBold" style={[styles.text, { color: fg }]}>
-        {change === null ? 'немає даних' : `${rounded > 0 ? '▲ +' : rounded < 0 ? '▼ −' : '● '}${Math.abs(rounded)}%`}
+        {change === null ? 'немає даних' : `${rounded > 0 ? '▲ ' : rounded < 0 ? '▼ ' : '● '}${Math.abs(rounded)}%`}
       </ThemedText>
     </View>
   );
