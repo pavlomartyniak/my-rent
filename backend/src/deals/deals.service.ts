@@ -315,7 +315,11 @@ export class DealsService {
       `Ваш код для підписання договору № ${c.terms.number}: ${code}\n\nКод дійсний ${OTP_MINUTES} хвилин. Нікому його не повідомляйте. Якщо ви не підписуєте договір, просто проігноруйте цей лист.`,
     );
     // Локально (DEMO_MODE) лист лише потрапляє в журнал сервера, тож відсутність пошти там не є помилкою
-    if (!sent && this.config.get('DEMO_MODE') !== 'true') throw new ServiceUnavailableException('Не вдалося надіслати код на пошту. Спробуйте за хвилину');
+    if (!sent && this.config.get('DEMO_MODE') !== 'true') {
+      // Код не дійшов: скасовуємо «надіслано», щоб можна було одразу повторити
+      await this.deals.updateOne({ _id: deal._id }, { $unset: { [`contract.otp.${user.role}`]: '' } });
+      throw new ServiceUnavailableException('Не вдалося надіслати код на пошту. Спробуйте ще раз');
+    }
     return { email: maskEmail(account.email), expiresInMinutes: OTP_MINUTES, resendInSeconds: OTP_RESEND_SECONDS };
   }
 
