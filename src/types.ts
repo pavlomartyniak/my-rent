@@ -77,4 +77,4 @@ export type Reminder = {
 };
 
 /** Скільки авто власник може мати опублікованими одночасно. Облік без ліміту */
-export const MAX_LISTINGS = 3;
+export const MAX_LISTINGS = 5;

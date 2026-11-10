@@ -43,4 +43,4 @@ export type RentalStatus = (typeof RENTAL_STATUSES)[number];
 export const MAX_PHOTOS = 10;
 
 /** Бета-версія: власник може публікувати оголошення не більше ніж для цієї кількості авто. Облік безкоштовний без ліміту */
-export const MAX_LISTINGS = 3;
+export const MAX_LISTINGS = 5;
