@@ -81,8 +81,8 @@ export class Car {
   listing?: CarListing;
 
   /**
-   * Чим відкрито публікацію цього авто: free — одним із безкоштовних місць (в одного власника їх не більше FREE_LISTINGS), paid — разовою
-   * оплатою. Відкрита публікація лишається назавжди: зняти авто й опублікувати знову можна без доплати.
+   * Чи відкрито публікацію цього авто: free — воно займає одне з місць власника (їх не більше MAX_LISTINGS), paid — застаріле значення
+   * з часів платної публікації. Знімання з публікації звільняє місце; поки авто опубліковане, його можна редагувати без обмежень.
    */
   @Prop({ type: String, enum: ['free', 'paid'] })
   listingUnlock?: string;
@@ -90,7 +90,7 @@ export class Car {
   @Prop()
   listingUnlockedAt?: Date;
 
-  /** Номер безкоштовного місця (1…FREE_LISTINGS), яке займає авто: за ним унікальний індекс не пускає зайвих безкоштовних */
+  /** Номер місця (1…MAX_LISTINGS), яке займає авто: за ним унікальний індекс не пускає зайвих */
   @Prop()
   listingFreeSlot?: number;
 }
@@ -98,6 +98,6 @@ export class Car {
 export type CarDocument = HydratedDocument<Car>;
 export const CarSchema = SchemaFactory.createForClass(Car);
 // Пошук оголошень: опубліковані вільні авто за містом, найновіші першими
-// Кожне безкоштовне місце власника займає одне авто: той самий номер двічі дає помилку дубліката, тож гонки між запитами не дають зайвих безкоштовних
+// Кожне місце власника займає одне авто: той самий номер двічі дає помилку дубліката, тож гонки між запитами не дають зайвих місць
 CarSchema.index({ userId: 1, listingFreeSlot: 1 }, { unique: true, partialFilterExpression: { listingFreeSlot: { $exists: true } } });
 CarSchema.index({ 'listing.published': 1, status: 1, 'listing.cityKey': 1, 'listing.publishedAt': -1 });

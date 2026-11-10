@@ -15,6 +15,7 @@ import { Deal } from '../schemas/deal.schema';
 import { Offer, type OfferDocument } from '../schemas/offer.schema';
 import { RentalRequest } from '../schemas/rental-request.schema';
 import { User } from '../schemas/user.schema';
+import { releaseListingSlot } from '../cars/listing-access';
 import { WantedRequest, type WantedRequestDocument } from '../schemas/wanted-request.schema';
 import { wantedView } from '../wanted/wanted.service';
 import type { CreateOfferDto } from './offers.dto';
@@ -188,6 +189,7 @@ export class OffersService {
         car.driver = fullName(renter.firstName, renter.lastName);
         car.rentStart = w.startDate;
         if (car.listing) car.listing.published = false;
+        releaseListingSlot(car);
         await car.save({ session });
 
         offer.status = 'accepted';

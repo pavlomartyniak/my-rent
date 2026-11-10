@@ -1,5 +1,4 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 
@@ -13,7 +12,7 @@ import { NumberField } from '@/components/ui/number-field';
 import { Screen } from '@/components/ui/screen';
 import { api, ApiError } from '@/lib/api';
 import { useFleet } from '@/store/fleet';
-import { FREE_LISTINGS, LISTING_PRICE } from '@/types';
+import { MAX_LISTINGS } from '@/types';
 
 /** Оголошення про оренду: місто, ціна за добу й опис. Його бачать усі орендарі, поки авто вільне. */
 export default function ListingScreen() {
@@ -21,8 +20,8 @@ export default function ListingScreen() {
   const router = useRouter();
   const { cars, reload } = useFleet();
   const car = cars.find((c) => c.id === id);
-  // Перші авто публікуються безкоштовно; коли всі безкоштовні місця зайняті, кожне наступне відкривається разовою оплатою
-  const needsPayment = !!car && !car.listingUnlock && cars.filter((c) => c.id !== car.id && c.listingUnlock === 'free').length >= FREE_LISTINGS;
+  // Бета-версія: публікувати можна лише MAX_LISTINGS авто одночасно; авто, що вже опубліковане, можна редагувати без обмежень
+  const limitReached = !!car && !car.listingUnlock && cars.filter((c) => c.id !== car.id && c.listingUnlock).length >= MAX_LISTINGS;
 
   const [city, setCity] = useState(car?.listing?.city ?? '');
   const [price, setPrice] = useState(car?.listing ? String(car.listing.pricePerDay) : '');
@@ -30,7 +29,6 @@ export default function ListingScreen() {
   const [description, setDescription] = useState(car?.listing?.description ?? '');
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [waiting, setWaiting] = useState(false);
 
   if (!car) {
     return (
@@ -46,39 +44,12 @@ export default function ListingScreen() {
     price: Number(price) > 0 ? '' : 'Вкажіть ціну за добу',
   };
 
-  /**
-   * Оплата публікації: сервер створює рахунок WayForPay, застосунок відкриває сторінку оплати в браузері й чекає, поки платіжна система
-   * підтвердить гроші (сервер відкриє публікацію лише за підтвердженням, а не за натисканням «успіх»).
-   */
-  async function pay(carId: string) {
-    const start = await api<{ required: boolean; paid?: boolean; orderId?: string; pageUrl?: string }>('POST', `/payments/listing/${carId}`);
-    if (!start.required || start.paid) return true;
-    await WebBrowser.openBrowserAsync(start.pageUrl!);
-    setWaiting(true);
-    try {
-      for (let i = 0; i < 150; i++) {
-        const order = await api<{ status: string }>('GET', `/payments/orders/${start.orderId}`);
-        if (order.status === 'paid') return true;
-        if (order.status === 'failed') {
-          Alert.alert('Оплата не пройшла', 'Гроші не списано. Спробуйте ще раз.');
-          return false;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-      }
-      Alert.alert('Оплату ще не підтверджено', 'Якщо ви вже заплатили, зачекайте хвилину й натисніть кнопку ще раз: повторно платити не доведеться.');
-      return false;
-    } finally {
-      setWaiting(false);
-    }
-  }
-
   async function save() {
-    if (saving || !car) return;
+    if (saving || !car || limitReached) return;
     setSubmitted(true);
     if (errors.city || errors.price) return;
     setSaving(true);
     try {
-      if (needsPayment && !(await pay(car.id))) return;
       await api('PUT', `/cars/${car.id}/listing`, { city: city.trim(), pricePerDay: Number(price), deposit: Number(deposit) || 0, description: description.trim() });
       reload();
       router.back();
@@ -128,20 +99,20 @@ export default function ListingScreen() {
         placeholder="Стан авто, умови, ліміт пробігу…"
         style={{ minHeight: 110, paddingTop: 12, textAlignVertical: 'top' }}
       />
-      {needsPayment ? (
+      {limitReached ? (
         <Card>
           <ThemedText type="default" style={{ fontWeight: 600 }}>
-            Публікація цього авто: {LISTING_PRICE} разово
+            Ліміт бета-версії
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            Перші {FREE_LISTINGS} авто ви публікуєте безкоштовно, кожне наступне коштує {LISTING_PRICE} один раз за конкретне авто. Оплата відкриється на захищеній сторінці платіжної системи. Після оплати авто можна знімати з публікації й публікувати знову без доплати. Облік безкоштовний і без обмежень.
+            У бета-версії застосунку можна публікувати лише до {MAX_LISTINGS} авто. Щоб опублікувати це, зніміть з публікації одне з уже опублікованих авто. Облік авто, доходів і витрат не обмежений.
           </ThemedText>
         </Card>
       ) : null}
       <Button
-        title={waiting ? 'Чекаємо підтвердження оплати…' : saving ? 'Публікуємо…' : needsPayment ? `Сплатити ${LISTING_PRICE} і опублікувати` : car.listing?.published ? 'Зберегти оголошення' : 'Опублікувати'}
+        title={saving ? 'Публікуємо…' : limitReached ? 'Ліміт бета-версії: 3 авто' : car.listing?.published ? 'Зберегти оголошення' : 'Опублікувати'}
         icon="megaphone-outline"
-        disabled={saving}
+        disabled={saving || limitReached}
         onPress={save}
       />
     </Screen>

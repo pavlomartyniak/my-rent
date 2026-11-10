@@ -34,13 +34,6 @@ services:
         sync: false
       - key: MAIL_FROM
         sync: false
-      # WayForPay: дані магазину вводяться в панелі Render. Вебхук використовує адресу RENDER_EXTERNAL_URL
-      - key: WAYFORPAY_MERCHANT_ACCOUNT
-        sync: false
-      - key: WAYFORPAY_SECRET
-        sync: false
-      - key: WAYFORPAY_DOMAIN
-        sync: false
-      # false: вимикає «оплату» без грошей. Для тестування без налаштованого магазину можна тимчасово поставити true
+      # false: листи справді надсилаються. true лише для локальної розробки (лист пишеться в журнал)
       - key: DEMO_MODE
         value: "false"

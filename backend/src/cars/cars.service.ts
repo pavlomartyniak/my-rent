@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, HttpException, HttpStatus, Inje
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 
-import { FREE_LISTINGS, formatUah, LISTING_PRICE_UAH } from '../common/constants';
+import { MAX_LISTINGS } from '../common/constants';
 import { normalize } from '../common/normalize';
 import { MediaService } from '../media/media.service';
 import { Car } from '../schemas/car.schema';
@@ -12,14 +12,14 @@ import { Offer } from '../schemas/offer.schema';
 import { RentalRequest } from '../schemas/rental-request.schema';
 import { Transaction } from '../schemas/transaction.schema';
 import type { CreateCarDto, ListingDto, UpdateCarDto } from './cars.dto';
-import { freeSlot, listingAccess } from './listing-access';
+import { freeSlot, listingAccess, releaseListingSlot } from './listing-access';
 import { normalizePhotos } from './photos';
 
-/** Публікація цього авто ще не відкрита: безкоштовні місця вже зайняті іншими авто. Клієнт за кодом показує оплату */
-const paymentRequired = () =>
+/** Усі місця для публікації зайняті іншими авто (ліміт бета-версії). Клієнт за кодом показує пояснення */
+const listingLimit = () =>
   new HttpException(
-    { statusCode: HttpStatus.PAYMENT_REQUIRED, error: 'Payment Required', code: 'LISTING_PAYMENT_REQUIRED', price: LISTING_PRICE_UAH, message: `Перші ${FREE_LISTINGS} авто публікуються безкоштовно, кожне наступне коштує ${formatUah(LISTING_PRICE_UAH)} ₴ разово. Сплатіть публікацію цього авто, щоб продовжити` },
-    HttpStatus.PAYMENT_REQUIRED,
+    { statusCode: HttpStatus.FORBIDDEN, error: 'Forbidden', code: 'LISTING_LIMIT', limit: MAX_LISTINGS, message: `У бета-версії застосунку можна публікувати лише до ${MAX_LISTINGS} авто` },
+    HttpStatus.FORBIDDEN,
   );
 
 @Injectable()
@@ -39,7 +39,7 @@ export class CarsService {
   }
 
   async create(userId: string, dto: CreateCarDto) {
-    // Облік безкоштовний і без ліміту: платна лише публікація кожного наступного авто
+    // Облік без ліміту: у бета-версії обмежена лише кількість опублікованих авто
     return this.cars.create({ ...normalizePhotos(dto), userId });
   }
 
@@ -62,6 +62,7 @@ export class CarsService {
     // Авто, яке вже не вільне, не може лишатись в оголошеннях
     if (dto.status && dto.status !== 'Вільне' && car.listing?.published) {
       car.listing.published = false;
+      releaseListingSlot(car);
       await car.save();
     }
     return car;
@@ -77,14 +78,14 @@ export class CarsService {
     const cityKey = normalize(dto.city);
     if (!cityKey) throw new BadRequestException('Вкажіть місто');
 
-    // Публікація вже відкрита (безкоштовно чи оплатою), або авто займає вільне безкоштовне місце, або потрібна оплата
-    const freeUsed = car.listingUnlock ? 0 : await this.cars.countDocuments({ userId, listingUnlock: 'free', _id: { $ne: car._id } });
-    const access = listingAccess(car.listingUnlock, freeUsed, FREE_LISTINGS);
-    if (access === 'payment') throw paymentRequired();
+    // Публікація цього авто вже відкрита, або воно займає вільне місце, або місць (MAX_LISTINGS) уже немає
+    const used = car.listingUnlock ? 0 : await this.cars.countDocuments({ userId, listingUnlock: 'free', _id: { $ne: car._id } });
+    const access = listingAccess(car.listingUnlock, used, MAX_LISTINGS);
+    if (access === 'limit') throw listingLimit();
     if (access === 'free') {
       const taken = (await this.cars.find({ userId, listingFreeSlot: { $exists: true } }, 'listingFreeSlot').lean().exec()).map((c) => c.listingFreeSlot!);
-      const slot = freeSlot(taken, FREE_LISTINGS);
-      if (slot === null) throw paymentRequired();
+      const slot = freeSlot(taken, MAX_LISTINGS);
+      if (slot === null) throw listingLimit();
       car.listingUnlock = 'free';
       car.listingFreeSlot = slot;
       car.listingUnlockedAt = new Date();
@@ -102,32 +103,13 @@ export class CarsService {
     try {
       return await car.save();
     } catch (e) {
-      // Унікальний індекс: інший запит у цей же момент зайняв те саме безкоштовне місце
-      if (access === 'free' && (e as { code?: number }).code === 11000) throw new ConflictException('Не вдалося зайняти безкоштовне місце. Спробуйте ще раз');
+      // Унікальний індекс: інший запит у цей же момент зайняв те саме місце
+      if (access === 'free' && (e as { code?: number }).code === 11000) throw new ConflictException('Не вдалося зайняти місце для публікації. Спробуйте ще раз');
       throw e;
     }
   }
 
-  /** Чи треба платити за публікацію цього авто: безкоштовні місця зайняті, а саме воно ще не відкрите */
-  async listingNeedsPayment(userId: string, id: string) {
-    const car = await this.get(userId, id);
-    const freeUsed = car.listingUnlock ? 0 : await this.cars.countDocuments({ userId, listingUnlock: 'free', _id: { $ne: car._id } });
-    return listingAccess(car.listingUnlock, freeUsed, FREE_LISTINGS) === 'payment';
-  }
-
-  /**
-   * Відкриває публікацію цього авто разовою оплатою. Викликається лише після підтвердженої оплати (вебхук WayForPay)
-   * чи в демо-режимі. Повторний виклик для вже відкритого авто нічого не змінює.
-   */
-  async unlockListing(userId: string, id: string) {
-    const car = await this.get(userId, id);
-    if (car.listingUnlock) return car;
-    car.listingUnlock = 'paid';
-    car.listingUnlockedAt = new Date();
-    return car.save();
-  }
-
-  /** Знімає оголошення з публікації; дані оголошення зберігаються для повторної публікації */
+  /** Знімає оголошення з публікації й звільняє місце; дані оголошення зберігаються для повторної публікації */
   async unpublish(userId: string, id: string) {
     const car = await this.get(userId, id);
     if (car.listing) {

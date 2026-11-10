@@ -37,7 +37,7 @@ Expo сам вибирає файл за режимом (SDK 58 читає ли�
 ## Чек-лист нового середовища (прод)
 
 1. MongoDB Atlas: кластер, користувач бази, доступ з мережі, рядок підключення.
-2. Cloudinary, Resend (домен для листів), WayForPay (справжній мерчант) під окремим акаунтом.
+2. Cloudinary, Resend (домен для листів) під окремим акаунтом.
 3. Render: сервіс із гілки `main`, змінні: `MONGODB_URI`, `MONGODB_DB`, `JWT_SECRET` (новий, від 32 символів),
    `CLOUDINARY_*`, `RESEND_API_KEY`, `MAIL_FROM`, `NODE_VERSION=22`, `DEMO_MODE=false`, `MEDIA_SWEEP=true`.
 4. Адреса сервісу з Render у `.env.production` (корінь проєкту).

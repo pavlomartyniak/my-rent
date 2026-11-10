@@ -13,6 +13,7 @@ import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
 import { Offer } from '../schemas/offer.schema';
 import { RentalRequest, type RentalRequestDocument } from '../schemas/rental-request.schema';
+import { releaseListingSlot } from '../cars/listing-access';
 import { User } from '../schemas/user.schema';
 import type { CreateRentalDto } from './rentals.dto';
 import { fullName, maskedName, rentalDays, todayUtc, totalPrice, validateRange } from './rentals.math';
@@ -163,6 +164,7 @@ export class RentalsService {
         car.driver = fullName(renter.firstName, renter.lastName);
         car.rentStart = request.startDate;
         if (car.listing) car.listing.published = false;
+        releaseListingSlot(car);
         await car.save({ session });
 
         request.status = 'accepted';
