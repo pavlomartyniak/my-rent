@@ -4,6 +4,8 @@ import { ActivityIndicator, Alert, AppState, Linking, FlatList, Keyboard, Keyboa
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CarPhoto } from '@/components/car-photo';
+import { MoreMenu } from '@/components/more-menu';
+import { ReportSheet } from '@/components/report-sheet';
 import { StatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -14,6 +16,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/date';
 import { formatMoney } from '@/lib/format';
+import { confirmBlock, type ReportTarget } from '@/lib/moderation';
 import { clock, dayLabel, differentDays, newClientId, type ChatMessage, type ChatSummary, type MessagesPage } from '@/lib/chat';
 import { useChat, useChatEvents } from '@/store/chat';
 import { useFleet } from '@/store/fleet';
@@ -43,6 +46,7 @@ export default function ChatScreen() {
   const [text, setText] = useState('');
   const [typing, setTyping] = useState(false);
   const [keyboard, setKeyboard] = useState(false);
+  const [reporting, setReporting] = useState<ReportTarget | null>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTypingSent = useRef(0);
 
@@ -194,6 +198,14 @@ export default function ChatScreen() {
   }
   const contextTappable = !!chat && (!!chat.dealId || !!chat.source);
 
+  // Довге натискання на чуже повідомлення пропонує поскаржитись на нього
+  function reportMessage(m: ChatMessage) {
+    Alert.alert('Повідомлення', undefined, [
+      { text: 'Поскаржитись на повідомлення', style: 'destructive', onPress: () => setReporting({ kind: 'message', messageId: m.id }) },
+      { text: 'Скасувати', style: 'cancel' },
+    ]);
+  }
+
   const lastMineId = messages.find((m) => m.mine && !m.status)?.id;
   const readUntil = chat?.otherReadAt ? new Date(chat.otherReadAt).getTime() : 0;
 
@@ -213,6 +225,15 @@ export default function ChatScreen() {
         </View>
         {chat?.counterpart.phone ? (
           <IconButton icon="call" label={`Зателефонувати: ${chat.counterpart.phone}`} onPress={() => callPhone(chat.counterpart.phone!)} />
+        ) : null}
+        {chat ? (
+          <MoreMenu
+            label="Безпека"
+            actions={[
+              { title: 'Поскаржитись на користувача', icon: 'flag-outline', onPress: () => setReporting({ kind: 'user', userId: chat.counterpart.id }) },
+              { title: 'Заблокувати користувача', icon: 'ban-outline', destructive: true, onPress: () => confirmBlock({ userId: chat.counterpart.id }, chat.counterpart.name, () => router.back()) },
+            ]}
+          />
         ) : null}
         <IconButton icon="trash-outline" label="Видалити розмову" tone="neutral" onPress={confirmDelete} />
       </View>
@@ -297,8 +318,9 @@ export default function ChatScreen() {
                   ) : null}
                   <View style={[styles.line, item.mine ? styles.lineMine : styles.lineTheirs]}>
                     <Pressable
-                      disabled={!failed}
-                      onPress={() => retry(item)}
+                      disabled={!failed && (item.mine || !!item.status)}
+                      onPress={failed ? () => retry(item) : undefined}
+                      onLongPress={!item.mine && !item.status ? () => reportMessage(item) : undefined}
                       accessibilityLabel={failed ? 'Не надіслано. Натисніть, щоб повторити' : undefined}
                       style={[
                         styles.bubble,
@@ -355,6 +377,7 @@ export default function ChatScreen() {
           </View>
         )}
       </KeyboardAvoidingView>
+      <ReportSheet target={reporting} onClose={() => setReporting(null)} />
     </View>
   );
 }

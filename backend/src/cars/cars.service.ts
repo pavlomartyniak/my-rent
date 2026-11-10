@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 
@@ -18,7 +18,7 @@ import { normalizePhotos } from './photos';
 /** Усі місця для публікації зайняті іншими авто (ліміт бета-версії). Клієнт за кодом показує пояснення */
 const listingLimit = () =>
   new HttpException(
-    { statusCode: HttpStatus.FORBIDDEN, error: 'Forbidden', code: 'LISTING_LIMIT', limit: MAX_LISTINGS, message: `У бета-версії застосунку можна публікувати лише до ${MAX_LISTINGS} авто` },
+    { statusCode: HttpStatus.FORBIDDEN, error: 'Forbidden', code: 'LISTING_LIMIT', limit: MAX_LISTINGS, message: `Можна опублікувати до ${MAX_LISTINGS} авто одночасно. Зніміть з публікації одне з опублікованих, щоб опублікувати це` },
     HttpStatus.FORBIDDEN,
   );
 
@@ -71,6 +71,7 @@ export class CarsService {
   /** Публікує оголошення (або оновлює його): авто має бути вільним і мати фото, доступне іншим користувачам */
   async publish(userId: string, id: string, dto: ListingDto) {
     const car = await this.get(userId, id);
+    if (car.moderationHidden) throw new ForbiddenException('Оголошення приховано модератором після скарги. Напишіть на kolo.rentapp@gmail.com');
     if (car.status !== 'Вільне') throw new BadRequestException('Опублікувати можна лише авто зі статусом «Вільне»');
     if (!car.photoUri?.startsWith('https://')) {
       throw new BadRequestException('Для оголошення потрібне фото авто, завантажене на сервер. Додайте його в редагуванні авто.');

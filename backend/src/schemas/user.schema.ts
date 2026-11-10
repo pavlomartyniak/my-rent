@@ -4,13 +4,17 @@ import type { HydratedDocument } from 'mongoose';
 import { ROLES, THEMES } from '../common/constants';
 import { jsonOptions } from '../common/json-options';
 
-@Schema(jsonOptions([], ['passwordHash', 'resetCodeHash', 'resetExpires', 'resetAttempts']))
+@Schema(jsonOptions([], ['passwordHash', 'resetCodeHash', 'resetExpires', 'resetAttempts', 'suspended']))
 export class User {
   @Prop({ required: true, unique: true, lowercase: true, trim: true })
   email: string;
 
   @Prop({ required: true })
   passwordHash: string;
+
+  /** Акаунт призупинено модератором: вхід і запити закриті, оголошення приховані */
+  @Prop({ type: Boolean, default: false })
+  suspended: boolean;
 
   /** Код відновлення пароля (хеш), строк дії й кількість невдалих спроб */
   @Prop()

@@ -9,6 +9,7 @@ import { RealtimeService } from '../realtime/realtime.service';
 import { planError, type PaymentPlan } from '../deals/payment-plan';
 import { newDealData } from '../deals/deal-factory';
 import { dealStageOf } from '../deals/deal-stage';
+import { ModerationService } from '../moderation/moderation.service';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
 import { Offer } from '../schemas/offer.schema';
@@ -33,6 +34,7 @@ export class RentalsService {
     @InjectConnection() private readonly connection: Connection,
     private readonly chat: ChatService,
     private readonly realtime: RealtimeService,
+    private readonly moderation: ModerationService,
   ) {}
 
   async create(renterId: string, dto: CreateRentalDto) {
@@ -46,7 +48,8 @@ export class RentalsService {
     const car = await this.cars
       .findOne({ _id: dto.carId, 'listing.published': true, status: 'Вільне' })
       .exec();
-    if (!car || !car.listing) throw new NotFoundException('Оголошення більше недоступне');
+    if (!car || !car.listing || car.moderationHidden) throw new NotFoundException('Оголошення більше недоступне');
+    await this.moderation.assertNotBlocked(renterId, String(car.userId), 'Надіслати запит цьому власнику неможливо: один із вас заблокував іншого');
 
     const renter = await this.users.findById(renterId).exec();
     if (!renter) throw new NotFoundException('Користувача не знайдено');

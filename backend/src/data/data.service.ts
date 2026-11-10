@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { ClientSession, Model } from 'mongoose';
 
 import { MediaService } from '../media/media.service';
+import { ModerationService } from '../moderation/moderation.service';
 import { Car } from '../schemas/car.schema';
 import { Reminder } from '../schemas/reminder.schema';
 import { Conversation } from '../schemas/conversation.schema';
@@ -28,6 +29,7 @@ export class DataService {
     @InjectModel(Conversation.name) private readonly conversations: Model<Conversation>,
     @InjectModel(Message.name) private readonly messages: Model<Message>,
     private readonly media: MediaService,
+    private readonly moderation: ModerationService,
   ) {}
 
   /** Профіль, авто й нагадування одним запитом — для старту застосунку */
@@ -74,6 +76,7 @@ export class DataService {
     const chats = await this.conversations.find({ $or: [{ ownerId: userId }, { renterId: userId }] }, '_id').lean().exec();
     await this.messages.deleteMany({ conversationId: { $in: chats.map((c) => c._id) } });
     await this.conversations.deleteMany({ _id: { $in: chats.map((c) => c._id) } });
+    await this.moderation.purgeUser(userId);
     await this.users.deleteOne({ _id: userId });
     // Оренди, запити й чати, що тримали посилання на ці фото, вже видалено: тепер їх можна прибрати остаточно
     void this.media.release(photos);

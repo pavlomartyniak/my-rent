@@ -5,6 +5,7 @@ import { type Model, Types } from 'mongoose';
 import type { AuthUser } from '../common/current-user';
 import { dealStageOf } from '../deals/deal-stage';
 import { fullName, maskedName, todayUtc } from '../rentals/rentals.math';
+import { ModerationService } from '../moderation/moderation.service';
 import { Conversation, type ChatContext, type ConversationDocument } from '../schemas/conversation.schema';
 import { Deal } from '../schemas/deal.schema';
 import { Message, type MessageDocument } from '../schemas/message.schema';
@@ -37,6 +38,7 @@ export class ChatService implements OnModuleInit {
     @InjectModel(Deal.name) private readonly deals: Model<Deal>,
     @InjectModel(User.name) private readonly users: Model<User>,
     private readonly gateway: ChatGateway,
+    private readonly moderation: ModerationService,
   ) {
     gateway.chat = this;
   }
@@ -216,6 +218,7 @@ export class ChatService implements OnModuleInit {
     const text = cleanMessage(rawText);
     if (!text) throw new BadRequestException('Напишіть повідомлення');
     const c = await this.mineOrThrow(user, id);
+    await this.moderation.assertNotBlocked(String(c.ownerId), String(c.renterId), 'Писати цьому користувачу неможливо: один із вас заблокував іншого');
     if (!(await this.infoFor([c])).get(String(c._id))?.canSend) throw new ForbiddenException('Чат закрито: за цим запитом уже немає активної домовленості');
 
     // Повторна відправка з тим самим clientId повертає вже збережене повідомлення

@@ -5,6 +5,8 @@ import type { Request } from 'express';
 
 import type { Role } from '../common/constants';
 import { type AuthUser, IS_PUBLIC, ROLES_KEY } from '../common/current-user';
+import { SUSPENDED_MESSAGE } from '../moderation/moderation.constants';
+import { ModerationService } from '../moderation/moderation.service';
 
 /** Глобальний guard: усі маршрути закриті, крім позначених @Public() */
 @Injectable()
@@ -12,6 +14,7 @@ export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly jwt: JwtService,
     private readonly reflector: Reflector,
+    private readonly moderation: ModerationService,
   ) {}
 
   async canActivate(context: ExecutionContext) {
@@ -29,6 +32,8 @@ export class JwtAuthGuard implements CanActivate {
     } catch {
       throw new UnauthorizedException('Сесія завершилась, увійдіть знову');
     }
+    // Призупинений модератором акаунт втрачає доступ одразу, не чекаючи завершення токена
+    if (await this.moderation.isSuspended(user.id)) throw new UnauthorizedException(SUSPENDED_MESSAGE);
     req.user = user;
 
     const allowed = this.reflector.getAllAndOverride<Role[] | undefined>(ROLES_KEY, [context.getHandler(), context.getClass()]);

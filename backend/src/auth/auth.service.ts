@@ -9,6 +9,7 @@ import type { Model } from 'mongoose';
 
 import { generateCode, OTP_MAX_ATTEMPTS, OTP_MINUTES, OTP_RESEND_SECONDS, resendWait } from '../contract/contract.otp';
 import { MailService } from '../mail/mail.service';
+import { SUSPENDED_MESSAGE } from '../moderation/moderation.constants';
 import { PendingRegistration, type PendingRegistrationDocument } from '../schemas/pending-registration.schema';
 import { UsersService } from '../users/users.service';
 import type { LoginDto, RegisterDto, ResetPasswordDto, VerifyRegistrationDto } from './auth.dto';
@@ -137,6 +138,7 @@ export class AuthService {
     const user = await this.users.findByEmail(dto.email);
     const ok = await bcrypt.compare(dto.password, user?.passwordHash ?? DUMMY_HASH);
     if (!user || !ok) throw new UnauthorizedException('Невірний email або пароль');
+    if (user.suspended) throw new UnauthorizedException(SUSPENDED_MESSAGE);
     return this.session(user.id, user.role, this.users.toPublic(user));
   }
 

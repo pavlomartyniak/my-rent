@@ -10,7 +10,8 @@
     "start:prod": "node dist/main",
     "start:local-prod": "nest build && APP_ENV=production node dist/main",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test test/*.test.ts"
+    "test": "tsx --test test/*.test.ts",
+    "moderate": "tsx scripts/moderate.ts"
   },
   "dependencies": {
     "@nestjs/common": "^12.2.0",

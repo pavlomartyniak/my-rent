@@ -10,6 +10,7 @@ import { RealtimeService } from '../realtime/realtime.service';
 import { planError, type PaymentPlan } from '../deals/payment-plan';
 import { newDealData } from '../deals/deal-factory';
 import { dealStageOf } from '../deals/deal-stage';
+import { ModerationService } from '../moderation/moderation.service';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
 import { Offer, type OfferDocument } from '../schemas/offer.schema';
@@ -36,12 +37,14 @@ export class OffersService {
     @InjectConnection() private readonly connection: Connection,
     private readonly chat: ChatService,
     private readonly realtime: RealtimeService,
+    private readonly moderation: ModerationService,
   ) {}
 
   /** Власник пропонує своє вільне авто на заявку орендаря */
   async create(ownerId: string, wantedId: string, dto: CreateOfferDto) {
     const w = await this.wanted.findOne({ _id: wantedId, status: 'open', endDate: { $gte: todayUtc() } }).exec();
     if (!w) throw new NotFoundException('Заявка вже закрита або недоступна');
+    await this.moderation.assertNotBlocked(ownerId, String(w.renterId), 'Зробити пропозицію цьому орендарю неможливо: один із вас заблокував іншого');
 
     const car = await this.cars.findOne({ _id: dto.carId, userId: ownerId, status: 'Вільне' }).exec();
     if (!car) throw new NotFoundException('Авто не знайдено або воно не вільне');

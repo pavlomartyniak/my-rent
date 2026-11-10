@@ -7,6 +7,7 @@ import { RealtimeService } from '../realtime/realtime.service';
 import { escapeRegex, normalize } from '../common/normalize';
 import { maskedName, rentalDays, todayUtc, validateRange } from '../rentals/rentals.math';
 import { dealStageOf } from '../deals/deal-stage';
+import { ModerationService } from '../moderation/moderation.service';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
 import { Offer } from '../schemas/offer.schema';
@@ -47,6 +48,7 @@ export class WantedService {
     @InjectModel(Deal.name) private readonly deals: Model<Deal>,
     private readonly places: PlacesService,
     private readonly realtime: RealtimeService,
+    private readonly moderation: ModerationService,
   ) {}
 
   async create(renterId: string, dto: CreateWantedDto) {
@@ -105,6 +107,9 @@ export class WantedService {
   /** Дошка заявок для власників: відкриті й актуальні, за містом і маркою/моделлю */
   async board(ownerId: string, query: BoardQuery) {
     const filter: Record<string, unknown> = { status: 'open', endDate: { $gte: todayUtc() } };
+    // Заявки тих, кого ви заблокували або хто заблокував вас, не показуються
+    const blocked = await this.moderation.blockedWith(ownerId);
+    if (blocked.length) filter['renterId'] = { $nin: blocked };
     const cityKey = normalize(query.city ?? '');
     if (cityKey) filter['cityKey'] = { $regex: escapeRegex(cityKey) };
     else if (query.regionId !== undefined) filter['cityKey'] = { $in: this.places.cityKeysOfRegion(query.regionId) };

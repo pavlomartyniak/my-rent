@@ -6,6 +6,7 @@ import { PlacesService } from '../catalog/places.service';
 import { escapeRegex, normalize } from '../common/normalize';
 import { maskedName } from '../rentals/rentals.math';
 import { Car, type CarDocument } from '../schemas/car.schema';
+import { ModerationService } from '../moderation/moderation.service';
 import { RentalRequest } from '../schemas/rental-request.schema';
 import { User } from '../schemas/user.schema';
 
@@ -39,11 +40,17 @@ export class MarketService {
     @InjectModel(User.name) private readonly users: Model<User>,
     @InjectModel(RentalRequest.name) private readonly rentals: Model<RentalRequest>,
     private readonly places: PlacesService,
+    private readonly moderation: ModerationService,
   ) {}
 
   /** Вільні авто з опублікованими оголошеннями, найновіші першими */
   async search(query: MarketQuery, renterId?: string) {
-    const filter: Record<string, unknown> = { 'listing.published': true, status: 'Вільне' };
+    const filter: Record<string, unknown> = { 'listing.published': true, status: 'Вільне', moderationHidden: { $ne: true } };
+    // Оголошення тих, кого ви заблокували або хто заблокував вас, не показуються
+    if (renterId) {
+      const blocked = await this.moderation.blockedWith(renterId);
+      if (blocked.length) filter['userId'] = { $nin: blocked };
+    }
 
     const cityKey = normalize(query.city ?? '');
     if (cityKey) filter['listing.cityKey'] = { $regex: escapeRegex(cityKey) };
@@ -91,8 +98,8 @@ export class MarketService {
   }
 
   async get(id: string, renterId?: string) {
-    const car = await this.cars.findOne({ _id: id, 'listing.published': true, status: 'Вільне' }).exec();
-    if (!car) throw new NotFoundException('Оголошення не знайдено або вже недоступне');
+    const car = await this.cars.findOne({ _id: id, 'listing.published': true, status: 'Вільне', moderationHidden: { $ne: true } }).exec();
+    if (!car || (renterId && (await this.moderation.isBlocked(renterId, String(car.userId))))) throw new NotFoundException('Оголошення не знайдено або вже недоступне');
     const owners = await this.owners([car.userId]);
     const requests = await this.pendingRequests(renterId, [car._id]);
     return { ...publicView(car, owners.get(String(car.userId)) ?? ''), myRequest: requests.get(String(car._id)) ?? null };

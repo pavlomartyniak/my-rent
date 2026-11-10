@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Alert, View } from 'react-native';
+import { Alert, Linking, View } from 'react-native';
 
 import { ScreenTitle } from '@/components/screen-title';
 import { ThemedText } from '@/components/themed-text';
@@ -10,6 +10,7 @@ import { SettingsGroup, SettingsRow } from '@/components/ui/settings-group';
 import { Spacing } from '@/constants/theme';
 import { ExportSheet } from '@/components/export-sheet';
 import { LegalSheet } from '@/components/legal-sheet';
+import { LEGAL_CONTACT } from '@/lib/legal';
 import { fullName } from '@/lib/profile';
 import { ensureNotificationPermission } from '@/lib/notifications';
 import { useAuth } from '@/store/auth';
@@ -109,6 +110,13 @@ export default function SettingsScreen() {
       </SettingsGroup>
 
       <SettingsGroup title="Допомога">
+        <SettingsRow icon="ban-outline" title="Заблоковані користувачі" subtitle="Розблокувати можна тут" onPress={() => router.push('/blocked')} />
+        <SettingsRow
+          icon="mail-outline"
+          title="Написати нам"
+          subtitle={LEGAL_CONTACT}
+          onPress={() => Linking.openURL(`mailto:${LEGAL_CONTACT}`).catch(() => Alert.alert('Напишіть нам', LEGAL_CONTACT))}
+        />
         <SettingsRow
           icon="bulb-outline"
           title="Показати підказки знову"

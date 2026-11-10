@@ -22,6 +22,7 @@ npm run start:dev         # http://localhost:4000
 | `MONGODB_DB` | Назва бази (`my-rent`) |
 | `JWT_SECRET` | Секрет підпису токенів, мінімум 32 символи (`openssl rand -base64 48`) |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | дані Cloudinary для завантаження фото авто; без них `POST /media/upload-signature` відповідає 503 |
+| `MODERATION_EMAIL` | Куди надсилати листи про нові скарги (за замовчуванням `kolo.rentapp@gmail.com`) |
 | `DEMO_MODE` | `true` лише для розробки: листи не надсилаються, а пишуться в журнал сервера. **У продакшені — `false`** |
 
 Мобільний застосунок бере адресу API з `EXPO_PUBLIC_API_URL` (файл `.env.local` у корені). На реальному

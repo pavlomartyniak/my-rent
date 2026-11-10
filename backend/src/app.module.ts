@@ -19,6 +19,7 @@ import { MailModule } from './mail/mail.module';
 import { HealthController } from './health.controller';
 import { MarketModule } from './market/market.module';
 import { MediaModule } from './media/media.module';
+import { ModerationModule } from './moderation/moderation.module';
 import { RemindersModule } from './reminders/reminders.module';
 import { RentalsModule } from './rentals/rentals.module';
 import { ReportsModule } from './reports/reports.module';
@@ -66,6 +67,7 @@ import { WantedModule } from './wanted/wanted.module';
     MarketModule,
     RentalsModule,
     MediaModule,
+    ModerationModule,
     WantedModule,
     DataModule,
   ],

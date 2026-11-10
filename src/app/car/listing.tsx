@@ -20,7 +20,7 @@ export default function ListingScreen() {
   const router = useRouter();
   const { cars, reload } = useFleet();
   const car = cars.find((c) => c.id === id);
-  // Бета-версія: публікувати можна лише MAX_LISTINGS авто одночасно; авто, що вже опубліковане, можна редагувати без обмежень
+  // Публікувати можна лише MAX_LISTINGS авто одночасно; авто, що вже опубліковане, можна редагувати без обмежень
   const limitReached = !!car && !car.listingUnlock && cars.filter((c) => c.id !== car.id && c.listingUnlock).length >= MAX_LISTINGS;
 
   const [city, setCity] = useState(car?.listing?.city ?? '');
@@ -102,15 +102,15 @@ export default function ListingScreen() {
       {limitReached ? (
         <Card>
           <ThemedText type="default" style={{ fontWeight: 600 }}>
-            Ліміт бета-версії
+            Ліміт опублікованих авто
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            У бета-версії застосунку можна публікувати лише до {MAX_LISTINGS} авто. Щоб опублікувати це, зніміть з публікації одне з уже опублікованих авто. Облік авто, доходів і витрат не обмежений.
+            Можна опублікувати до {MAX_LISTINGS} авто одночасно. Щоб опублікувати це, зніміть з публікації одне з уже опублікованих авто. Облік авто, доходів і витрат не обмежений.
           </ThemedText>
         </Card>
       ) : null}
       <Button
-        title={saving ? 'Публікуємо…' : limitReached ? 'Ліміт бета-версії: 3 авто' : car.listing?.published ? 'Зберегти оголошення' : 'Опублікувати'}
+        title={saving ? 'Публікуємо…' : limitReached ? `Ліміт: ${MAX_LISTINGS} опубліковані авто` : car.listing?.published ? 'Зберегти оголошення' : 'Опублікувати'}
         icon="megaphone-outline"
         disabled={saving || limitReached}
         onPress={save}

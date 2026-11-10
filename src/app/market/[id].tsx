@@ -1,9 +1,10 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HeroButton } from '@/components/hero-button';
+import { ReportSheet } from '@/components/report-sheet';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { PhotoViewer } from '@/components/photo-viewer';
 import { ReportStatus } from '@/components/report-status';
@@ -18,6 +19,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { formatKm, formatMoney, initials } from '@/lib/format';
+import { confirmBlock } from '@/lib/moderation';
 import type { MarketCar } from '@/lib/rentals';
 
 /** Оголошення: фото, умови й закріплена внизу кнопка «Надіслати запит» */
@@ -27,6 +29,7 @@ export default function MarketCarScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [viewer, setViewer] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const { data: car, loading, error, retry } = useReport<MarketCar>(`/market/cars/${id}`, { useCache: false });
 
   if (!car) {
@@ -132,6 +135,24 @@ export default function MarketCarScreen() {
           </Card>
         ) : null}
 
+        <View style={styles.safety}>
+          <Pressable accessibilityRole="button" onPress={() => setReporting(true)} style={({ pressed }) => [styles.safetyLink, pressed && { opacity: 0.6 }]}>
+            <Icon name="flag-outline" size={16} color="textSecondary" />
+            <ThemedText type="small" themeColor="textSecondary">
+              Поскаржитись на оголошення
+            </ThemedText>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => confirmBlock({ carId: car.id }, car.owner, () => router.back())}
+            style={({ pressed }) => [styles.safetyLink, pressed && { opacity: 0.6 }]}>
+            <Icon name="ban-outline" size={16} color="textSecondary" />
+            <ThemedText type="small" themeColor="textSecondary">
+              Заблокувати власника
+            </ThemedText>
+          </Pressable>
+        </View>
+
         {car.myRequest ? (
           <Card style={styles.card}>
             <ThemedText type="default" style={styles.bold} themeColor="positive">
@@ -157,6 +178,7 @@ export default function MarketCarScreen() {
         )}
       </View>
 
+      <ReportSheet target={reporting ? { kind: 'listing', carId: car.id } : null} onClose={() => setReporting(false)} />
       {viewer ? <PhotoViewer photos={photos} startIndex={0} onClose={() => setViewer(false)} /> : null}
     </View>
   );
@@ -171,6 +193,8 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   title: { fontSize: 30, lineHeight: 36 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  safety: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.four, justifyContent: 'center', paddingVertical: Spacing.two },
+  safetyLink: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: Spacing.one },
   card: { gap: Spacing.three, padding: Spacing.four, borderRadius: 28 },
   price: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.two },
   priceValue: { fontSize: 36, lineHeight: 44, fontWeight: 700, letterSpacing: -0.5 },
