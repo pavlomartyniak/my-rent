@@ -97,19 +97,19 @@ describe('автоматичні платежі за договором', () => 
   });
 });
 
-import { buildSchedule, planError } from '../src/deals/payment-plan';
+import { addMonths, buildSchedule, planError } from '../src/deals/payment-plan';
 
 describe('план оплати', () => {
   it('одразу: один платіж у день початку на всю суму', () => assert.deepEqual(buildSchedule('2026-11-01', '2026-11-11', 500, 'lump'), [{ n: 1, dueDate: '2026-11-01', days: 10, amount: 5000 }]));
-  it('щомісяця: 90 діб = три рівні платежі кожні 30 діб', () => {
+  it('щомісяця: три платежі за календарні місяці, довжина залежить від місяця', () => {
     const s = buildSchedule('2026-11-01', '2027-01-30', 100, 'monthly');
     assert.equal(s.length, 3);
-    assert.deepEqual(s.map((p) => p.dueDate), ['2026-11-01', '2026-12-01', '2026-12-31']);
-    assert.deepEqual(s.map((p) => p.amount), [3000, 3000, 3000]);
+    assert.deepEqual(s.map((p) => p.dueDate), ['2026-11-01', '2026-12-01', '2027-01-01']);
+    assert.deepEqual(s.map((p) => p.amount), [3000, 3100, 2900]);
   });
   it('щомісяця: останній платіж на залишок, сума збігається з вартістю', () => {
     const s = buildSchedule('2026-11-01', '2027-01-15', 100, 'monthly'); // 75 діб
-    assert.deepEqual(s.map((p) => p.days), [30, 30, 15]);
+    assert.deepEqual(s.map((p) => p.days), [30, 31, 14]);
     assert.equal(s.reduce((n, p) => n + p.amount, 0), 7500);
   });
   it('щотижня: платіж за кожні 7 діб наперед, перший у день передачі, останній на залишок', () => {
@@ -133,14 +133,41 @@ describe('план оплати', () => {
     assert.equal(planError('daily', '2026-11-01', '2026-11-03'), null);
   });
   it('одразу підходить для будь-якого строку', () => assert.equal(planError('lump', '2026-11-01', '2026-11-02'), null));
-  it('щомісяця більше не можна обрати', () => assert.ok(planError('monthly', '2026-11-01', '2027-03-01')));
+  it('щодня недоступно для оренди довшої за календарний місяць', () => {
+    assert.equal(planError('daily', '2026-11-01', '2026-12-01'), null); // рівно місяць
+    assert.ok(planError('daily', '2026-11-01', '2026-12-02')); // місяць і доба
+    assert.equal(planError('daily', '2026-01-01', '2026-02-01'), null); // 31 доба, але рівно місяць
+  });
+  it('щомісяця лише для оренди довшої за календарний місяць', () => {
+    assert.ok(planError('monthly', '2026-11-01', '2026-12-01'));
+    assert.equal(planError('monthly', '2026-11-01', '2026-12-02'), null);
+    assert.equal(planError('monthly', '2026-11-01', '2027-03-01'), null);
+    assert.equal(planError('weekly', '2026-11-01', '2027-03-01'), null);
+    assert.equal(planError('lump', '2026-11-01', '2027-03-01'), null);
+  });
+  it('addMonths: кінець місяця не вилазить за місяць', () => {
+    assert.equal(addMonths('2026-01-31', 1), '2026-02-28');
+    assert.equal(addMonths('2028-01-31', 1), '2028-02-29');
+    assert.equal(addMonths('2026-11-15', 2), '2027-01-15');
+    assert.equal(addMonths('2026-12-31', 2), '2027-02-28');
+  });
+  it('щомісячний графік: календарні місяці, останній на залишок', () => {
+    const s = buildSchedule('2026-11-01', '2027-01-15', 1000, 'monthly');
+    assert.deepEqual(s.map((x) => [x.dueDate, x.days, x.amount]), [['2026-11-01', 30, 30000], ['2026-12-01', 31, 31000], ['2027-01-01', 14, 14000]]);
+    assert.equal(s.reduce((a, x) => a + x.days, 0), 75);
+  });
+  it('щомісячний графік від 31 числа не зсувається', () => {
+    const s = buildSchedule('2026-01-31', '2026-04-10', 100, 'monthly');
+    assert.deepEqual(s.map((x) => x.dueDate), ['2026-01-31', '2026-02-28', '2026-03-31']);
+    assert.equal(s.reduce((a, x) => a + x.days, 0), 69);
+  });
   it('договір містить графік платежів', () => {
     const t = buildTerms({
       number: 'MR-1', createdAt: new Date('2026-10-25T10:00:00Z'), city: 'Львів', owner: { name: 'А', phone: '' }, renter: { name: 'Б', phone: '' },
       car: { title: 'X', brand: 'X', model: 'X', year: 2020, vin: '', mileage: 1 }, startDate: '2026-11-01', endDate: '2027-01-30', pricePerDay: 100, paymentPlan: 'monthly',
     });
     const text = buildSections(t).flatMap((s) => s.paragraphs).join('\n');
-    assert.ok(text.includes('Платіж 1: 01.11.2026') && text.includes('Платіж 3: 31.12.2026') && text.includes('щомісяця'));
+    assert.ok(text.includes('Платіж 1: 01.11.2026') && text.includes('Платіж 3: 01.01.2027') && text.includes('щомісяця'));
   });
   const termsFor = (paymentPlan: 'weekly' | 'daily', endDate: string) =>
     buildSections(

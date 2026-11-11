@@ -71,7 +71,7 @@ export default function OfferScreen() {
     if (priceError) return;
     setSending(true);
     try {
-      const res = await api<{ chatId: string | null }>('POST', `/wanted/${wanted!.id}/offers`, { carId: car.id, pricePerDay: Number(price), message: message.trim(), paymentPlan: effectivePlan(wanted?.days ?? 0, plan) });
+      const res = await api<{ chatId: string | null }>('POST', `/wanted/${wanted!.id}/offers`, { carId: car.id, pricePerDay: Number(price), message: message.trim(), paymentPlan: effectivePlan(wanted!.startDate, wanted!.endDate, plan) });
       invalidate();
       router.back();
       // Пропозиція вже лежить у чаті з орендарем: відкриваємо його, щоб можна було одразу домовитись
@@ -129,7 +129,7 @@ export default function OfferScreen() {
         maxDigits={7}
         placeholder={suggestion ? String(suggestion) : '1 200'}
       />
-      <PaymentPlanPicker days={wanted.days} value={plan} onChange={setPlan} />
+      <PaymentPlanPicker startDate={wanted.startDate} endDate={wanted.endDate} value={plan} onChange={setPlan} />
 
       <Field
         label="Повідомлення орендарю (необов’язково)"

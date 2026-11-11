@@ -6,20 +6,22 @@ import { availablePlans, effectivePlan, type ChoosablePlan } from '@/lib/payment
 import { ThemedText } from './themed-text';
 import { Segmented } from './ui/segmented';
 
-const LABELS: Record<ChoosablePlan, string> = { lump: 'Одразу вся сума', weekly: 'Щотижня', daily: 'Щодня' };
+const LABELS: Record<ChoosablePlan, string> = { lump: 'Одразу вся сума', weekly: 'Щотижня', daily: 'Щодня', monthly: 'Щомісяця' };
 const HINTS: Record<ChoosablePlan, string> = {
   lump: 'Орендар сплачує всю суму під час передачі авто.',
   weekly: 'Орендар платить за кожні 7 діб наперед: перший платіж під час передачі авто. Збігається з тижневими виплатами Bolt, Uber чи Uklon. Графік потрапить у договір.',
   daily: 'Орендар платить за кожну добу наперед: перший платіж під час передачі авто. Графік потрапить у договір.',
+  monthly: 'Орендар платить за кожен календарний місяць наперед (від дати передачі до такого ж числа наступного місяця): перший платіж під час передачі авто, останній — за залишок. Графік потрапить у договір.',
 };
 
 /**
- * Вибір плану оплати в запиті чи пропозиції. Щотижня можна платити за оренду довшу за 7 діб, щодня — від 2 діб.
+ * Вибір плану оплати в запиті чи пропозиції. Щотижня можна платити за оренду довшу за 7 діб, щодня — від 2 діб,
+ * щомісяця — за оренду довшу за календарний місяць (для неї щодня недоступно).
  * Для однієї доби вибору немає: оплачується вся сума одразу, це видно під блоком.
  */
-export function PaymentPlanPicker({ days, value, onChange }: { days: number; value: ChoosablePlan; onChange: (plan: ChoosablePlan) => void }) {
-  const options = availablePlans(days);
-  const plan = effectivePlan(days, value);
+export function PaymentPlanPicker({ startDate, endDate, value, onChange }: { startDate: string; endDate: string; value: ChoosablePlan; onChange: (plan: ChoosablePlan) => void }) {
+  const options = availablePlans(startDate, endDate);
+  const plan = effectivePlan(startDate, endDate, value);
 
   return (
     <View style={{ gap: Spacing.one }}>

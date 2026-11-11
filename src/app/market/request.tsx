@@ -59,7 +59,7 @@ export default function RentalRequestScreen() {
     if (sending || !car) return;
     setSending(true);
     try {
-      const res = await api<{ chatId: string | null }>('POST', '/rentals', { carId: car.id, startDate: start, endDate: end, message: message.trim(), paymentPlan: effectivePlan(days, plan) });
+      const res = await api<{ chatId: string | null }>('POST', '/rentals', { carId: car.id, startDate: start, endDate: end, message: message.trim(), paymentPlan: effectivePlan(start, end, plan) });
       invalidate();
       router.dismissAll();
       router.navigate('/renter/requests');
@@ -107,7 +107,7 @@ export default function RentalRequestScreen() {
         </View>
       ) : null}
 
-      <PaymentPlanPicker days={days} value={plan} onChange={setPlan} />
+      <PaymentPlanPicker startDate={start} endDate={end} value={plan} onChange={setPlan} />
 
       <Field
         label="Повідомлення власнику (необов’язково)"
