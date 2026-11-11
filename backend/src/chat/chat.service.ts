@@ -354,13 +354,15 @@ export class ChatService implements OnModuleInit {
 
   private async summaries(user: AuthUser, items: ConversationDocument[]) {
     const role = user.role;
-    const [people, info] = await Promise.all([this.people(items.map((c) => (role === 'owner' ? c.renterId : c.ownerId))), this.infoFor(items)]);
+    const [people, info, blocks] = await Promise.all([this.people(items.map((c) => (role === 'owner' ? c.renterId : c.ownerId))), this.infoFor(items), this.moderation.blockDirections(user.id)]);
     const other: Side = role === 'owner' ? 'renter' : 'owner';
     const fallback = role === 'owner' ? 'Орендар' : 'Власник';
     return items.map((c) => {
       const otherId = role === 'owner' ? c.renterId : c.ownerId;
       const p = people.get(String(otherId));
       const i = info.get(String(c._id))!;
+      const blockedByMe = blocks.byMe.has(String(otherId));
+      const blocked = blockedByMe || blocks.byThem.has(String(otherId));
       const name = p ? (i.full ? fullName(p.firstName, p.lastName) : maskedName(p.firstName, p.lastName)) || fallback : fallback;
       const cleared = c.clearedAt?.[role];
       const last = c.lastMessage && (!cleared || c.lastMessage.at > cleared) ? c.lastMessage : null;
@@ -389,7 +391,10 @@ export class ChatService implements OnModuleInit {
         unread: c.unread?.[role] ?? 0,
         /** Коли співрозмовник востаннє читав чат: за цим застосунок показує «прочитано» */
         otherReadAt: c.lastReadAt?.[other] ?? null,
-        canSend: i.canSend,
+        // Блокування в будь-який бік закриває написання. Заблокований не бачить, хто саме заблокував: blockedByMe лише для автора блокування
+        canSend: i.canSend && !blocked,
+        blocked,
+        blockedByMe,
         lastActivityAt: c.lastActivityAt,
       };
     });

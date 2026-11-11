@@ -23,6 +23,9 @@ export type ChatSummary = {
   otherReadAt: string | null;
   /** false — активної домовленості вже немає, чат лише для читання */
   canSend: boolean;
+  /** Між вами є блокування в будь-який бік; blockedByMe — заблокували ви (заблокований не бачить, хто саме) */
+  blocked: boolean;
+  blockedByMe: boolean;
   lastActivityAt: string;
 };
 

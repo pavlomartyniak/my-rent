@@ -61,6 +61,18 @@ export class ModerationService {
     return counterpartIds(userId, rows);
   }
 
+  /** З ким у користувача є блокування й у який бік: byMe — заблокував він, byThem — заблокували його */
+  async blockDirections(userId: string): Promise<{ byMe: Set<string>; byThem: Set<string> }> {
+    const rows = await this.blocks.find({ $or: [{ blockerId: userId }, { blockedId: userId }] }).lean().exec();
+    const byMe = new Set<string>();
+    const byThem = new Set<string>();
+    for (const b of rows) {
+      if (String(b.blockerId) === userId) byMe.add(String(b.blockedId));
+      else byThem.add(String(b.blockerId));
+    }
+    return { byMe, byThem };
+  }
+
   async isBlocked(a: string, b: string) {
     return !!(await this.blocks.exists({ $or: [{ blockerId: a, blockedId: b }, { blockerId: b, blockedId: a }] }));
   }

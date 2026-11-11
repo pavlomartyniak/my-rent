@@ -10,6 +10,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
+import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -349,7 +350,22 @@ export default function ChatScreen() {
           />
         )}
 
-        {chat && !chat.canSend ? (
+        {chat?.blocked ? (
+          <View style={[styles.closed, { backgroundColor: theme.backgroundElement, borderTopColor: theme.border, paddingBottom: Math.max(insets.bottom, Spacing.two), gap: Spacing.two }]}>
+            <ThemedText type="small" themeColor="textSecondary" style={styles.closedText}>
+              {chat.blockedByMe ? 'Ви заблокували цього користувача, тому писати йому не можна. Історію можна читати.' : 'Писати цьому користувачу неможливо. Історію можна читати.'}
+            </ThemedText>
+            {chat.blockedByMe ? (
+              <Button
+                title="Розблокувати"
+                variant="secondary"
+                onPress={() => {
+                  api('DELETE', `/moderation/blocks/${chat.counterpart.id}`).then(load, (e) => Alert.alert('Не вдалося розблокувати', e instanceof ApiError ? e.message : 'Спробуйте ще раз'));
+                }}
+              />
+            ) : null}
+          </View>
+        ) : chat && !chat.canSend ? (
           <View style={[styles.closed, { backgroundColor: theme.backgroundElement, borderTopColor: theme.border, paddingBottom: Math.max(insets.bottom, Spacing.two) }]}>
             <ThemedText type="small" themeColor="textSecondary" style={styles.closedText}>
               Чат закрито: між вами вже немає активного запиту чи оренди. Історію можна читати.
