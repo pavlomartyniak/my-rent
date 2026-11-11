@@ -36,7 +36,7 @@ export class LegalService {
       const what = license.length ? 'заповнити дані для договору та посвідчення водія' : plate.length ? 'заповнити дані для договору та вказати державний номер авто' : 'заповнити дані для договору';
       throw legalIncomplete(`${lead} ${what}`, [...identity, ...license, ...plate], 'me');
     }
-    if (license.length) throw legalIncomplete(`${lead} додати в профілі дані посвідчення водія: серію, номер, категорії та строк дії. Це потрібно для договору`, license, 'license');
+    if (license.length) throw legalIncomplete(`${lead} додати в профілі дані посвідчення водія: серію, номер і строк дії. Це потрібно для договору`, license, 'license');
     if (covers) throw legalIncomplete(covers, [covers], 'license');
     if (plate.length) throw legalIncomplete(`${lead} вказати державний номер авто. Це потрібно для договору`, plate, 'car');
   }

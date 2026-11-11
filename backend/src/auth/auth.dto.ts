@@ -30,7 +30,7 @@ export class RegisterDto {
   /** Посвідчення водія при реєстрації орендаря: необов'язкове, але якщо вказане, то повністю й чинне */
   @IsOptional()
   @IsObject()
-  license?: { series?: string; number?: string; categories?: string[]; validUntil?: string };
+  license?: { series?: string; number?: string; validUntil?: string };
 
   @IsEmail({}, { message: 'Невірний формат email' })
   @MaxLength(254)

@@ -8,9 +8,6 @@ export type PartyType = (typeof PARTY_TYPES)[number];
 export const ID_DOC_TYPES = ['passport_book', 'id_card'] as const;
 export type IdDocType = (typeof ID_DOC_TYPES)[number];
 
-/** Категорії посвідчення водія */
-export const LICENSE_CATEGORIES = ['A1', 'A', 'B1', 'B', 'C1', 'C', 'D1', 'D', 'BE', 'C1E', 'CE', 'D1E', 'DE', 'T'] as const;
-
 export type LegalProfile = {
   /** Статус сторони: фізична особа чи ФОП; записується в договір (п. 1.3) */
   partyType: PartyType;
@@ -23,7 +20,7 @@ export type LegalProfile = {
   idDoc: { type: IdDocType; series: string; number: string; issuedBy: string; issuedAt: string };
   address: string;
   /** Посвідчення водія: обов'язкове для орендаря; validUntil — строк дії, YYYY-MM-DD */
-  license?: { series: string; number: string; categories: string[]; validUntil: string };
+  license?: { series: string; number: string; validUntil: string; /** Лише в договорах, складених, коли категорії ще збирались */ categories?: string[] };
 };
 
 /** Дані авто для договору: державний номер (обов'язковий) і колір (необов'язковий) */
@@ -73,22 +70,20 @@ export function normalizeLegal(input: Partial<LegalProfile> & Record<string, unk
 
 /** Посвідчення водія в єдиному вигляді; undefined, якщо нічого не введено */
 export function normalizeLicense(input: Partial<NonNullable<LegalProfile['license']>> | undefined | null): NonNullable<LegalProfile['license']> | undefined {
-  if (!input || (!input.series && !input.number && !input.categories?.length && !input.validUntil)) return undefined;
+  if (!input || (!input.series && !input.number && !input.validUntil)) return undefined;
   return {
     series: compact(input.series),
     number: cap(input.number, 20).replace(/\s/g, ''),
-    categories: [...new Set((input.categories ?? []).slice(0, 20).map((c) => up(c)))],
     validUntil: cap(input.validUntil, 10),
   };
 }
 
-/** Що не так з посвідченням водія (серія, номер, категорії, строк дії); порожній список — усе гаразд */
+/** Що не так з посвідченням водія (серія, номер, строк дії); порожній список — усе гаразд */
 export function licenseProblems(raw: LegalProfile['license'] | undefined | null, today: string): string[] {
   const l = normalizeLicense(raw);
   const out: string[] = [];
   if (!l || !SERIES_LICENSE.test(l.series)) out.push('Серія посвідчення водія: 2–3 літери');
   if (!l || !/^\d{6}$/.test(l.number)) out.push('Номер посвідчення водія: 6 цифр');
-  if (!l || !l.categories.length || l.categories.some((c) => !(LICENSE_CATEGORIES as readonly string[]).includes(c))) out.push('Оберіть категорії посвідчення водія');
   if (!l || !/^\d{4}-\d{2}-\d{2}$/.test(l.validUntil) || Number.isNaN(Date.parse(l.validUntil))) out.push('Вкажіть, до якої дати діє посвідчення водія');
   else if (l.validUntil < today) out.push('Посвідчення водія прострочено: оновіть його дані');
   return out;

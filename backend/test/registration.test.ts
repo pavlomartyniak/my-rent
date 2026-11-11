@@ -121,16 +121,16 @@ describe('реєстрація з підтвердженням пошти', () =
 
   it('повне чинне посвідчення зберігається в профілі після підтвердження пошти', async () => {
     const { auth, created, lastCode } = setup();
-    const license = { series: 'ааа', number: '123456', categories: ['b'], validUntil: '2099-01-01' };
+    const license = { series: 'ааа', number: '123456', validUntil: '2099-01-01' };
     await auth.register({ ...form, role: 'renter', license });
     await auth.verifyRegistration({ email: form.email, code: lastCode() });
-    assert.deepEqual((created[0] as { legal: unknown }).legal, { license: { series: 'ААА', number: '123456', categories: ['B'], validUntil: '2099-01-01' } });
+    assert.deepEqual((created[0] as { legal: unknown }).legal, { license: { series: 'ААА', number: '123456', validUntil: '2099-01-01' } });
   });
 
   it('частково заповнене чи прострочене посвідчення відхиляється до надсилання листа', async () => {
     const { auth, outbox } = setup();
     await assert.rejects(auth.register({ ...form, role: 'renter', license: { number: '123456' } }), (e: unknown) => e instanceof BadRequestException);
-    await assert.rejects(auth.register({ ...form, role: 'renter', license: { series: 'ААА', number: '123456', categories: ['B'], validUntil: '2020-01-01' } }), (e: unknown) => e instanceof BadRequestException && /прострочено/.test(JSON.stringify(e.getResponse())));
+    await assert.rejects(auth.register({ ...form, role: 'renter', license: { series: 'ААА', number: '123456', validUntil: '2020-01-01' } }), (e: unknown) => e instanceof BadRequestException && /прострочено/.test(JSON.stringify(e.getResponse())));
     assert.equal(outbox.length, 0);
   });
 

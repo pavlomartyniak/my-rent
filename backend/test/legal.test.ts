@@ -11,7 +11,7 @@ const good: LegalProfile = {
   rnokpp: '3000000008',
   idDoc: { type: 'id_card', series: '', number: '123456789', issuedBy: '1234', issuedAt: '2022-05-01' },
   address: 'м. Київ, вул. Хрещатик, 1, кв. 2',
-  license: { series: 'ААА', number: '123456', categories: ['B'], validUntil: '2030-01-01' },
+  license: { series: 'ААА', number: '123456', validUntil: '2030-01-01' },
 };
 
 describe('РНОКПП', () => {
@@ -44,29 +44,30 @@ describe('дані сторони', () => {
   });
   it('дата видачі не з майбутнього', () => assert.ok(legalProblems({ ...good, idDoc: { ...good.idDoc, issuedAt: '2027-01-01' } }, { needLicense: false, today: TODAY }).length));
   it('нормалізація: пробіли, регістр, зайві поля', () => {
-    const n = normalizeLegal({ ...good, rnokpp: ' 3000 000008 ', license: { series: 'а а', number: '12 34 56', categories: ['b', 'B', 'ce'], validUntil: '2030-01-01' }, extra: 'x' } as never);
+    const n = normalizeLegal({ ...good, rnokpp: ' 3000 000008 ', license: { series: 'а а', number: '12 34 56', validUntil: '2030-01-01' }, extra: 'x' } as never);
     assert.equal(n.rnokpp, '3000000008');
-    assert.deepEqual(n.license, { series: 'АА', number: '123456', categories: ['B', 'CE'], validUntil: '2030-01-01' });
+    assert.deepEqual(n.license, { series: 'АА', number: '123456', validUntil: '2030-01-01' });
     assert.ok(!('extra' in n));
     assert.ok(!('kved' in n));
   });
 });
 
 describe('посвідчення водія окремо від даних сторони', () => {
-  const lic = { series: 'ААА', number: '123456', categories: ['B'], validUntil: '2030-01-01' };
+  const lic = { series: 'ААА', number: '123456', validUntil: '2030-01-01' };
   it('порожнє посвідчення — undefined, а не об’єкт із порожніми полями', () => {
     assert.equal(normalizeLicense(undefined), undefined);
-    assert.equal(normalizeLicense({ series: '', number: '', categories: [], validUntil: '' }), undefined);
+    assert.equal(normalizeLicense({ series: '', number: '', validUntil: '' }), undefined);
   });
-  it('повне посвідчення без помилок, порожнє — усі чотири пункти', () => {
+  it('повне посвідчення (серія, номер, строк дії) без помилок, порожнє — усі три пункти', () => {
     assert.deepEqual(licenseProblems(lic, TODAY), []);
-    assert.equal(licenseProblems(undefined, TODAY).length, 4);
+    assert.equal(licenseProblems(undefined, TODAY).length, 3);
+    assert.equal(licenseProblems({ ...lic, categories: [] } as never, TODAY).length, 0);
   });
   it('дані сторони без посвідчення проходять перевірку особи', () => {
     const { license: _l, ...noLicense } = good;
     assert.deepEqual(identityProblems(noLicense as LegalProfile, TODAY), []);
     assert.deepEqual(legalProblems(noLicense as LegalProfile, { needLicense: false, today: TODAY }), []);
-    assert.equal(legalProblems(noLicense as LegalProfile, { needLicense: true, today: TODAY }).length, 4);
+    assert.equal(legalProblems(noLicense as LegalProfile, { needLicense: true, today: TODAY }).length, 3);
   });
   it('legal лише з посвідченням (після реєстрації): особа не заповнена, посвідчення є', () => {
     const onlyLicense = { license: lic } as unknown as LegalProfile;
@@ -77,7 +78,7 @@ describe('посвідчення водія окремо від даних ст�
 
 describe('посвідчення водія', () => {
   const withLicense = (license: object) => ({ ...good, license: license as never });
-  const lic = { series: 'ААА', number: '123456', categories: ['B'], validUntil: '2030-01-01' };
+  const lic = { series: 'ААА', number: '123456', validUntil: '2030-01-01' };
   it('без строку дії — помилка', () => assert.ok(legalProblems(withLicense({ ...lic, validUntil: '' }), { needLicense: true, today: TODAY }).some((e) => /до якої дати/.test(e))));
   it('хибна дата — помилка', () => assert.ok(legalProblems(withLicense({ ...lic, validUntil: 'скоро' }), { needLicense: true, today: TODAY }).some((e) => /до якої дати/.test(e))));
   it('прострочене — помилка, діє до сьогодні включно — ок', () => {

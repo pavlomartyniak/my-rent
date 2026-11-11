@@ -5,7 +5,7 @@ import { buildSections, buildTerms, TEMPLATE_VERSION, uahWords, V4, type Contrac
 
 const legal = (over: object = {}) => ({ partyType: 'individual' as const, rnokpp: '3000000008', idDoc: { type: 'id_card' as const, series: '', number: '123456789', issuedBy: '1234', issuedAt: '2022-05-01' }, address: 'м. Київ, вул. Хрещатик, 1, кв. 2', ...over });
 const owner: ContractParty = { name: 'Власенко Петро Іванович', phone: '+380501112233', legal: legal() };
-const renter: ContractParty = { name: 'Тестова Олена Петрівна', phone: '+380509998877', legal: legal({ license: { series: 'ААА', number: '123456', categories: ['B'], validUntil: '2030-01-01' } }) };
+const renter: ContractParty = { name: 'Тестова Олена Петрівна', phone: '+380509998877', legal: legal({ license: { series: 'ААА', number: '123456', validUntil: '2030-01-01' } }) };
 const base = {
   number: 'MR-1', createdAt: new Date('2026-11-12T10:00:00Z'), city: 'Львів', owner, renter,
   car: { title: 'Skoda Octavia 2020', brand: 'Skoda', model: 'Octavia', year: 2020, vin: 'TMBJG7NE0L0000000', mileage: 1, plate: 'AA1234BB', color: 'сірий', fuel: 'Бензин' },
@@ -22,7 +22,7 @@ describe('шаблон договору версії 4 (посилена ред�
   it('сторони й авто з повними даними', () => {
     const s = text(buildTerms(base));
     assert.match(s, /Наймодавець \(Орендодавець\): Власенко Петро Іванович, РНОКПП 3000000008, документ про особу: ID-картка № 123456789/);
-    assert.match(s, /Наймач \(Орендар\): Тестова Олена Петрівна.*посвідчення водія серії ААА № 123456, категорії B, дійсне до 01\.01\.2030/);
+    assert.match(s, /Наймач \(Орендар\): Тестова Олена Петрівна.*посвідчення водія серії ААА № 123456, дійсне до 01\.01\.2030/);
     assert.match(s, /Skoda Octavia, рік випуску 2020, колір сірий, VIN TMBJG7NE0L0000000, державний номер AA1234BB, вид палива бензин/);
   });
   it('у п. 1.1 немає даних свідоцтва про реєстрацію: потрібен лише державний номер', () => {
@@ -60,9 +60,9 @@ describe('шаблон договору версії 4 (посилена ред�
     assert.match(text(buildTerms(base)), /5\.1\. Гарантійний платіж цим Договором не передбачено/);
     assert.doesNotMatch(text(buildTerms({ ...base, deposit: 5000 })), /застава/i);
   });
-  it('п. 1.7: номер, категорії й строк дії посвідчення, обов’язок діяти весь строк найму', () => {
+  it('п. 1.7: серія, номер і строк дії посвідчення, обов’язок діяти весь строк найму', () => {
     const s = text(buildTerms(base));
-    assert.match(s, /1\.7\. Наймач гарантує, що має чинне посвідчення водія відповідної категорії \(серія ААА № 123456, категорії B, дійсне до 01\.01\.2030\)/);
+    assert.match(s, /1\.7\. Наймач гарантує, що має чинне посвідчення водія відповідної категорії \(серія ААА № 123456, дійсне до 01\.01\.2030\)/);
     assert.match(s, /Посвідчення має діяти протягом усього строку найму; якщо воно втрачає чинність.*припиняє керувати Авто/);
     const noLicense = text(buildTerms({ ...base, renter: { ...renter, legal: { ...renter.legal!, license: undefined } } }));
     assert.match(noLicense, /1\.7\. Наймач гарантує, що має чинне посвідчення водія відповідної категорії і не позбавлений/);

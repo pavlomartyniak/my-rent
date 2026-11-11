@@ -70,12 +70,12 @@ describe('шаблон договору', () => {
     const full = buildTerms({
       ...input,
       owner: { name: 'Власенко Петро Іванович', phone: '+380501112233', legal },
-      renter: { name: 'Тестова Олена Петрівна', phone: '', legal: { ...legal, partyType: 'individual', kved: undefined, license: { series: 'ААА', number: '123456', categories: ['B', 'C'] } } },
+      renter: { name: 'Тестова Олена Петрівна', phone: '', legal: { ...legal, partyType: 'individual', kved: undefined, license: { series: 'ААА', number: '123456', validUntil: '2030-01-01', categories: ['B', 'C'] } } },
       car: { ...input.car, plate: 'AA1234BB' },
     });
     const s = text({ ...full, templateVersion: 3 });
     assert.match(s, /Орендодавець: Власенко Петро Іванович, ФОП, КВЕД 49\.32, РНОКПП 3000000008, ID-картка № 123456789, виданий 1234 01\.05\.2022, адреса: м\. Київ/);
-    assert.match(s, /Орендар: Тестова Олена Петрівна, фізична особа, РНОКПП 3000000008.*посвідчення водія серії ААА № 123456, категорії B, C/);
+    assert.match(s, /Орендар: Тестова Олена Петрівна, фізична особа, РНОКПП 3000000008.*посвідчення водія серії ААА № 123456, категорії B, C/); // старі договори зберігають категорії, якщо вони були
     assert.match(s, /державний номер AA1234BB/);
     const v2 = text({ ...buildTerms(input), templateVersion: 2 });
     assert.doesNotMatch(v2, /РНОКПП|державний номер/);

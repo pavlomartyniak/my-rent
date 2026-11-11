@@ -68,7 +68,7 @@ export class UpdateLegalDto {
   address: string;
 }
 
-/** Посвідчення водія орендаря: серія, номер, категорії, строк дії. Порожнє значення прибирає посвідчення */
+/** Посвідчення водія орендаря: серія, номер, строк дії. Порожнє значення прибирає посвідчення */
 export class UpdateLicenseDto {
   @IsOptional()
   @IsString()
@@ -79,13 +79,6 @@ export class UpdateLicenseDto {
   @IsString()
   @MaxLength(20)
   number?: string;
-
-  @IsOptional()
-  @IsArray()
-  @ArrayMaxSize(20)
-  @IsString({ each: true })
-  @MaxLength(5, { each: true })
-  categories?: string[];
 
   @IsOptional()
   @IsString()

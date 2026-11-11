@@ -46,7 +46,7 @@ export default function ProfileScreen() {
     if (Object.values(errors).some(Boolean)) return;
     // Посвідчення: або порожнє (прибирається), або заповнене повністю
     if (isRenter && license && licenseFill(license) === 'partial') {
-      setLicenseProblems(['Заповніть посвідчення повністю (серія, номер, категорії, строк дії) або залиште порожнім']);
+      setLicenseProblems(['Заповніть посвідчення повністю (серія, номер, строк дії) або залиште порожнім']);
       return;
     }
     setSaving(true);
@@ -87,7 +87,7 @@ export default function ProfileScreen() {
           <Card>
             <ThemedText type="smallBold">Посвідчення водія</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              Посвідчення водія (серія, номер, категорії й строк дії) вказують у договорі. Його не вимагають, поки ви не захочете укласти договір, тоді воно має бути заповнене. Додати його можна й зараз, і пізніше.
+              Посвідчення водія (серія, номер і строк дії) вказують у договорі. Його не вимагають, поки ви не захочете укласти договір, тоді воно має бути заповнене. Додати його можна й зараз, і пізніше.
             </ThemedText>
           </Card>
           {license ? <LicenseFields value={license} onChange={setLicense} /> : null}

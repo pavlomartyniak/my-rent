@@ -242,7 +242,7 @@ export default function LoginScreen() {
               <LicenseFields value={license} onChange={setLicense} />
               {licenseState === 'partial' ? (
                 <ThemedText type="small" themeColor="negative">
-                  Заповніть посвідчення повністю (серія, номер, категорії, строк дії) або залиште порожнім.
+                  Заповніть посвідчення повністю (серія, номер, строк дії) або залиште порожнім.
                 </ThemedText>
               ) : null}
             </>

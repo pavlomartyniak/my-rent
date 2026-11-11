@@ -122,7 +122,7 @@ export default function LegalScreen() {
         <Card>
           <ThemedText type="smallBold">Посвідчення водія</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            Серію, номер, категорії та строк дії посвідчення додають у профілі. Без них договір не укласти.
+            Серію, номер і строк дії посвідчення додають у профілі. Без них договір не укласти.
           </ThemedText>
           <Button title="Відкрити профіль" icon="person-circle-outline" variant="secondary" onPress={() => router.push('/profile')} />
         </Card>
