@@ -148,6 +148,12 @@ export default function ChatScreen() {
     }
   }
 
+  /** Знімає блокування співрозмовника й оновлює чат: поле вводу повертається */
+  function unblock() {
+    if (!chat) return;
+    api('DELETE', `/moderation/blocks/${chat.counterpart.id}`).then(load, (e) => Alert.alert('Не вдалося розблокувати', e instanceof ApiError ? e.message : 'Спробуйте ще раз'));
+  }
+
   function send() {
     const body = text.trim();
     if (!body || !chat?.canSend) return;
@@ -232,7 +238,10 @@ export default function ChatScreen() {
             label="Безпека"
             actions={[
               { title: 'Поскаржитись на користувача', icon: 'flag-outline', onPress: () => setReporting({ kind: 'user', userId: chat.counterpart.id }) },
-              { title: 'Заблокувати користувача', icon: 'ban-outline', destructive: true, onPress: () => confirmBlock({ userId: chat.counterpart.id }, chat.counterpart.name, () => router.back()) },
+              // Уже заблокованого користувача можна розблокувати прямо тут; блокувати вдруге немає сенсу
+              chat.blockedByMe
+                ? { title: 'Розблокувати користувача', icon: 'checkmark-circle-outline', onPress: unblock }
+                : { title: 'Заблокувати користувача', icon: 'ban-outline', destructive: true, onPress: () => confirmBlock({ userId: chat.counterpart.id }, chat.counterpart.name, () => router.back()) },
             ]}
           />
         ) : null}
@@ -359,9 +368,7 @@ export default function ChatScreen() {
               <Button
                 title="Розблокувати"
                 variant="secondary"
-                onPress={() => {
-                  api('DELETE', `/moderation/blocks/${chat.counterpart.id}`).then(load, (e) => Alert.alert('Не вдалося розблокувати', e instanceof ApiError ? e.message : 'Спробуйте ще раз'));
-                }}
+                onPress={unblock}
               />
             ) : null}
           </View>
