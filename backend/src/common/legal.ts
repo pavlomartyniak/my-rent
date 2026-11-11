@@ -1,3 +1,5 @@
+import type { FieldIssue } from './field-errors';
+
 /**
  * Юридичні дані сторони договору й авто. Потрібні, щоб у договорі були визначені сторони й предмет: ПІБ повністю, РНОКПП,
  * документ про особу, адреса, для водія — посвідчення, для авто — державний номер. Чисті правила без бази.
@@ -78,35 +80,41 @@ export function normalizeLicense(input: Partial<NonNullable<LegalProfile['licens
   };
 }
 
-/** Що не так з посвідченням водія (серія, номер, строк дії); порожній список — усе гаразд */
-export function licenseProblems(raw: LegalProfile['license'] | undefined | null, today: string): string[] {
+/** Що не так з посвідченням водія: кожна помилка з полем форми (license.series, license.number, license.validUntil) */
+export function licenseIssues(raw: LegalProfile['license'] | undefined | null, today: string): FieldIssue[] {
   const l = normalizeLicense(raw);
-  const out: string[] = [];
-  if (!l || !SERIES_LICENSE.test(l.series)) out.push('Серія посвідчення водія: 2–3 літери');
-  if (!l || !/^\d{6}$/.test(l.number)) out.push('Номер посвідчення водія: 6 цифр');
-  if (!l || !/^\d{4}-\d{2}-\d{2}$/.test(l.validUntil) || Number.isNaN(Date.parse(l.validUntil))) out.push('Вкажіть, до якої дати діє посвідчення водія');
-  else if (l.validUntil < today) out.push('Посвідчення водія прострочено: оновіть його дані');
+  const out: FieldIssue[] = [];
+  if (!l || !SERIES_LICENSE.test(l.series)) out.push({ field: 'license.series', message: 'Серія посвідчення водія: 2–3 літери' });
+  if (!l || !/^\d{6}$/.test(l.number)) out.push({ field: 'license.number', message: 'Номер посвідчення водія: 6 цифр' });
+  if (!l || !/^\d{4}-\d{2}-\d{2}$/.test(l.validUntil) || Number.isNaN(Date.parse(l.validUntil))) out.push({ field: 'license.validUntil', message: 'Вкажіть, до якої дати діє посвідчення водія' });
+  else if (l.validUntil < today) out.push({ field: 'license.validUntil', message: 'Посвідчення водія прострочено: оновіть його дані' });
   return out;
 }
 
-/** Що не так з даними сторони, окрім посвідчення водія */
-export function identityProblems(raw: LegalProfile | undefined | null, today: string): string[] {
-  if (!raw || !(raw as Partial<LegalProfile>).rnokpp) return ['Заповніть дані для договору'];
+/** Те саме списком повідомлень */
+export const licenseProblems = (raw: LegalProfile['license'] | undefined | null, today: string): string[] => licenseIssues(raw, today).map((i) => i.message);
+
+/** Що не так з даними сторони, окрім посвідчення водія: кожна помилка з полем форми */
+export function identityIssues(raw: LegalProfile | undefined | null, today: string): FieldIssue[] {
+  if (!raw || !(raw as Partial<LegalProfile>).rnokpp) return [{ field: 'rnokpp', message: 'Заповніть дані для договору' }];
   const p = normalizeLegal(raw as never);
-  const out: string[] = [];
-  if (!p.middleName) out.push('Вкажіть по батькові');
-  if (!rnokppValid(p.rnokpp)) out.push('РНОКПП: 10 цифр, перевірте номер');
-  if (p.partyType === 'fop' && !/^\d{2}\.\d{2}$/.test(p.kved ?? '')) out.push('Вкажіть основний КВЕД у форматі 49.32');
+  const out: FieldIssue[] = [];
+  if (!p.middleName) out.push({ field: 'middleName', message: 'Вкажіть по батькові' });
+  if (!rnokppValid(p.rnokpp)) out.push({ field: 'rnokpp', message: 'РНОКПП: 10 цифр, перевірте номер' });
+  if (p.partyType === 'fop' && !/^\d{2}\.\d{2}$/.test(p.kved ?? '')) out.push({ field: 'kved', message: 'Вкажіть основний КВЕД у форматі 49.32' });
   const d = p.idDoc;
   if (d.type === 'passport_book') {
-    if (!SERIES_BOOK.test(d.series)) out.push('Серія паспорта: дві українські літери');
-    if (!/^\d{6}$/.test(d.number)) out.push('Номер паспорта: 6 цифр');
-  } else if (!/^\d{9}$/.test(d.number)) out.push('Номер ID-картки: 9 цифр');
-  if (d.issuedBy.length < 3) out.push('Вкажіть, ким виданий документ');
-  if (!isPastIso(d.issuedAt, today)) out.push('Вкажіть дату видачі документа');
-  if (p.address.length < 10) out.push('Вкажіть адресу проживання повністю');
+    if (!SERIES_BOOK.test(d.series)) out.push({ field: 'idDoc.series', message: 'Серія паспорта: дві українські літери' });
+    if (!/^\d{6}$/.test(d.number)) out.push({ field: 'idDoc.number', message: 'Номер паспорта: 6 цифр' });
+  } else if (!/^\d{9}$/.test(d.number)) out.push({ field: 'idDoc.number', message: 'Номер ID-картки: 9 цифр' });
+  if (d.issuedBy.length < 3) out.push({ field: 'idDoc.issuedBy', message: 'Вкажіть, ким виданий документ' });
+  if (!isPastIso(d.issuedAt, today)) out.push({ field: 'idDoc.issuedAt', message: 'Вкажіть дату видачі документа' });
+  if (p.address.length < 10) out.push({ field: 'address', message: 'Вкажіть адресу проживання повністю' });
   return out;
 }
+
+/** Те саме списком повідомлень */
+export const identityProblems = (raw: LegalProfile | undefined | null, today: string): string[] => identityIssues(raw, today).map((i) => i.message);
 
 /** Що не так з даними: список зрозумілих пунктів, порожній — усе гаразд. needLicense — для орендаря (водія) */
 export function legalProblems(raw: LegalProfile | undefined | null, opts: { needLicense: boolean; today: string }): string[] {

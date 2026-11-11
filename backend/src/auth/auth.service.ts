@@ -11,7 +11,8 @@ import { generateCode, OTP_MAX_ATTEMPTS, OTP_MINUTES, OTP_RESEND_SECONDS, resend
 import { MailService } from '../mail/mail.service';
 import { SUSPENDED_MESSAGE } from '../moderation/moderation.constants';
 import { PendingRegistration, type PendingRegistrationDocument } from '../schemas/pending-registration.schema';
-import { licenseProblems, normalizeLicense } from '../common/legal';
+import { badFields, conflictField } from '../common/field-errors';
+import { licenseIssues, normalizeLicense } from '../common/legal';
 import { todayUtc } from '../rentals/rentals.math';
 import { PHONE_TAKEN } from '../common/profile';
 import { UsersService } from '../users/users.service';
@@ -44,14 +45,14 @@ export class AuthService {
    */
   async register(dto: RegisterDto) {
     const email = dto.email.toLowerCase().trim();
-    if (await this.users.findByEmail(email)) throw new ConflictException('Користувач з таким email уже існує');
-    if (await this.users.phoneTaken(dto.phone)) throw new ConflictException(PHONE_TAKEN);
+    if (await this.users.findByEmail(email)) throw conflictField('email', 'Користувач з таким email уже існує');
+    if (await this.users.phoneTaken(dto.phone)) throw conflictField('phone', PHONE_TAKEN);
 
     // Посвідчення необов'язкове, але якщо його вказано, воно має бути повним і чинним
     const license = dto.role === 'renter' ? normalizeLicense(dto.license) : undefined;
     if (license) {
-      const problems = licenseProblems(license, todayUtc());
-      if (problems.length) throw new BadRequestException(problems);
+      const issues = licenseIssues(license, todayUtc());
+      if (issues.length) throw badFields(issues);
     }
 
     const now = new Date();
@@ -117,7 +118,7 @@ export class AuthService {
     // Атомарно списуємо код: два паралельні запити не створять два акаунти
     const consumed = await this.pending.findOneAndDelete({ _id: doc._id, codeHash: doc.codeHash }).exec();
     if (!consumed) throw new ConflictException('Код уже використано. Запросіть новий');
-    if (await this.users.findByEmail(email)) throw new ConflictException('Користувач з таким email уже існує');
+    if (await this.users.findByEmail(email)) throw conflictField('email', 'Користувач з таким email уже існує');
 
     const user = await this.users.create({ email, passwordHash: doc.passwordHash, firstName: doc.firstName, lastName: doc.lastName, phone: doc.phone, role: doc.role, ...(doc.license ? { legal: { license: doc.license } } : {}) });
     return this.session(user.id, user.role, this.users.toPublic(user));
@@ -149,7 +150,7 @@ export class AuthService {
   async login(dto: LoginDto) {
     const user = await this.users.findByEmail(dto.email);
     const ok = await bcrypt.compare(dto.password, user?.passwordHash ?? DUMMY_HASH);
-    if (!user || !ok) throw new UnauthorizedException('Невірний email або пароль');
+    if (!user || !ok) throw new UnauthorizedException({ statusCode: 401, error: 'Unauthorized', message: 'Невірний email або пароль', fields: { password: 'Невірний email або пароль' } });
     if (user.suspended) throw new UnauthorizedException(SUSPENDED_MESSAGE);
     return this.session(user.id, user.role, this.users.toPublic(user));
   }

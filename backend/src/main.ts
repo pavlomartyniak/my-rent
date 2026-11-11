@@ -5,6 +5,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 
 import { AppModule } from './app.module';
+import { validationFactory } from './common/field-errors';
 import { describeTarget, resolveAppEnv } from './config/env-files';
 
 async function bootstrap() {
@@ -16,7 +17,7 @@ async function bootstrap() {
   app.use(helmet());
   app.useBodyParser('json', { limit: '2mb' });
   // whitelist відкидає невідомі поля, transform приводить типи до DTO
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true, exceptionFactory: validationFactory }));
 
   const port = app.get(ConfigService).get<number>('PORT') ?? 3000;
   await app.listen(port, '0.0.0.0');

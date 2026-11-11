@@ -1,7 +1,8 @@
-import { BadRequestException, Body, Controller, Get, NotFoundException, Patch, Put } from '@nestjs/common';
+import { Body, Controller, Get, NotFoundException, Patch, Put } from '@nestjs/common';
 
 import { type AuthUser, CurrentUser, Roles } from '../common/current-user';
-import { legalProblems, licenseProblems, normalizeLegal, normalizeLicense } from '../common/legal';
+import { badFields } from '../common/field-errors';
+import { identityIssues, legalProblems, licenseIssues, normalizeLegal, normalizeLicense } from '../common/legal';
 import { todayUtc } from '../rentals/rentals.math';
 import { UpdateLegalDto, UpdateLicenseDto, UpdateMeDto } from './users.dto';
 import { UsersService } from './users.service';
@@ -22,8 +23,8 @@ export class UsersController {
   async setLegal(@CurrentUser() auth: AuthUser, @Body() dto: UpdateLegalDto) {
     // Посвідчення водія зберігається окремо (PATCH /me/license), тому тут його не перевіряємо й не чіпаємо
     const legal = normalizeLegal({ ...dto, license: undefined } as never);
-    const problems = legalProblems(legal, { needLicense: false, today: todayUtc() });
-    if (problems.length) throw new BadRequestException(problems);
+    const issues = identityIssues(legal, todayUtc());
+    if (issues.length) throw badFields(issues);
     const user = await this.users.setLegal(auth.id, legal);
     if (!user) throw new NotFoundException('Користувача не знайдено');
     return this.view(user);
@@ -35,8 +36,8 @@ export class UsersController {
   async setLicense(@CurrentUser() auth: AuthUser, @Body() dto: UpdateLicenseDto) {
     const license = normalizeLicense(dto);
     if (license) {
-      const problems = licenseProblems(license, todayUtc());
-      if (problems.length) throw new BadRequestException(problems);
+      const issues = licenseIssues(license, todayUtc());
+      if (issues.length) throw badFields(issues);
     }
     const user = await this.users.setLicense(auth.id, license ?? null);
     if (!user) throw new NotFoundException('Користувача не знайдено');

@@ -57,6 +57,8 @@ export function CarForm({ car }: { car?: Car }) {
   const [photos, setPhotos] = useState<string[]>(car?.photos?.length ? car.photos : car?.photoUri ? [car.photoUri] : []);
   const [status, setStatus] = useState(car?.status ?? CAR_STATUSES[0]);
   const [submitted, setSubmitted] = useState(false);
+  // Помилки полів від сервера (наприклад, хибний державний номер): підсвічують поле, поки його не змінять
+  const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   const rented = status === RENTED;
@@ -70,7 +72,7 @@ export function CarForm({ car }: { car?: Car }) {
     vin: !vin.trim() || vin.trim().length === 17 ? '' : 'VIN має містити 17 символів',
     plate: plate.trim().length >= 4 ? '' : 'Вкажіть державний номер авто',
   };
-  const err = (k: keyof typeof errors) => (submitted ? errors[k] : undefined);
+  const err = (k: keyof typeof errors) => serverErrors[k] || (submitted ? errors[k] : undefined);
 
   function pickBrand() {
     openCatalogPicker({
@@ -123,6 +125,7 @@ export function CarForm({ car }: { car?: Car }) {
   async function onSave() {
     if (saving) return;
     setSubmitted(true);
+    setServerErrors({});
     if (Object.values(errors).some(Boolean)) return;
     const data = {
       brand,
@@ -143,12 +146,12 @@ export function CarForm({ car }: { car?: Car }) {
     };
     setSaving(true);
     if (car) {
-      const ok = await updateCar(car.id, data);
+      const ok = await updateCar(car.id, data, setServerErrors);
       setSaving(false);
       if (ok) router.back();
       return;
     }
-    const created = await addCar(data);
+    const created = await addCar(data, setServerErrors);
     setSaving(false);
     if (!created) return;
     // Нове авто ще не бачать орендарі: поки його не опубліковано, воно лише в обліку власника
@@ -193,7 +196,7 @@ export function CarForm({ car }: { car?: Car }) {
         <Segmented scroll options={FUEL_TYPES} value={fuel as FuelType} onChange={(f) => setFuel(f === fuel ? '' : f)} />
       </View>
       <Field label="VIN" value={vin} onChangeText={setVin} error={err('vin')} autoCapitalize="characters" autoCorrect={false} maxLength={17} placeholder="17 символів" />
-      <Field label="Державний номер" value={plate} onChangeText={setPlate} error={err('plate')} autoCapitalize="characters" autoCorrect={false} maxLength={12} placeholder="AA 1234 BB" />
+      <Field label="Державний номер" value={plate} onChangeText={(v) => { setPlate(v); setServerErrors((e) => ({ ...e, plate: '' })); }} error={err('plate')} autoCapitalize="characters" autoCorrect={false} maxLength={12} placeholder="AA 1234 BB" />
       <Field label="Колір (необов’язково)" value={color} onChangeText={setColor} maxLength={30} placeholder="Сірий" />
       <ThemedText type="small" themeColor="textSecondary">
         Державний номер обов’язковий: він потрібен для договору. Колір вказувати необов’язково.

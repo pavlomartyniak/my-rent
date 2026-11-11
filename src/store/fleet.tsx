@@ -57,8 +57,8 @@ type FleetContextValue = Data & {
   invalidate: () => void;
   // Усі зміни йдуть на сервер; повертають true, якщо вдалося (помилку показують самі)
   /** Повертає створене авто (щоб одразу запропонувати його опублікувати) або null, якщо не вдалося */
-  addCar: (car: NewCar) => Promise<Car | null>;
-  updateCar: (id: string, patch: Partial<NewCar>) => Promise<boolean>;
+  addCar: (car: NewCar, onFields?: FieldsHandler) => Promise<Car | null>;
+  updateCar: (id: string, patch: Partial<NewCar>, onFields?: FieldsHandler) => Promise<boolean>;
   deleteCar: (id: string) => Promise<boolean>;
   addTransaction: (tx: NewTransaction) => Promise<boolean>;
   updateTransaction: (id: string, patch: Partial<NewTransaction>) => Promise<boolean>;
@@ -71,10 +71,13 @@ type FleetContextValue = Data & {
   resetHints: () => Promise<boolean>;
   /** Змінює тему одразу й зберігає її в акаунті */
   setTheme: (value: ThemePreference) => Promise<boolean>;
-  updateProfile: (changes: Partial<Profile>) => Promise<boolean>;
+  updateProfile: (changes: Partial<Profile>, onFields?: FieldsHandler) => Promise<boolean>;
   clearAll: () => Promise<boolean>;
   deleteAccount: () => Promise<boolean>;
 };
+
+/** Отримує помилки полів форми від сервера: {поле: текст} */
+export type FieldsHandler = (fields: Record<string, string>) => void;
 
 const FleetContext = createContext<FleetContextValue | null>(null);
 
@@ -127,35 +130,39 @@ export function FleetProvider({ children }: { children: ReactNode }) {
     [patch, touch],
   );
 
-  /** Виконує запит; при помилці показує повідомлення й повертає false */
-  const run = useCallback(async (action: () => Promise<void>) => {
+  /**
+   * Виконує запит; при помилці показує повідомлення й повертає false. Якщо сервер вказав поля форми й передано `onFields`,
+   * то замість повідомлення форма отримує {поле: текст} і сама підсвічує ці поля.
+   */
+  const run = useCallback(async (action: () => Promise<void>, onFields?: (fields: Record<string, string>) => void) => {
     try {
       await action();
       return true;
     } catch (e) {
-      Alert.alert('Помилка', messageOf(e));
+      if (onFields && e instanceof ApiError && e.fields && Object.keys(e.fields).length) onFields(e.fields);
+      else Alert.alert('Помилка', messageOf(e));
       return false;
     }
   }, []);
 
   const addCar = useCallback(
-    async (car: NewCar) => {
+    async (car: NewCar, onFields?: FieldsHandler) => {
       const box: { created?: Car } = {};
       const ok = await run(async () => {
         box.created = await api<Car>('POST', '/cars', car);
         patchData((d) => ({ ...d, cars: [...d.cars, box.created!] }));
-      });
+      }, onFields);
       return ok ? (box.created ?? null) : null;
     },
     [run, patchData],
   );
 
   const updateCar = useCallback(
-    (id: string, changes: Partial<NewCar>) =>
+    (id: string, changes: Partial<NewCar>, onFields?: FieldsHandler) =>
       run(async () => {
         const updated = await api<Car>('PATCH', `/cars/${id}`, changes);
         patchData((d) => ({ ...d, cars: d.cars.map((c) => (c.id === id ? updated : c)) }));
-      }),
+      }, onFields),
     [run, patchData],
   );
 
@@ -241,11 +248,11 @@ export function FleetProvider({ children }: { children: ReactNode }) {
   );
 
   const updateMe = useCallback(
-    (changes: Partial<Pick<Data, 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'phone'>>) =>
+    (changes: Partial<Pick<Data, 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'phone'>>, onFields?: FieldsHandler) =>
       run(async () => {
         await api('PATCH', '/me', changes);
         patch((d) => ({ ...d, ...changes }));
-      }),
+      }, onFields),
     [run, patch],
   );
 
@@ -257,7 +264,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
     [setPreference, updateMe],
   );
 
-  const updateProfile = useCallback((changes: Partial<Profile>) => updateMe(changes), [updateMe]);
+  const updateProfile = useCallback((changes: Partial<Profile>, onFields?: FieldsHandler) => updateMe(changes, onFields), [updateMe]);
 
   const finishOnboarding = useCallback(() => updateMe({ onboarded: true }), [updateMe]);
   const resetHints = useCallback(() => updateMe({ dismissedHints: [] }), [updateMe]);

@@ -19,14 +19,14 @@ export function licenseFill(l: LicenseDraft): 'empty' | 'partial' | 'full' {
 }
 
 /** Поля посвідчення водія: серія, номер і строк дії. Використовуються в профілі та при реєстрації */
-export function LicenseFields({ value, onChange }: { value: LicenseDraft; onChange: (next: LicenseDraft) => void }) {
+export function LicenseFields({ value, onChange, errors }: { value: LicenseDraft; onChange: (next: LicenseDraft) => void; /** Помилки полів (series, number, validUntil), що підсвічуються червоним */ errors?: Partial<Record<keyof LicenseDraft, string>> }) {
   const set = (patch: Partial<LicenseDraft>) => onChange({ ...value, ...patch });
 
   return (
     <View style={styles.wrap}>
-      <Field label="Серія" value={value.series} onChangeText={(v) => set({ series: v.toUpperCase() })} autoCapitalize="characters" autoCorrect={false} maxLength={3} placeholder="ААА" />
-      <Field label="Номер" value={value.number} onChangeText={(v) => set({ number: v.replace(/\D/g, '') })} keyboardType="number-pad" maxLength={6} placeholder="6 цифр" />
-      <DateField label="Діє до" value={value.validUntil || todayISO()} onChange={(iso) => set({ validUntil: iso })} minimumDate={new Date()} />
+      <Field label="Серія" value={value.series} onChangeText={(v) => set({ series: v.toUpperCase() })} autoCapitalize="characters" autoCorrect={false} maxLength={3} placeholder="ААА" error={errors?.series} />
+      <Field label="Номер" value={value.number} onChangeText={(v) => set({ number: v.replace(/\D/g, '') })} keyboardType="number-pad" maxLength={6} placeholder="6 цифр" error={errors?.number} />
+      <DateField label="Діє до" value={value.validUntil || todayISO()} onChange={(iso) => set({ validUntil: iso })} minimumDate={new Date()} error={errors?.validUntil} />
       <ThemedText type="small" themeColor="textSecondary">
         {value.validUntil ? 'Посвідчення має діяти до кінця оренди, інакше запит не надіслати.' : 'Дату не обрано: торкніться поля й оберіть, до якого числа діє посвідчення.'}
       </ThemedText>

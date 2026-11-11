@@ -37,6 +37,9 @@ export default function LegalScreen() {
   const [me, setMe] = useState<Me | null>(null);
   const [form, setForm] = useState<LegalProfile>(EMPTY);
   const [problems, setProblems] = useState<string[]>([]);
+  // Помилки полів від сервера: підсвічують поля червоним, поки їх не змінять
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const clear = (...keys: string[]) => setFieldErrors((f) => (keys.some((k) => k in f) ? Object.fromEntries(Object.entries(f).filter(([k]) => !keys.includes(k))) : f));
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState('');
 
@@ -49,13 +52,20 @@ export default function LegalScreen() {
       .catch((e) => setLoadError(e instanceof ApiError ? e.message : 'Не вдалося завантажити'));
   }, []);
 
-  const set = (patch: Partial<LegalProfile>) => setForm((f) => ({ ...f, ...patch }));
-  const setDoc = (patch: Partial<LegalProfile['idDoc']>) => setForm((f) => ({ ...f, idDoc: { ...f.idDoc, ...patch } }));
+  const set = (patch: Partial<LegalProfile>) => {
+    setForm((f) => ({ ...f, ...patch }));
+    clear(...Object.keys(patch));
+  };
+  const setDoc = (patch: Partial<LegalProfile['idDoc']>) => {
+    setForm((f) => ({ ...f, idDoc: { ...f.idDoc, ...patch } }));
+    clear(...Object.keys(patch).map((k) => `idDoc.${k}`));
+  };
 
   async function save() {
     if (saving) return;
     setSaving(true);
     setProblems([]);
+    setFieldErrors({});
     try {
       // Посвідчення водія зберігається окремо, у профілі
       await api('PUT', '/me/legal', { ...form, license: undefined });
@@ -64,7 +74,8 @@ export default function LegalScreen() {
       Alert.alert('Збережено', 'Дані для договору заповнено.');
       router.back();
     } catch (e) {
-      if (e instanceof ApiError && e.status === 400) setProblems(e.details?.length ? e.details : [e.message]);
+      if (e instanceof ApiError && e.fields && Object.keys(e.fields).length) setFieldErrors(e.fields);
+      else if (e instanceof ApiError && e.status === 400) setProblems(e.details?.length ? e.details : [e.message]);
       else Alert.alert('Не вдалося зберегти', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
     } finally {
       setSaving(false);
@@ -100,23 +111,23 @@ export default function LegalScreen() {
           Статус записується в договір.
         </ThemedText>
       </View>
-      {form.partyType === 'fop' ? <Field label="Основний КВЕД" value={form.kved ?? ''} onChangeText={(v) => set({ kved: v })} keyboardType="numbers-and-punctuation" maxLength={10} placeholder="49.32" /> : null}
+      {form.partyType === 'fop' ? <Field label="Основний КВЕД" error={fieldErrors.kved} value={form.kved ?? ''} onChangeText={(v) => set({ kved: v })} keyboardType="numbers-and-punctuation" maxLength={10} placeholder="49.32" /> : null}
 
       <ThemedText type="small" themeColor="textSecondary">
         Прізвище та ім’я беруться з профілю: {me.lastName} {me.firstName}.
       </ThemedText>
-      <Field label="По батькові" value={form.middleName} onChangeText={(v) => set({ middleName: v })} autoCapitalize="words" maxLength={50} placeholder="Іванович" />
-      <Field label="РНОКПП (ІПН)" value={form.rnokpp} onChangeText={(v) => set({ rnokpp: v.replace(/\D/g, '') })} keyboardType="number-pad" maxLength={10} placeholder="10 цифр" />
+      <Field label="По батькові" error={fieldErrors.middleName} value={form.middleName} onChangeText={(v) => set({ middleName: v })} autoCapitalize="words" maxLength={50} placeholder="Іванович" />
+      <Field label="РНОКПП (ІПН)" error={fieldErrors.rnokpp} value={form.rnokpp} onChangeText={(v) => set({ rnokpp: v.replace(/\D/g, '') })} keyboardType="number-pad" maxLength={10} placeholder="10 цифр" />
 
       <View style={styles.group}>
         <ThemedText type="smallBold">Документ, що посвідчує особу</ThemedText>
         <Segmented options={Object.values(ID_DOC_LABELS)} value={ID_DOC_LABELS[doc.type]} onChange={(l) => setDoc({ type: l === ID_DOC_LABELS.passport_book ? 'passport_book' : 'id_card' })} />
       </View>
-      {doc.type === 'passport_book' ? <Field label="Серія паспорта" value={doc.series} onChangeText={(v) => setDoc({ series: v.toUpperCase() })} autoCapitalize="characters" maxLength={2} placeholder="АА" /> : null}
-      <Field label={doc.type === 'passport_book' ? 'Номер паспорта' : 'Номер ID-картки'} value={doc.number} onChangeText={(v) => setDoc({ number: v.replace(/\D/g, '') })} keyboardType="number-pad" maxLength={doc.type === 'passport_book' ? 6 : 9} placeholder={doc.type === 'passport_book' ? '6 цифр' : '9 цифр'} />
-      <Field label="Ким виданий (орган чи номер)" value={doc.issuedBy} onChangeText={(v) => setDoc({ issuedBy: v })} maxLength={120} placeholder={doc.type === 'id_card' ? '1234' : 'Шевченківським РУ ГУ ДМС'} />
-      <DateField label="Дата видачі" value={doc.issuedAt || todayISO()} onChange={(iso) => setDoc({ issuedAt: iso })} />
-      <Field label="Адреса проживання" value={form.address} onChangeText={(v) => set({ address: v })} maxLength={200} multiline placeholder="м. Київ, вул. Хрещатик, 1, кв. 2" style={{ minHeight: 64, textAlignVertical: 'top', paddingTop: 12 }} />
+      {doc.type === 'passport_book' ? <Field label="Серія паспорта" error={fieldErrors['idDoc.series']} value={doc.series} onChangeText={(v) => setDoc({ series: v.toUpperCase() })} autoCapitalize="characters" maxLength={2} placeholder="АА" /> : null}
+      <Field label={doc.type === 'passport_book' ? 'Номер паспорта' : 'Номер ID-картки'} error={fieldErrors['idDoc.number']} value={doc.number} onChangeText={(v) => setDoc({ number: v.replace(/\D/g, '') })} keyboardType="number-pad" maxLength={doc.type === 'passport_book' ? 6 : 9} placeholder={doc.type === 'passport_book' ? '6 цифр' : '9 цифр'} />
+      <Field label="Ким виданий (орган чи номер)" error={fieldErrors['idDoc.issuedBy']} value={doc.issuedBy} onChangeText={(v) => setDoc({ issuedBy: v })} maxLength={120} placeholder={doc.type === 'id_card' ? '1234' : 'Шевченківським РУ ГУ ДМС'} />
+      <DateField label="Дата видачі" error={fieldErrors['idDoc.issuedAt']} value={doc.issuedAt || todayISO()} onChange={(iso) => setDoc({ issuedAt: iso })} />
+      <Field label="Адреса проживання" error={fieldErrors.address} value={form.address} onChangeText={(v) => set({ address: v })} maxLength={200} multiline placeholder="м. Київ, вул. Хрещатик, 1, кв. 2" style={{ minHeight: 64, textAlignVertical: 'top', paddingTop: 12 }} />
 
       {isRenter ? (
         <Card>

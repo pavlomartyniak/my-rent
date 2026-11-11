@@ -1,4 +1,4 @@
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, type Href, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme, View } from 'react-native';
 
@@ -31,6 +31,9 @@ function Routes() {
   if (status === 'loading') return null;
 
   const authed = status === 'in';
+  // Головний екран ролі. Без явного redirectTo Expo Router після входу чи онбордингу веде на «перший доступний» екран,
+  // упорядкований за довжиною назви, і стартовим стає випадковий короткий екран (наприклад, legal). Тому переходи задані явно.
+  const home: Href = role === 'renter' ? '/renter' : '/';
 
   // Після входу чекаємо на дані із сервера; якщо не вдалося — даємо спробувати ще раз
   if (authed && !ready) {
@@ -51,15 +54,15 @@ function Routes() {
     <>
       <AnimatedSplashOverlay />
       <Stack screenOptions={{ headerShadowVisible: false, headerTitleStyle: { fontWeight: '600', fontSize: 17 }, headerLargeTitleShadowVisible: false }}>
-        <Stack.Protected guard={!authed}>
+        <Stack.Protected guard={!authed} redirectTo={authed ? (onboarded ? home : '/onboarding') : undefined}>
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="forgot" options={{ title: 'Відновлення пароля', headerBackTitle: 'Назад' }} />
         </Stack.Protected>
-        <Stack.Protected guard={authed && !onboarded}>
+        <Stack.Protected guard={authed && !onboarded} redirectTo={authed ? home : undefined}>
           <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         </Stack.Protected>
         {/* Власник авто: облік, звіти, оголошення й запити на оренду */}
-        <Stack.Protected guard={authed && onboarded && role === 'owner'}>
+        <Stack.Protected guard={authed && onboarded && role === 'owner'} redirectTo={authed && onboarded ? '/renter' : undefined}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="car/[id]" options={{ title: 'Авто', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="car/analytics" options={{ title: 'Аналітика', headerBackTitle: 'Назад' }} />
@@ -70,7 +73,7 @@ function Routes() {
           <Stack.Screen name="wanted/offer" options={{ title: 'Пропозиція орендарю', presentation: 'modal' }} />
         </Stack.Protected>
         {/* Орендар: пошук авто й запити */}
-        <Stack.Protected guard={authed && onboarded && role === 'renter'}>
+        <Stack.Protected guard={authed && onboarded && role === 'renter'} redirectTo={authed && onboarded ? '/' : undefined}>
           <Stack.Screen name="renter" options={{ headerShown: false }} />
           <Stack.Screen name="market/[id]" options={{ title: 'Авто', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="market/request" options={{ title: 'Запит на оренду', presentation: 'modal' }} />

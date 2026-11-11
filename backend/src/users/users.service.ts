@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 
-import { ConflictException } from '@nestjs/common';
+import { conflictField } from '../common/field-errors';
 import type { LegalProfile } from '../common/legal';
 import { PHONE_TAKEN, phoneKey } from '../common/profile';
 import { User, type UserDocument } from '../schemas/user.schema';
@@ -64,7 +64,7 @@ export class UsersService {
   }
 
   async update(id: string, patch: Partial<Pick<User, 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'phone'>>) {
-    if (patch.phone && (await this.phoneTaken(patch.phone, id))) throw new ConflictException(PHONE_TAKEN);
+    if (patch.phone && (await this.phoneTaken(patch.phone, id))) throw conflictField('phone', PHONE_TAKEN);
     try {
       return await this.users.findByIdAndUpdate(id, { $set: { ...patch, ...(patch.phone ? { phoneKey: phoneKey(patch.phone) } : {}) } }, { new: true }).exec();
     } catch (e) {
@@ -75,7 +75,7 @@ export class UsersService {
   /** Гонка двох запитів із тим самим номером закінчується помилкою індексу: перетворюємо її на зрозумілу відповідь */
   private mapDuplicate(e: unknown) {
     const err = e as { code?: number; keyPattern?: Record<string, unknown> };
-    if (err?.code === 11000 && err.keyPattern?.phoneKey) return new ConflictException(PHONE_TAKEN);
+    if (err?.code === 11000 && err.keyPattern?.phoneKey) return conflictField('phone', PHONE_TAKEN);
     return e;
   }
 

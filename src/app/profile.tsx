@@ -26,6 +26,9 @@ export default function ProfileScreen() {
   // null — посвідчення ще завантажується
   const [license, setLicense] = useState<LicenseDraft | null>(null);
   const [licenseProblems, setLicenseProblems] = useState<string[]>([]);
+  // Помилки полів від сервера (зайнятий телефон, хибне посвідчення): підсвічують поля, поки їх не змінять
+  const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
+  const clear = (...keys: string[]) => setServerErrors((f) => (keys.some((k) => k in f) ? Object.fromEntries(Object.entries(f).filter(([k]) => !keys.includes(k))) : f));
 
   useEffect(() => {
     if (!isRenter) return;
@@ -51,14 +54,16 @@ export default function ProfileScreen() {
     }
     setSaving(true);
     setLicenseProblems([]);
-    const ok = await updateProfile({ firstName: firstName.trim(), lastName: lastName.trim(), phone: phone.trim() });
+    setServerErrors({});
+    const ok = await updateProfile({ firstName: firstName.trim(), lastName: lastName.trim(), phone: phone.trim() }, setServerErrors);
     if (ok && isRenter && license) {
       try {
         await api('PUT', '/me/license', license);
         invalidate();
       } catch (e) {
         setSaving(false);
-        if (e instanceof ApiError && e.status === 400) setLicenseProblems(e.details?.length ? e.details : [e.message]);
+        if (e instanceof ApiError && e.fields) setServerErrors(e.fields);
+        else if (e instanceof ApiError && e.status === 400) setLicenseProblems(e.details?.length ? e.details : [e.message]);
         else Alert.alert('Не вдалося зберегти посвідчення', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
         return;
       }
@@ -69,13 +74,16 @@ export default function ProfileScreen() {
 
   return (
     <Screen>
-      <Field label="Ім’я" value={firstName} onChangeText={setFirstName} error={submitted ? errors.firstName : undefined} autoCapitalize="words" textContentType="givenName" maxLength={50} />
-      <Field label="Прізвище" value={lastName} onChangeText={setLastName} error={submitted ? errors.lastName : undefined} autoCapitalize="words" textContentType="familyName" maxLength={50} />
+      <Field label="Ім’я" value={firstName} onChangeText={(v) => { setFirstName(v); clear('firstName'); }} error={serverErrors.firstName ?? (submitted ? errors.firstName : undefined)} autoCapitalize="words" textContentType="givenName" maxLength={50} />
+      <Field label="Прізвище" value={lastName} onChangeText={(v) => { setLastName(v); clear('lastName'); }} error={serverErrors.lastName ?? (submitted ? errors.lastName : undefined)} autoCapitalize="words" textContentType="familyName" maxLength={50} />
       <Field
         label="Телефон"
         value={phone}
-        onChangeText={setPhone}
-        error={submitted || phone ? errors.phone || undefined : undefined}
+        onChangeText={(v) => {
+          setPhone(v);
+          clear('phone');
+        }}
+        error={serverErrors.phone ?? (submitted || phone ? errors.phone || undefined : undefined)}
         keyboardType="phone-pad"
         textContentType="telephoneNumber"
         maxLength={20}
@@ -90,7 +98,16 @@ export default function ProfileScreen() {
               Посвідчення водія (серія, номер і строк дії) вказують у договорі. Його не вимагають, поки ви не захочете укласти договір, тоді воно має бути заповнене. Додати його можна й зараз, і пізніше.
             </ThemedText>
           </Card>
-          {license ? <LicenseFields value={license} onChange={setLicense} /> : null}
+          {license ? (
+            <LicenseFields
+              value={license}
+              onChange={(l) => {
+                setLicense(l);
+                clear('license.series', 'license.number', 'license.validUntil');
+              }}
+              errors={{ series: serverErrors['license.series'], number: serverErrors['license.number'], validUntil: serverErrors['license.validUntil'] }}
+            />
+          ) : null}
           {licenseProblems.length ? (
             <Card>
               {licenseProblems.map((p) => (

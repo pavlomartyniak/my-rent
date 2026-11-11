@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 
 import { MAX_LISTINGS } from '../common/constants';
+import { badField } from '../common/field-errors';
 import { type CarLegal, normalizeCarLegal, plateValid } from '../common/legal';
 import { normalize } from '../common/normalize';
 import { MediaService } from '../media/media.service';
@@ -50,7 +51,7 @@ export class CarsService {
 
   async create(userId: string, dto: CreateCarDto) {
     // Державний номер обов'язковий із самого початку: без нього авто не можна ні опублікувати, ні вказати в договорі
-    if (!plateValid(dto.plate)) throw new BadRequestException('Вкажіть державний номер авто (наприклад AA1234BB)');
+    if (!plateValid(dto.plate)) throw badField('plate', 'Вкажіть державний номер авто (наприклад AA1234BB)');
     // Облік без ліміту: у бета-версії обмежена лише кількість опублікованих авто
     return this.cars.create({ ...normalizePhotos(withCarLegal(dto)), userId });
   }
@@ -62,7 +63,7 @@ export class CarsService {
   }
 
   async update(userId: string, id: string, dto: UpdateCarDto) {
-    if (dto.plate !== undefined && !plateValid(dto.plate)) throw new BadRequestException('Вкажіть державний номер авто (наприклад AA1234BB)');
+    if (dto.plate !== undefined && !plateValid(dto.plate)) throw badField('plate', 'Вкажіть державний номер авто (наприклад AA1234BB)');
     // Фото до зміни: те, чого в новому наборі немає, прибираємо з Cloudinary
     const before = await this.cars.findOne({ _id: id, userId }, 'photoUri photos').lean().exec();
     const car = await this.cars.findOneAndUpdate({ _id: id, userId }, { $set: normalizePhotos(withCarLegal(dto)) }, { new: true, runValidators: true }).exec();

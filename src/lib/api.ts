@@ -15,6 +15,8 @@ export class ApiError extends Error {
     readonly details?: string[],
     /** Чого стосується помилка: me — даних користувача, car — авто */
     readonly scope?: string,
+    /** Помилки по полях форми ({phone: «Цей номер уже використовується»}): за ними форма підсвічує поля */
+    readonly fields?: Record<string, string>,
   ) {
     super(message);
   }
@@ -89,13 +91,14 @@ export async function api<T = void>(
   if (!res.ok) {
     // 401 на авторизованому запиті — токен недійсний; на /auth/* це просто невірні дані
     if (res.status === 401 && token && !path.startsWith('/auth/')) onUnauthorized?.();
-    const body = data as { code?: string; scope?: string; message?: unknown; missing?: unknown } | null;
+    const body = data as { code?: string; scope?: string; message?: unknown; missing?: unknown; fields?: unknown } | null;
     throw new ApiError(
       errorMessage(data, 'Щось пішло не так. Спробуйте ще раз.'),
       res.status,
       typeof body?.code === 'string' ? body.code : undefined,
       Array.isArray(body?.message) ? body.message.map(String) : Array.isArray(body?.missing) ? body.missing.map(String) : undefined,
       typeof body?.scope === 'string' ? body.scope : undefined,
+      body?.fields && typeof body.fields === 'object' ? (body.fields as Record<string, string>) : undefined,
     );
   }
   return data as T;

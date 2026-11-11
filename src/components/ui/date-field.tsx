@@ -10,13 +10,13 @@ import { formatDate, fromISODate, toISODate } from '@/lib/date';
 import { ThemedText } from '../themed-text';
 import { Icon } from './icon';
 
-type Props = { label: string; value: string; onChange: (iso: string) => void; minimumDate?: Date };
+type Props = { label: string; value: string; onChange: (iso: string) => void; minimumDate?: Date; /** Помилка поля: червона рамка й текст під ним */ error?: string };
 
 /**
  * Поле дати у тому ж стилі, що й решта полів. На iOS календар розкривається під полем
  * і згортається після вибору дня, на Android відкривається системний діалог.
  */
-export function DateField({ label, value, onChange, minimumDate }: Props) {
+export function DateField({ label, value, onChange, minimumDate, error }: Props) {
   const theme = useTheme();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [open, setOpen] = useState(false);
@@ -47,7 +47,7 @@ export function DateField({ label, value, onChange, minimumDate }: Props) {
         onPress={onPress}
         style={({ pressed }) => [
           styles.box,
-          { backgroundColor: theme.backgroundElement, borderColor: open ? theme.accent : theme.borderStrong },
+          { backgroundColor: theme.backgroundElement, borderColor: error ? theme.negative : open ? theme.accent : theme.borderStrong },
           pressed && styles.pressed,
         ]}>
         <Icon name="calendar-outline" size={20} color="accent" />
@@ -56,6 +56,11 @@ export function DateField({ label, value, onChange, minimumDate }: Props) {
         </ThemedText>
         <Icon name={open ? 'chevron-up' : 'chevron-down'} size={20} color="accent" />
       </Pressable>
+      {error ? (
+        <ThemedText type="small" themeColor="negative">
+          {error}
+        </ThemedText>
+      ) : null}
 
       {open && Platform.OS === 'ios' ? (
         <View style={[styles.calendar, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>

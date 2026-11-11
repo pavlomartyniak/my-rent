@@ -14,7 +14,7 @@ type AuthContextValue = {
   /** Повертає текст помилки або null, якщо успішно */
   login: (email: string, password: string) => Promise<string | null>;
   /** Перший крок реєстрації: надсилає код на пошту, акаунта ще немає. Повертає помилку або секунди до можливості надіслати код ще раз */
-  register: (email: string, password: string, profile: Profile, role: Role, license?: { series: string; number: string; validUntil: string }) => Promise<{ error?: string; resendInSeconds?: number }>;
+  register: (email: string, password: string, profile: Profile, role: Role, license?: { series: string; number: string; validUntil: string }) => Promise<{ error?: string; fields?: Record<string, string>; resendInSeconds?: number }>;
   /** Другий крок: код із листа створює акаунт і входить. Повертає текст помилки або null */
   confirmRegistration: (email: string, code: string) => Promise<string | null>;
   /** Надсилає код реєстрації ще раз */
@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
           return { resendInSeconds: res.resendInSeconds };
         } catch (e) {
-          return { error: e instanceof ApiError ? e.message : 'Не вдалося виконати запит' };
+          return { error: e instanceof ApiError ? e.message : 'Не вдалося виконати запит', fields: e instanceof ApiError ? e.fields : undefined };
         }
       },
       confirmRegistration: (email, code) => authenticate('/auth/register/verify', { email: email.trim(), code: code.trim() }),

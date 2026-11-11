@@ -36,6 +36,9 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [license, setLicense] = useState<LicenseDraft>(EMPTY_LICENSE);
   const [error, setError] = useState<string | null>(null);
+  // Помилки полів від сервера (зайнятий телефон чи пошта, хибне посвідчення): підсвічують відповідні поля, поки їх не змінять
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const clearField = (...keys: string[]) => setFieldErrors((f) => (keys.some((k) => k in f) ? Object.fromEntries(Object.entries(f).filter(([k]) => !keys.includes(k))) : f));
   const [busy, setBusy] = useState(false);
   const [slow, setSlow] = useState(false);
   // Після форми реєстрації: чекаємо код із листа
@@ -71,9 +74,12 @@ export default function LoginScreen() {
     if (!valid || busy) return;
     setBusy(true);
     setError(null);
+    setFieldErrors({});
     if (signingUp) {
       const res = await register(email, password, { firstName, lastName, phone }, isRenter ? 'renter' : 'owner', licenseState === 'full' ? license : undefined);
       setBusy(false);
+      // Якщо сервер вказав поля, підсвічуємо їх, а загального повідомлення внизу не показуємо
+      if (res.fields && Object.keys(res.fields).length) return setFieldErrors(res.fields);
       if (res.error) return setError(res.error);
       setWait(res.resendInSeconds ?? 60);
       setCode('');
@@ -220,18 +226,21 @@ export default function LoginScreen() {
               })}
             </View>
           </View>
-          <Field label="Ім’я" value={firstName} onChangeText={setFirstName} autoCapitalize="words" autoComplete="given-name" textContentType="givenName" maxLength={50} placeholder="Іван" />
-          <Field label="Прізвище" value={lastName} onChangeText={setLastName} autoCapitalize="words" autoComplete="family-name" textContentType="familyName" maxLength={50} placeholder="Шевченко" />
+          <Field label="Ім’я" value={firstName} onChangeText={(v) => { setFirstName(v); clearField('firstName'); }} error={fieldErrors.firstName} autoCapitalize="words" autoComplete="given-name" textContentType="givenName" maxLength={50} placeholder="Іван" />
+          <Field label="Прізвище" value={lastName} onChangeText={(v) => { setLastName(v); clearField('lastName'); }} error={fieldErrors.lastName} autoCapitalize="words" autoComplete="family-name" textContentType="familyName" maxLength={50} placeholder="Шевченко" />
           <Field
             label="Телефон"
             value={phone}
-            onChangeText={setPhone}
+            onChangeText={(v) => {
+              setPhone(v);
+              clearField('phone');
+            }}
             keyboardType="phone-pad"
             autoComplete="tel"
             textContentType="telephoneNumber"
             maxLength={20}
             placeholder="+380 67 123 45 67"
-            error={phone.trim() && !isValidPhone(phone) ? 'Невірний формат телефону' : undefined}
+            error={fieldErrors.phone ?? (phone.trim() && !isValidPhone(phone) ? 'Невірний формат телефону' : undefined)}
           />
           {isRenter ? (
             <>
@@ -239,7 +248,14 @@ export default function LoginScreen() {
               <ThemedText type="small" themeColor="textSecondary">
                 Знадобиться лише тоді, коли захочете укласти договір. Якщо не заповнювати зараз, додайте пізніше в профілі.
               </ThemedText>
-              <LicenseFields value={license} onChange={setLicense} />
+              <LicenseFields
+                value={license}
+                onChange={(l) => {
+                  setLicense(l);
+                  clearField('license.series', 'license.number', 'license.validUntil');
+                }}
+                errors={{ series: fieldErrors['license.series'], number: fieldErrors['license.number'], validUntil: fieldErrors['license.validUntil'] }}
+              />
               {licenseState === 'partial' ? (
                 <ThemedText type="small" themeColor="negative">
                   Заповніть посвідчення повністю (серія, номер, строк дії) або залиште порожнім.
@@ -253,7 +269,11 @@ export default function LoginScreen() {
       <Field
         label="Email"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={(v) => {
+          setEmail(v);
+          clearField('email');
+        }}
+        error={fieldErrors.email}
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}
@@ -264,7 +284,11 @@ export default function LoginScreen() {
       <Field
         label={signingUp ? 'Пароль (мінімум 8 символів)' : 'Пароль'}
         value={password}
-        onChangeText={setPassword}
+        onChangeText={(v) => {
+          setPassword(v);
+          clearField('password');
+        }}
+        error={fieldErrors.password}
         secureTextEntry
         autoCapitalize="none"
         autoComplete={signingUp ? 'new-password' : 'current-password'}
