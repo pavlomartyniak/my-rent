@@ -237,7 +237,7 @@ export default function LoginScreen() {
             <>
               <ThemedText type="smallBold">Посвідчення водія (необов’язково)</ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                Знадобиться, щоб надіслати запит на авто чи створити заявку. Якщо не заповнювати зараз, додайте пізніше в профілі.
+                Знадобиться лише тоді, коли захочете укласти договір. Якщо не заповнювати зараз, додайте пізніше в профілі.
               </ThemedText>
               <LicenseFields value={license} onChange={setLicense} />
               {licenseState === 'partial' ? (

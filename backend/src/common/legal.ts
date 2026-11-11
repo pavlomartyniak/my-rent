@@ -1,6 +1,6 @@
 /**
  * Юридичні дані сторони договору й авто. Потрібні, щоб у договорі були визначені сторони й предмет: ПІБ повністю, РНОКПП,
- * документ про особу, адреса, для водія — посвідчення, для авто — держномер і свідоцтво про реєстрацію. Чисті правила без бази.
+ * документ про особу, адреса, для водія — посвідчення, для авто — державний номер. Чисті правила без бази.
  */
 export const PARTY_TYPES = ['individual', 'fop'] as const;
 export type PartyType = (typeof PARTY_TYPES)[number];
@@ -26,13 +26,12 @@ export type LegalProfile = {
   license?: { series: string; number: string; categories: string[]; validUntil: string };
 };
 
-/** Дані авто для договору: державний номер, свідоцтво про реєстрацію й колір */
-export type CarLegal = { plate: string; regCertificate: string; color: string };
+/** Дані авто для договору: державний номер (обов'язковий) і колір (необов'язковий) */
+export type CarLegal = { plate: string; color: string };
 
 const CYR = 'А-ЯІЇЄҐ';
 const SERIES_BOOK = new RegExp(`^[${CYR}]{2}$`);
 const SERIES_LICENSE = new RegExp(`^[${CYR}A-Z]{2,3}$`);
-const REG_CERT = new RegExp(`^[${CYR}A-Z]{2,4}\\d{6}$`);
 const PLATE = new RegExp(`^[${CYR}A-Z0-9]{4,10}$`);
 
 const cap = (s: unknown, n: number) => String(s ?? '').trim().slice(0, n);
@@ -122,7 +121,7 @@ export function legalProblems(raw: LegalProfile | undefined | null, opts: { need
 }
 
 export function normalizeCarLegal(input: Partial<CarLegal>): CarLegal {
-  return { plate: compact(input.plate), regCertificate: compact(input.regCertificate), color: cap(input.color, 30) };
+  return { plate: compact(input.plate), color: cap(input.color, 30) };
 }
 
 /** Державний номер у єдиному вигляді (великі літери, без пробілів) має допустимий вигляд */
@@ -132,8 +131,6 @@ export function carProblems(car: Partial<CarLegal> | undefined | null): string[]
   const c = normalizeCarLegal(car ?? {});
   const out: string[] = [];
   if (!PLATE.test(c.plate)) out.push('Вкажіть державний номер авто');
-  if (!REG_CERT.test(c.regCertificate)) out.push('Вкажіть серію й номер свідоцтва про реєстрацію (ТЕХ 123456)');
-  if (c.color.length < 3) out.push('Вкажіть колір авто');
   return out;
 }
 

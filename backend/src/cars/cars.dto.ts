@@ -33,16 +33,11 @@ export class CreateCarDto {
   @Max(5_000_000)
   mileage?: number;
 
-  /** Державний номер (обов'язковий при додаванні авто) і серія з номером свідоцтва про реєстрацію (для публікації та договору) */
+  /** Державний номер: обов'язковий при додаванні авто */
   @IsOptional()
   @IsString()
   @MaxLength(20)
   plate?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(20)
-  regCertificate?: string;
 
   @IsOptional()
   @IsString()

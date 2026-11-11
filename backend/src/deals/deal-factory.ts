@@ -7,10 +7,10 @@ import { fullName } from '../rentals/rentals.math';
 import type { PaymentPlan } from './payment-plan';
 
 type PersonDoc = { firstName: string; lastName: string; phone?: string; legal?: LegalProfile };
-type CarDoc = { brand: string; model: string; year: number; vin: string; mileage: number; plate?: string; regCertificate?: string; color?: string; fuel?: string };
+type CarDoc = { brand: string; model: string; year: number; vin: string; mileage: number; plate?: string; color?: string; fuel?: string };
 
 /** Сторона договору. З юридичними даними ім'я записується як у документах (Прізвище Ім'я По батькові) */
-const party = (u: PersonDoc): ContractParty => {
+export const party = (u: PersonDoc): ContractParty => {
   const phone = u.phone ?? '';
   if (!u.legal) return { name: fullName(u.firstName, u.lastName) || 'Користувач', phone };
   const { partyType, kved, rnokpp, idDoc, address, license } = u.legal;
@@ -20,6 +20,19 @@ const party = (u: PersonDoc): ContractParty => {
     legal: { partyType, ...(kved ? { kved } : {}), rnokpp, idDoc, address, ...(license ? { license } : {}) },
   };
 };
+
+/** Дані авто для умов договору */
+export const carTerms = (title: string, car: CarDoc) => ({
+  title,
+  brand: car.brand,
+  model: car.model,
+  year: car.year,
+  vin: car.vin ?? '',
+  mileage: car.mileage ?? 0,
+  ...(car.plate ? { plate: car.plate } : {}),
+  ...(car.color ? { color: car.color } : {}),
+  ...(car.fuel ? { fuel: car.fuel } : {}),
+});
 
 /**
  * Дані нової оренди з договором. Вона створюється в статусі «підписання» (`awaiting`): оренда почнеться,
@@ -52,9 +65,10 @@ export function newDealData(input: {
     number: contractNumber(createdAt, String(_id)),
     createdAt,
     city: input.city,
-    owner: party(input.owner),
-    renter: party(input.renter),
-    car: { title: input.title, brand: input.car.brand, model: input.car.model, year: input.car.year, vin: input.car.vin ?? '', mileage: input.car.mileage ?? 0, ...(input.car.plate ? { plate: input.car.plate } : {}), ...(input.car.regCertificate ? { regCertificate: input.car.regCertificate } : {}), ...(input.car.color ? { color: input.car.color } : {}), ...(input.car.fuel ? { fuel: input.car.fuel } : {}) },
+    // Юридичні дані сторін потрапляють у договір лише тоді, коли обидві натиснуть «Укласти договір» (formContract)
+    owner: party({ firstName: input.owner.firstName, lastName: input.owner.lastName, phone: input.owner.phone }),
+    renter: party({ firstName: input.renter.firstName, lastName: input.renter.lastName, phone: input.renter.phone }),
+    car: carTerms(input.title, input.car),
     startDate: input.startDate,
     endDate: input.endDate,
     pricePerDay: input.pricePerDay,
@@ -76,7 +90,8 @@ export function newDealData(input: {
     source: input.source,
     sourceId: input.sourceId,
     status: 'awaiting',
-    contract: { terms, hash: contractHash(terms), signatures: {} },
+    // Договір ще чернетка: його формують і підписують, коли обидві сторони натиснуть «Укласти договір» (intent)
+    contract: { terms, hash: contractHash(terms), signatures: {}, intent: {} },
     payments: terms.payments.map((p) => ({ n: p.n, renterPaid: 0, ownerReceived: 0 })),
   };
 }

@@ -54,7 +54,11 @@ export function useAttention(role: 'owner' | 'renter' | null) {
 
   const items: AttentionItem[] = [];
 
-  for (const d of signing.filter((x) => x.contract?.signing.state === 'open')) {
+  // Договір ще не сформовано: потрібно натиснути «Укласти договір» (тоді й заповнюються дані)
+  for (const d of signing.filter((x) => x.contract && !x.contract.formed && !x.contract.myIntent)) {
+    items.push({ key: `intent-${d.id}`, tone: 'success', icon: 'create', title: d.contract!.otherIntent ? 'Друга сторона хоче укласти договір' : 'Можна укласти договір', action: 'Укласти договір', text: `${d.title}. Натисніть «Укласти договір» і заповніть свої дані`, count: 1, tab: 'home', target: { kind: 'contract', dealId: d.id } });
+  }
+  for (const d of signing.filter((x) => x.contract?.formed && x.contract.signing.state === 'open')) {
     items.push({ key: `sign-${d.id}`, tone: 'success', icon: 'create', title: 'Час підписати договір', action: 'Підписати', text: `${d.title}. Підписуйте під час зустрічі, коли передаєте авто, ключі й гроші`, count: 1, tab: 'home', target: { kind: 'contract', dealId: d.id } });
   }
   // Платежі за договором: «ви сплатили?» (орендар) чи «ви отримали?» (власник)
@@ -147,7 +151,7 @@ export function useAttention(role: 'owner' | 'renter' | null) {
       });
     }
   }
-  for (const d of signing.filter((x) => x.contract?.signing.state === 'early')) {
+  for (const d of signing.filter((x) => x.contract?.formed && x.contract.signing.state === 'early')) {
     items.push({ key: `sign-early-${d.id}`, tone: 'info', icon: 'document-text', title: 'Договір сформовано', action: 'Переглянути', text: `${d.title}. Перегляньте його, підписувати — при зустрічі`, count: 0, tab: 'home', target: { kind: 'contract', dealId: d.id } });
   }
 

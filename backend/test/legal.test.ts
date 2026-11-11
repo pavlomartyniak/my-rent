@@ -93,11 +93,15 @@ describe('посвідчення водія', () => {
 });
 
 describe('дані авто', () => {
-  const full = { plate: 'AA 1234 BB', regCertificate: 'ТЕХ 123456', color: 'сірий' };
-  it('нормалізація', () => assert.deepEqual(normalizeCarLegal({ plate: 'aa 1234 bb', regCertificate: 'тех 123456', color: ' сірий ' }), { plate: 'AA1234BB', regCertificate: 'ТЕХ123456', color: 'сірий' }));
-  it('повні дані приймаються', () => assert.deepEqual(carProblems(full), []));
-  it('порожні дані: номер, свідоцтво, колір', () => assert.equal(carProblems({}).length, 3));
-  it('хибне свідоцтво', () => assert.equal(carProblems({ ...full, regCertificate: '123' }).length, 1));
+  it('нормалізація', () => assert.deepEqual(normalizeCarLegal({ plate: 'aa 1234 bb', color: ' сірий ' }), { plate: 'AA1234BB', color: 'сірий' }));
+  it('обов’язковий лише державний номер: колір необов’язковий', () => {
+    assert.deepEqual(carProblems({ plate: 'AA 1234 BB' }), []);
+    assert.deepEqual(carProblems({ plate: 'AA1234BB', color: '' }), []);
+  });
+  it('без номера — одна помилка, свідоцтва ніхто не вимагає', () => {
+    assert.deepEqual(carProblems({}), ['Вкажіть державний номер авто']);
+    assert.deepEqual(carProblems({ plate: 'AA1234BB', regCertificate: '' } as never), []);
+  });
   it('державний номер: нормалізація й перевірка', () => {
     for (const ok of ['AA1234BB', 'aa 1234 bb', 'КА 1234 ВН', 'AB-1234-CD']) assert.equal(plateValid(ok), true, ok);
     for (const bad of ['', '   ', 'A1', '###$$$']) assert.equal(plateValid(bad), false, bad);

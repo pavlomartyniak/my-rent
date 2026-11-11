@@ -30,6 +30,10 @@ export type ContractView = {
   mySigned: boolean;
   /** Вікно підписання: договір підписують під час зустрічі, тож воно відкривається за добу до початку оренди */
   signing: { opensAt: string; closesAt: string; state: 'early' | 'open' | 'late' };
+  carId: string;
+  /** Чернетка, доки обидві сторони не натиснули «Укласти договір»; mine — чи натиснув користувач, other — друга сторона */
+  formed: boolean;
+  intent: { mine: boolean; other: boolean };
   /** Одностороння відмова від договору, якщо була: хто, чому, коли отримано й коли договір буде розірвано (через 12 год після отримання) */
   withdrawal: { by: 'owner' | 'renter'; ground: string; groundLabel: string; note: string; at: string; delivered: boolean; readAt: string | null; effectiveAt: string } | null;
 };

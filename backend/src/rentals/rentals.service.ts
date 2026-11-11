@@ -9,7 +9,6 @@ import { RealtimeService } from '../realtime/realtime.service';
 import { planError, type PaymentPlan } from '../deals/payment-plan';
 import { newDealData } from '../deals/deal-factory';
 import { dealStageOf } from '../deals/deal-stage';
-import { LegalService } from '../legal/legal.service';
 import { ModerationService } from '../moderation/moderation.service';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
@@ -36,7 +35,6 @@ export class RentalsService {
     private readonly chat: ChatService,
     private readonly realtime: RealtimeService,
     private readonly moderation: ModerationService,
-    private readonly legal: LegalService,
   ) {}
 
   async create(renterId: string, dto: CreateRentalDto) {
@@ -46,8 +44,6 @@ export class RentalsService {
     const plan: PaymentPlan = dto.paymentPlan ?? 'lump';
     const planProblem = planError(plan, dto.startDate, dto.endDate);
     if (planProblem) throw new BadRequestException(planProblem);
-    // Орендар — сторона договору: ПІБ, РНОКПП, документ, адреса й посвідчення водія мають бути заповнені
-    await this.legal.assertRenterCanRent(renterId, dto.endDate);
 
     const car = await this.cars
       .findOne({ _id: dto.carId, 'listing.published': true, status: 'Вільне' })
@@ -160,7 +156,6 @@ export class RentalsService {
         const car = await this.cars.findOne({ _id: request.carId, userId: ownerId }, null, { session }).exec();
         if (!car) throw new NotFoundException('Авто не знайдено');
         if (car.status !== 'Вільне') throw new ConflictException('Авто вже не вільне: змініть статус авто, перш ніж приймати запит');
-        await this.legal.assertDealReady(String(ownerId), String(request.renterId), car, 'owner');
 
         const renter = await this.users.findById(request.renterId, null, { session }).exec();
         if (!renter) throw new NotFoundException('Орендаря не знайдено');

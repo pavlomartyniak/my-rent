@@ -25,6 +25,21 @@ export function ContractCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
   const other = as === 'owner' ? 'орендар' : 'власник';
   const open = () => router.push({ pathname: '/contracts/[id]', params: { id: deal.id } });
 
+  // Договір ще чернетка: сторони мають натиснути «Укласти договір» і заповнити свої дані
+  if (awaiting && !c.formed) {
+    return (
+      <View style={[styles.box, { backgroundColor: theme.accentSoft, borderColor: 'transparent' }]}>
+        <ThemedText type="smallBold" themeColor="accent">
+          {c.myIntent ? `Ви готові укласти договір. Чекаємо: ${other}` : c.otherIntent ? `${other[0]!.toUpperCase()}${other.slice(1)} хоче укласти договір` : 'Договір ще не укладено'}
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          {c.myIntent ? 'Договір сформується, коли друга сторона теж натисне «Укласти договір».' : 'Щоб укласти договір, натисніть «Укласти договір» і заповніть свої дані (паспорт, РНОКПП, адреса). Раніше їх не вимагають.'}
+        </ThemedText>
+        <Button title={c.myIntent ? 'Переглянути договір' : 'Укласти договір'} icon="document-text-outline" variant={c.myIntent ? 'secondary' : 'primary'} onPress={open} />
+      </View>
+    );
+  }
+
   if (awaiting) {
     const ready = c.signing.state === 'open' && !c.mySigned;
     return (

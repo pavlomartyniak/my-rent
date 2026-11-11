@@ -8,7 +8,7 @@ const owner: ContractParty = { name: 'Власенко Петро Іванови
 const renter: ContractParty = { name: 'Тестова Олена Петрівна', phone: '+380509998877', legal: legal({ license: { series: 'ААА', number: '123456', categories: ['B'], validUntil: '2030-01-01' } }) };
 const base = {
   number: 'MR-1', createdAt: new Date('2026-11-12T10:00:00Z'), city: 'Львів', owner, renter,
-  car: { title: 'Skoda Octavia 2020', brand: 'Skoda', model: 'Octavia', year: 2020, vin: 'TMBJG7NE0L0000000', mileage: 1, plate: 'AA1234BB', regCertificate: 'ТЕХ123456', color: 'сірий', fuel: 'Бензин' },
+  car: { title: 'Skoda Octavia 2020', brand: 'Skoda', model: 'Octavia', year: 2020, vin: 'TMBJG7NE0L0000000', mileage: 1, plate: 'AA1234BB', color: 'сірий', fuel: 'Бензин' },
   startDate: '2026-11-20', endDate: '2026-11-30', pricePerDay: 1200,
 };
 const text = (t: ReturnType<typeof buildTerms>) => buildSections(t).flatMap((s) => [s.title, ...s.paragraphs]).join('\n');
@@ -23,7 +23,14 @@ describe('шаблон договору версії 4 (посилена ред�
     const s = text(buildTerms(base));
     assert.match(s, /Наймодавець \(Орендодавець\): Власенко Петро Іванович, РНОКПП 3000000008, документ про особу: ID-картка № 123456789/);
     assert.match(s, /Наймач \(Орендар\): Тестова Олена Петрівна.*посвідчення водія серії ААА № 123456, категорії B, дійсне до 01\.01\.2030/);
-    assert.match(s, /Skoda Octavia, рік випуску 2020, колір сірий, VIN TMBJG7NE0L0000000, державний номер AA1234BB, свідоцтво про реєстрацію ТЗ ТЕХ123456, вид палива бензин/);
+    assert.match(s, /Skoda Octavia, рік випуску 2020, колір сірий, VIN TMBJG7NE0L0000000, державний номер AA1234BB, вид палива бензин/);
+  });
+  it('у п. 1.1 немає даних свідоцтва про реєстрацію: потрібен лише державний номер', () => {
+    const s = text(buildTerms(base));
+    assert.match(s, /1\.1\..*державний номер AA1234BB/);
+    assert.doesNotMatch(s.split('1.2.')[0]!, /свідоцтво про реєстрацію ТЗ [А-ЯA-Z]/);
+    const noColor = text(buildTerms({ ...base, car: { ...base.car, color: undefined } }));
+    assert.doesNotMatch(noColor, /колір/);
   });
   it('між фізособами — електронна форма без нотаріуса (п. 1.3), між ФОП — господарська діяльність', () => {
     assert.match(text(buildTerms(base)), /1\.3\. Сторони домовились укласти Договір у письмовій електронній формі в порядку розд\. 12 без нотаріального посвідчення/);

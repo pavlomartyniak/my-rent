@@ -87,7 +87,7 @@ export default function ProfileScreen() {
           <Card>
             <ThemedText type="smallBold">Посвідчення водія</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              Щоб надіслати запит на авто чи створити заявку, посвідчення водія (серія, номер, категорії й строк дії) має бути заповнене: його вказують у договорі. Додати його можна й пізніше.
+              Посвідчення водія (серія, номер, категорії й строк дії) вказують у договорі. Його не вимагають, поки ви не захочете укласти договір, тоді воно має бути заповнене. Додати його можна й зараз, і пізніше.
             </ThemedText>
           </Card>
           {license ? <LicenseFields value={license} onChange={setLicense} /> : null}

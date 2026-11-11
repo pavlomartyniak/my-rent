@@ -16,6 +16,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
+import { handleLegalGate } from '@/lib/legal-gate';
 import { downloadContractPdf, METHOD_LABEL, type ContractSignature, type ContractView } from '@/lib/contract';
 import { formatDate, todayISO } from '@/lib/date';
 import { useFleet } from '@/store/fleet';
@@ -27,7 +28,7 @@ export default function ContractScreen() {
   const theme = useTheme();
   const { invalidate, reload, role } = useFleet();
   const { data, loading, error, retry } = useReport<ContractView>(`/deals/${id}/contract`, { useCache: false, refetchOnFocus: true });
-  const [busy, setBusy] = useState<'pdf' | 'cancel' | null>(null);
+  const [busy, setBusy] = useState<'pdf' | 'cancel' | 'intent' | null>(null);
   const [signing, setSigning] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
 
@@ -42,9 +43,9 @@ export default function ContractScreen() {
 
   const awaiting = data.status === 'awaiting';
   const state = data.signing.state;
-  const canSign = awaiting && !data.mySigned && state === 'open';
+  const canSign = awaiting && data.formed && !data.mySigned && state === 'open';
 
-  async function run(kind: 'cancel', fn: () => Promise<unknown>, failTitle: string) {
+  async function run(kind: 'cancel' | 'intent', fn: () => Promise<unknown>, failTitle: string) {
     setBusy(kind);
     try {
       await fn();
@@ -54,6 +55,21 @@ export default function ContractScreen() {
     } catch (e) {
       Alert.alert(failTitle, e instanceof ApiError ? e.message : 'Спробуйте ще раз');
       retry();
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function intend() {
+    setBusy('intent');
+    try {
+      await api('POST', `/deals/${id}/contract/intent`, {});
+      invalidate();
+      reload();
+      retry();
+    } catch (e) {
+      // Дані ще не заповнені: пояснюємо, що це обов'язково, і ведемо на потрібну сторінку
+      if (!handleLegalGate(e, router, data!.carId)) Alert.alert('Не вдалося', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
     } finally {
       setBusy(null);
     }
@@ -109,6 +125,20 @@ export default function ContractScreen() {
       <SignatureRow label="Орендодавець" name={data.terms.owner.name} signature={data.signatures.owner} you={role === 'owner'} />
       <SignatureRow label="Орендар" name={data.terms.renter.name} signature={data.signatures.renter} you={role === 'renter'} />
 
+      {awaiting && !data.formed ? (
+        <Card style={{ backgroundColor: theme.warningSoft }}>
+          <ThemedText type="smallBold" themeColor="warning">
+            {data.intent.mine ? 'Ви готові укласти договір' : 'Договір ще не укладено'}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {data.intent.mine
+              ? 'Договір сформується з даними обох сторін, коли друга сторона теж натисне «Укласти договір». Тоді його можна буде підписати.'
+              : `Щоб укласти договір, натисніть кнопку нижче: ви зобов’язані заповнити свої дані (паспорт, РНОКПП, адреса${role === 'renter' ? ', посвідчення водія' : ', державний номер авто'}). Договір сформується, коли це зроблять обидві сторони${data.intent.other ? ' (друга сторона вже готова)' : ''}.`}
+          </ThemedText>
+          {!data.intent.mine ? <Button title="Укласти договір" icon="create-outline" disabled={busy !== null} onPress={() => void intend()} /> : null}
+        </Card>
+      ) : null}
+
       {canSign ? (
         <>
           <Card style={{ backgroundColor: theme.positiveSoft }}>
@@ -121,7 +151,7 @@ export default function ContractScreen() {
           </Card>
           <Button title="Підписати договір" icon="create-outline" disabled={busy !== null} onPress={() => setSigning(true)} />
         </>
-      ) : awaiting && !data.mySigned ? (
+      ) : awaiting && data.formed && !data.mySigned ? (
         <Card style={{ backgroundColor: theme.warningSoft }}>
           <ThemedText type="smallBold" themeColor="warning">
             {state === 'early' ? `Підписання відкриється ${formatDate(data.signing.opensAt)}` : 'Час на підписання минув'}
@@ -132,7 +162,7 @@ export default function ContractScreen() {
               : 'Договір не підписано вчасно, тому домовленість буде скасовано. Домовтесь про нову оренду.'}
           </ThemedText>
         </Card>
-      ) : awaiting ? (
+      ) : awaiting && data.formed ? (
         <Card style={{ backgroundColor: theme.warningSoft }}>
           <ThemedText type="smallBold" themeColor="warning">
             Ви підписали. Чекаємо підпису другої сторони

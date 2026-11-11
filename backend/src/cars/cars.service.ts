@@ -5,7 +5,6 @@ import type { Model } from 'mongoose';
 import { MAX_LISTINGS } from '../common/constants';
 import { type CarLegal, normalizeCarLegal, plateValid } from '../common/legal';
 import { normalize } from '../common/normalize';
-import { LegalService } from '../legal/legal.service';
 import { MediaService } from '../media/media.service';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
@@ -24,10 +23,10 @@ const listingLimit = () =>
     HttpStatus.FORBIDDEN,
   );
 
-/** Державний номер і свідоцтво зберігаємо в єдиному вигляді: великі літери, без пробілів і дефісів */
+/** Державний номер зберігаємо в єдиному вигляді: великі літери, без пробілів і дефісів */
 function withCarLegal<T extends Partial<CarLegal>>(dto: T): T {
   const out = { ...dto };
-  for (const k of ['plate', 'regCertificate', 'color'] as const) {
+  for (const k of ['plate', 'color'] as const) {
     if (dto[k] !== undefined) out[k] = normalizeCarLegal({ [k]: dto[k] })[k] as T[typeof k];
   }
   return out;
@@ -43,7 +42,6 @@ export class CarsService {
     @InjectModel(Offer.name) private readonly offers: Model<Offer>,
     @InjectModel(Deal.name) private readonly deals: Model<Deal>,
     private readonly media: MediaService,
-    private readonly legal: LegalService,
   ) {}
 
   list(userId: string) {
@@ -93,9 +91,6 @@ export class CarsService {
     }
     const cityKey = normalize(dto.city);
     if (!cityKey) throw new BadRequestException('Вкажіть місто');
-    // Без даних власника й авто договір не буде дійсним, тому опублікувати їх не можна
-    await this.legal.assertUserReady(userId, 'owner');
-    this.legal.assertCarReady(car);
 
     // Публікація цього авто вже відкрита, або воно займає вільне місце, або місць (MAX_LISTINGS) уже немає
     const used = car.listingUnlock ? 0 : await this.cars.countDocuments({ userId, listingUnlock: 'free', _id: { $ne: car._id } });

@@ -9,9 +9,11 @@ import { renderContractPdf } from '../contract/contract.pdf';
 import { checkCode, generateCode, hashCode, maskEmail, OTP_MAX_ATTEMPTS, OTP_MINUTES, OTP_RESEND_SECONDS, resendWait } from '../contract/contract.otp';
 import { signContract } from '../contract/contract.signing';
 import { MailService } from '../mail/mail.service';
-import { buildSections } from '../contract/contract.terms';
+import { buildSections, buildTerms, contractHash } from '../contract/contract.terms';
 import { RealtimeService } from '../realtime/realtime.service';
 import { settledAmount } from './deal-payments';
+import { carTerms, party } from './deal-factory';
+import { LegalService } from '../legal/legal.service';
 import { SIGN_DAYS_AFTER, signingState, signingWindow } from '../contract/contract.window';
 import { fullName, todayUtc } from '../rentals/rentals.math';
 import { Car } from '../schemas/car.schema';
@@ -40,6 +42,7 @@ export class DealsService {
     private readonly realtime: RealtimeService,
     private readonly mail: MailService,
     private readonly config: ConfigService,
+    private readonly legal: LegalService,
   ) {}
 
   /** Усі оренди орендаря, новіші першими */
@@ -348,6 +351,10 @@ export class DealsService {
       signedAt: c.signedAt ?? null,
       mySigned: !!c.signatures?.[user.role],
       signing: this.signingView(deal.startDate),
+      carId: String(deal.carId),
+      // Чернетка, доки обидві сторони не натиснули «Укласти договір»; mine — чи натиснув користувач, other — чи друга сторона
+      formed: this.isFormed(c),
+      intent: { mine: !!c.intent?.[user.role], other: !!c.intent?.[user.role === 'owner' ? 'renter' : 'owner'] },
       withdrawal: this.withdrawalView(deal),
       payments: this.paymentsView(deal, user.role === 'renter' ? 'renter' : 'owner'),
     };
@@ -361,12 +368,67 @@ export class DealsService {
     return { pdf, filename: `${c.terms.number}.pdf` };
   }
 
+  /** Договір сформовано: обидві сторони натиснули «Укласти договір» і їхні дані в умовах. Договори старих редакцій сформовані з самого початку */
+  isFormed(c: NonNullable<DealDocument['contract']>) {
+    return !!c.formedAt || (c.terms.templateVersion ?? 1) < 4;
+  }
+
+  /**
+   * Сторона хоче укласти договір. Лише тепер вимагаються дані для договору (власнику — ще державний номер авто, орендарю —
+   * посвідчення водія, чинне до кінця оренди). Коли натиснули обидві, умови формуються наново з їхніми даними, і можна підписувати.
+   */
+  async intend(user: AuthUser, id: string) {
+    const deal = await this.mine(user, id);
+    const c = this.requireContract(deal);
+    if (deal.status !== 'awaiting') throw new ConflictException(deal.status === 'terminated' ? 'Домовленість скасована' : 'Договір уже підписано обома сторонами');
+    if (this.isFormed(c)) throw new ConflictException('Договір уже сформовано: його можна підписувати');
+    if (!c.intent?.[user.role]) {
+      const car = await this.cars.findById(deal.carId, 'plate').lean().exec();
+      await this.legal.assertReadyToContract(user.id, user.role, { plate: car?.plate ?? '' }, deal.endDate);
+      c.intent = { ...(c.intent ?? {}), [user.role]: new Date() };
+      deal.markModified('contract');
+      if (c.intent.owner && c.intent.renter) await this.formContract(deal);
+      await deal.save();
+      this.pingOther(user, deal);
+    }
+    return this.contract(user, id);
+  }
+
+  /** Формує умови наново: ті самі дати, ціна й графік, але з повними даними сторін і авто, і новий відбиток */
+  private async formContract(deal: DealDocument) {
+    const c = deal.contract!;
+    const [owner, renter, car] = await Promise.all([
+      this.users.findById(deal.ownerId).exec(),
+      this.users.findById(deal.renterId).exec(),
+      this.cars.findById(deal.carId).exec(),
+    ]);
+    if (!owner || !renter || !car) throw new NotFoundException('Не вдалося сформувати договір: сторону чи авто не знайдено');
+    const t = c.terms;
+    const terms = buildTerms({
+      number: t.number,
+      createdAt: new Date(),
+      city: t.city,
+      owner: party(owner),
+      renter: party(renter),
+      car: carTerms(t.car.title, car),
+      startDate: deal.startDate,
+      endDate: deal.endDate,
+      pricePerDay: deal.pricePerDay,
+      paymentPlan: t.paymentPlan,
+      deposit: t.deposit,
+      purpose: t.purpose,
+    });
+    deal.contract = { ...c, terms, hash: contractHash(terms), formedAt: new Date() };
+    deal.markModified('contract');
+  }
+
   /** Договір, який сторона зараз може підписати: перевірки, спільні для запиту коду й самого підпису */
   private async signable(user: AuthUser, id: string) {
     const deal = await this.deals.findOne({ _id: id, ...this.side(user) }).exec();
     if (!deal) throw new NotFoundException('Оренду не знайдено');
     const c = this.requireContract(deal);
     if (deal.status !== 'awaiting') throw new ConflictException(deal.status === 'terminated' ? 'Домовленість скасована' : 'Договір уже підписано обома сторонами');
+    if (!this.isFormed(c)) throw new ConflictException('Спершу обидві сторони мають натиснути «Укласти договір» і заповнити свої дані');
     const state = signingState(todayUtc(), deal.startDate);
     if (state === 'early') {
       throw new ConflictException(`Підписання відкриється ${signingWindow(deal.startDate).opensAt.split('-').reverse().join('.')}: підписуйте договір під час зустрічі, коли передаєте авто, ключі й гроші`);
@@ -837,7 +899,7 @@ export class DealsService {
       status: d.status ?? 'active',
       /** Договір: номер і хто підписав (null — оренда без договору, створена до його появи) */
       contract: d.contract
-        ? { number: d.contract.terms.number, signed: { owner: !!d.contract.signatures?.owner, renter: !!d.contract.signatures?.renter }, mySigned: !!d.contract.signatures?.[as], signedAt: d.contract.signedAt ?? null, signing: this.signingView(d.startDate) }
+        ? { number: d.contract.terms.number, signed: { owner: !!d.contract.signatures?.owner, renter: !!d.contract.signatures?.renter }, mySigned: !!d.contract.signatures?.[as], signedAt: d.contract.signedAt ?? null, signing: this.signingView(d.startDate), formed: this.isFormed(d.contract), myIntent: !!d.contract.intent?.[as], otherIntent: !!d.contract.intent?.[as === 'owner' ? 'renter' : 'owner'] }
         : null,
       /** План оплати й графік платежів із відповідями сторін (для оренд з договором) */
       paymentPlan: d.contract?.terms.paymentPlan ?? null,
