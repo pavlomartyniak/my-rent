@@ -11,6 +11,7 @@ import { generateCode, OTP_MAX_ATTEMPTS, OTP_MINUTES, OTP_RESEND_SECONDS, resend
 import { MailService } from '../mail/mail.service';
 import { SUSPENDED_MESSAGE } from '../moderation/moderation.constants';
 import { PendingRegistration, type PendingRegistrationDocument } from '../schemas/pending-registration.schema';
+import { PHONE_TAKEN } from '../common/profile';
 import { UsersService } from '../users/users.service';
 import type { LoginDto, RegisterDto, ResetPasswordDto, VerifyRegistrationDto } from './auth.dto';
 
@@ -42,6 +43,7 @@ export class AuthService {
   async register(dto: RegisterDto) {
     const email = dto.email.toLowerCase().trim();
     if (await this.users.findByEmail(email)) throw new ConflictException('Користувач з таким email уже існує');
+    if (await this.users.phoneTaken(dto.phone)) throw new ConflictException(PHONE_TAKEN);
 
     const now = new Date();
     const existing = await this.pending.findOne({ email }).exec();

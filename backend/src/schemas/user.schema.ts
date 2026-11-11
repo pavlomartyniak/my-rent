@@ -4,7 +4,7 @@ import type { HydratedDocument } from 'mongoose';
 import { ROLES, THEMES } from '../common/constants';
 import { jsonOptions } from '../common/json-options';
 
-@Schema(jsonOptions([], ['passwordHash', 'resetCodeHash', 'resetExpires', 'resetAttempts', 'suspended']))
+@Schema(jsonOptions([], ['passwordHash', 'resetCodeHash', 'resetExpires', 'resetAttempts', 'suspended', 'phoneKey']))
 export class User {
   @Prop({ required: true, unique: true, lowercase: true, trim: true })
   email: string;
@@ -36,6 +36,10 @@ export class User {
   @Prop({ default: '', trim: true })
   phone: string;
 
+  /** Нормалізований номер для перевірки унікальності; у старих акаунтів без телефону відсутній */
+  @Prop({ type: String })
+  phoneKey?: string;
+
   /** Тип акаунта: owner — власник авто (облік), renter — орендар (пошук і запити); не змінюється */
   @Prop({ enum: ROLES, default: 'owner' })
   role: string;
@@ -53,3 +57,5 @@ export class User {
 
 export type UserDocument = HydratedDocument<User>;
 export const UserSchema = SchemaFactory.createForClass(User);
+// Один номер — один акаунт; акаунти без номера (створені до цього правила) в індекс не потрапляють
+UserSchema.index({ phoneKey: 1 }, { unique: true, partialFilterExpression: { phoneKey: { $type: 'string' } } });

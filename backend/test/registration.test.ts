@@ -1,3 +1,4 @@
+import { phoneKey } from '../src/common/profile';
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
@@ -30,12 +31,13 @@ function fakePending() {
   };
 }
 
-function setup(opts: { mailOk?: boolean; existingEmail?: string } = {}) {
+function setup(opts: { mailOk?: boolean; existingEmail?: string; takenPhone?: string } = {}) {
   const pending = fakePending();
   const created: Record<string, unknown>[] = [];
   const outbox: { to: string; text: string }[] = [];
   const users = {
     findByEmail: async (email: string) => (email === opts.existingEmail ? { id: 'u0' } : created.find((u) => u.email === email) ?? null),
+    phoneTaken: async (phone: string) => !!opts.takenPhone && phoneKey(phone) === phoneKey(opts.takenPhone),
     create: async (data: Record<string, unknown>) => {
       const user = { id: `u${created.length + 1}`, role: data.role, ...data };
       created.push(user);
@@ -112,6 +114,12 @@ describe('реєстрація з підтвердженням пошти', () =
   it('зайнята пошта відхиляється до надсилання листа', async () => {
     const { auth, outbox } = setup({ existingEmail: 'ivan@example.com' });
     await assert.rejects(auth.register(form), /уже існує/);
+    assert.equal(outbox.length, 0);
+  });
+
+  it('зайнятий номер (в іншому записі) відхиляється до надсилання листа', async () => {
+    const { auth, outbox } = setup({ takenPhone: '067 123 45 67' });
+    await assert.rejects(auth.register(form), /номер телефону вже використовується/);
     assert.equal(outbox.length, 0);
   });
 
