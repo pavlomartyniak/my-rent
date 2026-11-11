@@ -14,6 +14,7 @@ import { Screen } from '@/components/ui/screen';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { isValidPhone } from '@/lib/profile';
+import { EMPTY_LICENSE, LicenseFields, licenseFill, type LicenseDraft } from '@/components/license-fields';
 import { useAuth } from '@/store/auth';
 
 const MODES = ['Вхід', 'Реєстрація'] as const;
@@ -33,6 +34,7 @@ export default function LoginScreen() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [license, setLicense] = useState<LicenseDraft>(EMPTY_LICENSE);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [slow, setSlow] = useState(false);
@@ -42,7 +44,10 @@ export default function LoginScreen() {
   const [wait, setWait] = useState(0);
 
   const signingUp = mode === 'Реєстрація';
-  const validProfile = !!firstName.trim() && !!lastName.trim() && isValidPhone(phone);
+  const isRenter = roleLabel !== ROLES[0];
+  // Посвідчення при реєстрації необов'язкове: порожнє чи повністю заповнене
+  const licenseState = isRenter ? licenseFill(license) : 'empty';
+  const validProfile = !!firstName.trim() && !!lastName.trim() && isValidPhone(phone) && licenseState !== 'partial';
   const valid = /\S+@\S+\.\S+/.test(email) && password.length >= (signingUp ? 8 : 1) && (!signingUp || validProfile);
 
   // Якщо відповідь іде довше за кілька секунд — пояснюємо чому
@@ -67,7 +72,7 @@ export default function LoginScreen() {
     setBusy(true);
     setError(null);
     if (signingUp) {
-      const res = await register(email, password, { firstName, lastName, phone }, roleLabel === ROLES[0] ? 'owner' : 'renter');
+      const res = await register(email, password, { firstName, lastName, phone }, isRenter ? 'renter' : 'owner', licenseState === 'full' ? license : undefined);
       setBusy(false);
       if (res.error) return setError(res.error);
       setWait(res.resendInSeconds ?? 60);
@@ -228,6 +233,20 @@ export default function LoginScreen() {
             placeholder="+380 67 123 45 67"
             error={phone.trim() && !isValidPhone(phone) ? 'Невірний формат телефону' : undefined}
           />
+          {isRenter ? (
+            <>
+              <ThemedText type="smallBold">Посвідчення водія (необов’язково)</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                Знадобиться, щоб надіслати запит на авто чи створити заявку. Якщо не заповнювати зараз, додайте пізніше в профілі.
+              </ThemedText>
+              <LicenseFields value={license} onChange={setLicense} />
+              {licenseState === 'partial' ? (
+                <ThemedText type="small" themeColor="negative">
+                  Заповніть посвідчення повністю (серія, номер, категорії, строк дії) або залиште порожнім.
+                </ThemedText>
+              ) : null}
+            </>
+          ) : null}
         </>
       ) : null}
 

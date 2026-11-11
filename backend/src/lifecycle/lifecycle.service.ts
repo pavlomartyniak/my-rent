@@ -58,6 +58,7 @@ export class LifecycleService implements OnModuleInit, OnModuleDestroy {
       // Спершу скасовуємо непідписані договори й запускаємо оренди, що почались, а вже тоді завершуємо ті, що закінчились
       const expired = await this.dealsService.expireUnsigned();
       const started = await this.dealsService.startReserved();
+      await this.dealsService.finalizeWithdrawals();
       const ended = await this.endFinishedDeals();
       const wanted = await this.purgeOldWanted();
       const chats = await this.chat.purgeInactive(new Date(Date.now() - FINISHED_RETENTION_DAYS * DAY_MS));

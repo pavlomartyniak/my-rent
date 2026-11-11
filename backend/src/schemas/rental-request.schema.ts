@@ -29,6 +29,10 @@ export class RentalRequest {
   @Prop({ enum: ['lump', 'weekly', 'daily', 'monthly'], default: 'lump' })
   paymentPlan: string;
 
+  /** Мета використання авто, яку вказав орендар: потрапляє в договір */
+  @Prop({ type: String, enum: ['personal', 'passengers', 'delivery'], default: 'personal' })
+  purpose: string;
+
   @Prop({ required: true, enum: RENTAL_STATUSES, default: 'pending' })
   status: string;
 

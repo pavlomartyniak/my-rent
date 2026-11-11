@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 
 import { checkCode, generateCode, hashCode, maskEmail, OTP_MAX_ATTEMPTS, OTP_MINUTES, OTP_RESEND_SECONDS, resendWait, type PendingCode } from '../src/contract/contract.otp';
 import { methodLabel, SIGNING_METHOD_EMAIL_OTP, signContract } from '../src/contract/contract.signing';
-import { buildSections, buildTerms, contractHash } from '../src/contract/contract.terms';
+import { buildSections, buildTerms, contractHash, TEMPLATE_VERSION } from '../src/contract/contract.terms';
 
 const ctx = { dealId: 'deal1', role: 'renter', contractHash: 'abc' };
 const now = new Date('2026-11-10T12:00:00Z');
@@ -60,10 +60,25 @@ describe('шаблон договору', () => {
 
   it('новий договір містить пункти про спосіб підписання', () => {
     const t = buildTerms(input);
-    assert.equal(t.templateVersion, 2);
+    assert.equal(t.templateVersion, TEMPLATE_VERSION);
     assert.match(text(t), /простим електронним підписом/);
     assert.match(text(t), /одноразовим кодом/);
     assert.match(text(t), /паперову копію/);
+  });
+  it('договір версії 3 містить повні дані сторін і авто, а версії 2 — лише імена', () => {
+    const legal = { partyType: 'fop' as const, kved: '49.32', rnokpp: '3000000008', idDoc: { type: 'id_card' as const, series: '', number: '123456789', issuedBy: '1234', issuedAt: '2022-05-01' }, address: 'м. Київ, вул. Хрещатик, 1, кв. 2' };
+    const full = buildTerms({
+      ...input,
+      owner: { name: 'Власенко Петро Іванович', phone: '+380501112233', legal },
+      renter: { name: 'Тестова Олена Петрівна', phone: '', legal: { ...legal, partyType: 'individual', kved: undefined, license: { series: 'ААА', number: '123456', categories: ['B', 'C'] } } },
+      car: { ...input.car, plate: 'AA1234BB', regCertificate: 'ТЕХ123456' },
+    });
+    const s = text({ ...full, templateVersion: 3 });
+    assert.match(s, /Орендодавець: Власенко Петро Іванович, ФОП, КВЕД 49\.32, РНОКПП 3000000008, ID-картка № 123456789, виданий 1234 01\.05\.2022, адреса: м\. Київ/);
+    assert.match(s, /Орендар: Тестова Олена Петрівна, фізична особа, РНОКПП 3000000008.*посвідчення водія серії ААА № 123456, категорії B, C/);
+    assert.match(s, /державний номер AA1234BB, свідоцтво про реєстрацію ТЕХ123456/);
+    const v2 = text({ ...buildTerms(input), templateVersion: 2 });
+    assert.doesNotMatch(v2, /РНОКПП|державний номер/);
   });
   it('договір без версії читається за старим текстом, без нових пунктів', () => {
     const { templateVersion: _v, ...legacy } = buildTerms(input);

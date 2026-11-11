@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 
 import { ConflictException } from '@nestjs/common';
+import type { LegalProfile } from '../common/legal';
 import { PHONE_TAKEN, phoneKey } from '../common/profile';
 import { User, type UserDocument } from '../schemas/user.schema';
 
@@ -42,12 +43,24 @@ export class UsersService {
     return !!(await this.users.exists(filter));
   }
 
-  async create(data: { email: string; passwordHash: string; firstName: string; lastName: string; phone?: string; role?: string }) {
+  async create(data: { email: string; passwordHash: string; firstName: string; lastName: string; phone?: string; role?: string; legal?: Record<string, unknown> }) {
     try {
-      return await this.users.create({ ...data, ...(data.phone ? { phoneKey: phoneKey(data.phone) } : {}) });
+      return await this.users.create({ ...data, ...(data.phone ? { phoneKey: phoneKey(data.phone) } : {}) } as never);
     } catch (e) {
       throw this.mapDuplicate(e);
     }
+  }
+
+  /** Зберігає юридичні дані для договору; посвідчення водія, додане окремо, лишається як було */
+  async setLegal(id: string, legal: LegalProfile) {
+    const existing = await this.users.findById(id, 'legal').lean().exec();
+    const license = existing?.legal?.license;
+    return this.users.findByIdAndUpdate(id, { $set: { legal: { ...legal, ...(license ? { license } : {}) } } }, { new: true }).exec();
+  }
+
+  /** Зберігає посвідчення водія (окремо від решти даних для договору); null — прибрати */
+  setLicense(id: string, license: LegalProfile['license'] | null) {
+    return this.users.findByIdAndUpdate(id, license ? { $set: { 'legal.license': license } } : { $unset: { 'legal.license': '' } }, { new: true }).exec();
   }
 
   async update(id: string, patch: Partial<Pick<User, 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'phone'>>) {

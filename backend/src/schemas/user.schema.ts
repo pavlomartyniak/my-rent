@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import type { HydratedDocument } from 'mongoose';
 
 import { ROLES, THEMES } from '../common/constants';
+import type { LegalProfile } from '../common/legal';
 import { jsonOptions } from '../common/json-options';
 
 @Schema(jsonOptions([], ['passwordHash', 'resetCodeHash', 'resetExpires', 'resetAttempts', 'suspended', 'phoneKey']))
@@ -35,6 +36,10 @@ export class User {
 
   @Prop({ default: '', trim: true })
   phone: string;
+
+  /** Юридичні дані для договору (ПІБ повністю, РНОКПП, документ, адреса, посвідчення водія). Віддаються лише власнику акаунта */
+  @Prop({ type: Object })
+  legal?: LegalProfile;
 
   /** Нормалізований номер для перевірки унікальності; у старих акаунтів без телефону відсутній */
   @Prop({ type: String })

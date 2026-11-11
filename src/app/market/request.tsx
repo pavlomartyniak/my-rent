@@ -10,12 +10,14 @@ import { Card } from '@/components/ui/card';
 import { DateField } from '@/components/ui/date-field';
 import { Field } from '@/components/ui/field';
 import { Screen } from '@/components/ui/screen';
+import { Segmented } from '@/components/ui/segmented';
 import { Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { api, ApiError } from '@/lib/api';
 import { fromISODate, toISODate } from '@/lib/date';
 import { formatMoney, plural } from '@/lib/format';
 import { effectivePlan, type ChoosablePlan } from '@/lib/payment-plan';
+import { handleLegalGate } from '@/lib/legal-gate';
 import type { MarketCar } from '@/lib/rentals';
 import { useFleet } from '@/store/fleet';
 
@@ -26,6 +28,13 @@ const addDays = (iso: string, n: number) => {
 };
 
 /** Запит на оренду: дати й повідомлення власнику */
+/** Мета використання авто: потрапляє в договір (п. 3.1) */
+const PURPOSES = [
+  { value: 'personal', label: 'Особисті потреби' },
+  { value: 'passengers', label: 'Пасажири (таксі)' },
+  { value: 'delivery', label: 'Доставка' },
+] as const;
+
 export default function RentalRequestScreen() {
   const { carId } = useLocalSearchParams<{ carId: string }>();
   const router = useRouter();
@@ -37,6 +46,8 @@ export default function RentalRequestScreen() {
   const [end, setEnd] = useState(addDays(today, 4));
   const [message, setMessage] = useState('');
   const [plan, setPlan] = useState<ChoosablePlan>('weekly');
+  const [purposeLabel, setPurposeLabel] = useState<(typeof PURPOSES)[number]['label']>(PURPOSES[0].label);
+  const purpose = PURPOSES.find((p) => p.label === purposeLabel)!.value;
   const [sending, setSending] = useState(false);
 
   if (!car) {
@@ -59,7 +70,7 @@ export default function RentalRequestScreen() {
     if (sending || !car) return;
     setSending(true);
     try {
-      const res = await api<{ chatId: string | null }>('POST', '/rentals', { carId: car.id, startDate: start, endDate: end, message: message.trim(), paymentPlan: effectivePlan(start, end, plan) });
+      const res = await api<{ chatId: string | null }>('POST', '/rentals', { carId: car.id, startDate: start, endDate: end, message: message.trim(), paymentPlan: effectivePlan(start, end, plan), purpose });
       invalidate();
       router.dismissAll();
       router.navigate('/renter/requests');
@@ -67,6 +78,7 @@ export default function RentalRequestScreen() {
       if (res.chatId) router.push({ pathname: '/chats/[id]', params: { id: res.chatId } });
       else Alert.alert('Запит надіслано', 'Власник отримає його й відповість. Відповідь з’явиться у «Моїх запитах».');
     } catch (e) {
+      if (handleLegalGate(e, router)) return;
       Alert.alert('Не вдалося надіслати', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
     } finally {
       setSending(false);
@@ -106,6 +118,14 @@ export default function RentalRequestScreen() {
           </ThemedText>
         </View>
       ) : null}
+
+      <View style={{ gap: Spacing.one }}>
+        <ThemedText type="smallBold">Для чого авто</ThemedText>
+        <Segmented options={PURPOSES.map((p) => p.label)} value={purposeLabel} onChange={setPurposeLabel} />
+        <ThemedText type="small" themeColor="textSecondary">
+          Мета потрапить у договір. Для перевезення пасажирів і доставки орендар сам відповідає за потрібні дозволи.
+        </ThemedText>
+      </View>
 
       <PaymentPlanPicker startDate={start} endDate={end} value={plan} onChange={setPlan} />
 

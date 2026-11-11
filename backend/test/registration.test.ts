@@ -2,7 +2,7 @@ import { phoneKey } from '../src/common/profile';
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { HttpException } from '@nestjs/common';
+import { BadRequestException, HttpException } from '@nestjs/common';
 
 import { AuthService } from '../src/auth/auth.service';
 
@@ -109,6 +109,36 @@ describe('реєстрація з підтвердженням пошти', () =
     const otherCode = lastCode();
     await assert.rejects(auth.verifyRegistration({ email: form.email, code: otherCode }), /Невірний код/);
     assert.equal(created.length, 0);
+  });
+
+  it('посвідчення при реєстрації орендаря необов’язкове: без нього акаунт створюється без нього', async () => {
+    const { auth, created, lastCode } = setup();
+    await auth.register({ ...form, role: 'renter' });
+    await auth.verifyRegistration({ email: form.email, code: lastCode() });
+    assert.equal(created.length, 1);
+    assert.ok(!('legal' in created[0]!));
+  });
+
+  it('повне чинне посвідчення зберігається в профілі після підтвердження пошти', async () => {
+    const { auth, created, lastCode } = setup();
+    const license = { series: 'ааа', number: '123456', categories: ['b'], validUntil: '2099-01-01' };
+    await auth.register({ ...form, role: 'renter', license });
+    await auth.verifyRegistration({ email: form.email, code: lastCode() });
+    assert.deepEqual((created[0] as { legal: unknown }).legal, { license: { series: 'ААА', number: '123456', categories: ['B'], validUntil: '2099-01-01' } });
+  });
+
+  it('частково заповнене чи прострочене посвідчення відхиляється до надсилання листа', async () => {
+    const { auth, outbox } = setup();
+    await assert.rejects(auth.register({ ...form, role: 'renter', license: { number: '123456' } }), (e: unknown) => e instanceof BadRequestException);
+    await assert.rejects(auth.register({ ...form, role: 'renter', license: { series: 'ААА', number: '123456', categories: ['B'], validUntil: '2020-01-01' } }), (e: unknown) => e instanceof BadRequestException && /прострочено/.test(JSON.stringify(e.getResponse())));
+    assert.equal(outbox.length, 0);
+  });
+
+  it('власнику посвідчення не потрібне: якщо воно прийшло, його ігнорують', async () => {
+    const { auth, created, lastCode } = setup();
+    await auth.register({ ...form, role: 'owner', license: { number: 'x' } });
+    await auth.verifyRegistration({ email: form.email, code: lastCode() });
+    assert.ok(!('legal' in created[0]!));
   });
 
   it('зайнята пошта відхиляється до надсилання листа', async () => {

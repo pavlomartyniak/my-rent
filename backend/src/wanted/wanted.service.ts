@@ -7,6 +7,7 @@ import { RealtimeService } from '../realtime/realtime.service';
 import { escapeRegex, normalize } from '../common/normalize';
 import { maskedName, rentalDays, todayUtc, validateRange } from '../rentals/rentals.math';
 import { dealStageOf } from '../deals/deal-stage';
+import { LegalService } from '../legal/legal.service';
 import { ModerationService } from '../moderation/moderation.service';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
@@ -49,6 +50,7 @@ export class WantedService {
     private readonly places: PlacesService,
     private readonly realtime: RealtimeService,
     private readonly moderation: ModerationService,
+    private readonly legal: LegalService,
   ) {}
 
   async create(renterId: string, dto: CreateWantedDto) {
@@ -62,6 +64,8 @@ export class WantedService {
     const renter = await this.users.findById(renterId).exec();
     if (!renter) throw new NotFoundException('Користувача не знайдено');
     if (!renter.firstName || !renter.lastName) throw new BadRequestException('Заповніть ім’я й прізвище в профілі, щоб створювати заявки');
+    // Заявка — початок угоди: дані для договору й посвідчення водія (номер, строк дії) мають бути заповнені
+    await this.legal.assertRenterCanRent(renterId, dto.endDate);
 
     if ((await this.wanted.countDocuments({ renterId, status: 'open', endDate: { $gte: today } })) >= MAX_OPEN_PER_RENTER) {
       throw new ConflictException(`Одночасно можна мати до ${MAX_OPEN_PER_RENTER} відкритих заявок`);

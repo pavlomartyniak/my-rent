@@ -4,6 +4,7 @@ import { Alert, StyleSheet, View } from 'react-native';
 
 import { ReportStatus } from '@/components/report-status';
 import { SignSheet } from '@/components/sign-sheet';
+import { WithdrawSheet } from '@/components/withdraw-sheet';
 
 import { StatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
@@ -28,6 +29,7 @@ export default function ContractScreen() {
   const { data, loading, error, retry } = useReport<ContractView>(`/deals/${id}/contract`, { useCache: false, refetchOnFocus: true });
   const [busy, setBusy] = useState<'pdf' | 'cancel' | null>(null);
   const [signing, setSigning] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
 
   if (!data) {
     return (
@@ -141,6 +143,21 @@ export default function ContractScreen() {
         </Card>
       ) : null}
 
+      {data.withdrawal ? (
+        <Card style={{ backgroundColor: theme.warningSoft }}>
+          <ThemedText type="smallBold" themeColor="warning">
+            {data.withdrawal.by === 'owner' ? 'Орендодавець' : 'Орендар'} відмовився від договору
+          </ThemedText>
+          <ThemedText type="small">Підстава: {data.withdrawal.groundLabel}{data.withdrawal.note ? `. ${data.withdrawal.note}` : ''}</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {data.withdrawal.readAt ? `Друга сторона отримала повідомлення ${stampOf(data.withdrawal.readAt)}.` : data.withdrawal.delivered ? 'Повідомлення доставлено на пошту другої сторони.' : 'Повідомлення надіслано, очікуємо підтвердження отримання.'}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {data.status === 'terminated' ? 'Договір розірвано.' : `Договір діє до ${stampOf(data.withdrawal.effectiveAt)} (через 12 годин після отримання повідомлення), тоді його буде розірвано.`}
+          </ThemedText>
+        </Card>
+      ) : null}
+
       <Button title="Завантажити PDF" icon="download-outline" variant="secondary" disabled={busy === 'pdf'} onPress={() => void pdf()} />
 
       {data.sections.map((s) => (
@@ -161,6 +178,20 @@ export default function ContractScreen() {
       </ThemedText>
 
       {awaiting ? <Button title="Скасувати домовленість" variant="danger" disabled={busy !== null} onPress={confirmCancel} /> : null}
+      {data.status === 'active' && !data.withdrawal ? <Button title="Відмовитися від договору" icon="close-circle-outline" variant="danger" disabled={busy !== null} onPress={() => setWithdrawing(true)} /> : null}
+
+      <WithdrawSheet
+        visible={withdrawing}
+        dealId={data.dealId}
+        role={role === 'renter' ? 'renter' : 'owner'}
+        onClose={() => setWithdrawing(false)}
+        onDone={() => {
+          setWithdrawing(false);
+          invalidate();
+          reload();
+          retry();
+        }}
+      />
 
       <SignSheet
         visible={signing}
@@ -177,6 +208,8 @@ export default function ContractScreen() {
     </Screen>
   );
 }
+
+const stampOf = (iso: string) => `${formatDate(iso.slice(0, 10))} ${iso.slice(11, 16)} UTC`;
 
 function SignatureRow({ label, name, signature, you }: { label: string; name: string; signature: ContractSignature; you: boolean }) {
   const theme = useTheme();

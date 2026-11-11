@@ -9,6 +9,12 @@ export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    /** Машинний код помилки (LEGAL_INCOMPLETE, LISTING_LIMIT…), якщо сервер його віддав */
+    readonly code?: string,
+    /** Усі пункти, коли сервер повернув перелік (що саме виправити) */
+    readonly details?: string[],
+    /** Чого стосується помилка: me — даних користувача, car — авто */
+    readonly scope?: string,
   ) {
     super(message);
   }
@@ -83,7 +89,14 @@ export async function api<T = void>(
   if (!res.ok) {
     // 401 на авторизованому запиті — токен недійсний; на /auth/* це просто невірні дані
     if (res.status === 401 && token && !path.startsWith('/auth/')) onUnauthorized?.();
-    throw new ApiError(errorMessage(data, 'Щось пішло не так. Спробуйте ще раз.'), res.status);
+    const body = data as { code?: string; scope?: string; message?: unknown; missing?: unknown } | null;
+    throw new ApiError(
+      errorMessage(data, 'Щось пішло не так. Спробуйте ще раз.'),
+      res.status,
+      typeof body?.code === 'string' ? body.code : undefined,
+      Array.isArray(body?.message) ? body.message.map(String) : Array.isArray(body?.missing) ? body.missing.map(String) : undefined,
+      typeof body?.scope === 'string' ? body.scope : undefined,
+    );
   }
   return data as T;
 }

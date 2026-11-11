@@ -4,7 +4,7 @@ import type { Request } from 'express';
 
 import { type AuthUser, CurrentUser, Roles } from '../common/current-user';
 import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
-import { ConfirmPaymentDto, TerminateDealDto } from './deals.dto';
+import { ConfirmPaymentDto, TerminateDealDto, WithdrawDealDto } from './deals.dto';
 import { DealsService } from './deals.service';
 import { SignDto } from './sign.dto';
 
@@ -117,6 +117,13 @@ export class DealsController {
     // За проксі (Render) справжня адреса клієнта йде першою в X-Forwarded-For
     const forwarded = String(req.headers['x-forwarded-for'] ?? '').split(',')[0]?.trim();
     return this.deals.sign(user, id, dto.code, { ip: forwarded || req.ip, userAgent: String(req.headers['user-agent'] ?? '') });
+  }
+
+  /** Відмова від підписаного договору в односторонньому порядку (власник: прострочка, ДТП…; орендар: авто непридатне…) */
+  @HttpCode(200)
+  @Post(':id/withdraw')
+  withdrawFromContract(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Body() dto: WithdrawDealDto) {
+    return this.deals.withdraw(user, id, dto.ground, dto.note);
   }
 
   /** Скасувати домовленість до підписання договору */

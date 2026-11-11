@@ -91,6 +91,7 @@ function Routes() {
           <Stack.Screen name="transaction/new" options={{ title: 'Новий запис', presentation: 'modal' }} />
           <Stack.Screen name="transaction/[id]" options={{ title: 'Запис', presentation: 'modal' }} />
           <Stack.Screen name="profile" options={{ title: 'Профіль', presentation: 'modal' }} />
+          <Stack.Screen name="legal" options={{ title: 'Дані для договору', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="blocked" options={{ title: 'Заблоковані', headerBackTitle: 'Назад' }} />
         </Stack.Protected>
       </Stack>

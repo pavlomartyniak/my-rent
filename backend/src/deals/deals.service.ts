@@ -1,9 +1,10 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import type { ClientSession, Connection, Model } from 'mongoose';
 
 import type { AuthUser } from '../common/current-user';
+import { effectiveAt, GROUND_LABELS, groundsFor, isEffective } from './withdrawal';
 import { renderContractPdf } from '../contract/contract.pdf';
 import { checkCode, generateCode, hashCode, maskEmail, OTP_MAX_ATTEMPTS, OTP_MINUTES, OTP_RESEND_SECONDS, resendWait } from '../contract/contract.otp';
 import { signContract } from '../contract/contract.signing';
@@ -19,6 +20,10 @@ import { Offer } from '../schemas/offer.schema';
 import { RentalRequest } from '../schemas/rental-request.schema';
 import { Deal, type DealDocument } from '../schemas/deal.schema';
 import { User } from '../schemas/user.schema';
+
+/** Скільки днів після строку платежу відмова через прострочку ще неможлива */
+const OVERDUE_GRACE_DAYS = 2;
+const addDays = (iso: string, days: number) => new Date(new Date(`${iso}T00:00:00.000Z`).getTime() + days * 86_400_000).toISOString().slice(0, 10);
 
 type Person = { firstName: string; lastName: string; phone: string };
 
@@ -48,6 +53,7 @@ export class DealsService {
   async get(user: AuthUser, id: string) {
     const deal = await this.deals.findOne({ _id: id, ...this.side(user), hiddenFor: { $ne: user.role } }).exec();
     if (!deal) throw new NotFoundException('Оренду не знайдено');
+    await this.touchWithdrawal(user, deal);
     const owner = user.role === 'owner';
     return this.view(deal, owner ? 'owner' : 'renter', await this.people([owner ? deal.renterId : deal.ownerId]));
   }
@@ -224,9 +230,10 @@ export class DealsService {
    * прийнятий запит чи пропозиція завершуються. Те саме для розірвання за згодою, скасування до підписання й
    * автоматичного скасування непідписаного договору.
    */
-  private async close(deal: DealDocument, by: 'owner' | 'renter' | 'system', note: string, reason: string, session?: ClientSession) {
+  async close(deal: DealDocument, by: 'owner' | 'renter' | 'system', note: string, reason: string, session?: ClientSession) {
     // Майбутні платежі, за які нічого не підтверджено, скасовуються разом з орендою
     this.cancelFuturePayments(deal);
+    // До підпису це скасування домовленості, після — розірвання договору
     const today = todayUtc();
     deal.status = 'terminated';
     deal.terminatedBy = by;
@@ -248,11 +255,86 @@ export class DealsService {
     else await this.offers.updateOne({ _id: deal.sourceId, status: 'accepted' }, ended, { session });
   }
 
+  /**
+   * Одностороння відмова від договору (ч. 3 ст. 651 ЦК, п. 9.2–9.4). Власник і орендар мають свої підстави. Друга сторона
+   * отримує повідомлення в застосунку й на пошту; договір вважається розірваним через 12 годин після його отримання, до того
+   * він діє. Прострочку оплати сервер перевіряє за чинним графіком (платіж не отримано понад 2 дні після строку).
+   */
+  async withdraw(user: AuthUser, id: string, ground: string, note = '') {
+    if (!groundsFor(user.role).includes(ground)) throw new BadRequestException('Ця підстава недоступна для вашої ролі');
+    const deal = await this.mine(user, id);
+    this.requireContract(deal);
+    if (deal.status !== 'active') throw new ConflictException(deal.status === 'terminated' ? 'Оренду вже розірвано' : 'Відмовитись можна від підписаного договору. Домовленість до підпису просто скасуйте');
+    if (deal.withdrawal) throw new ConflictException('Повідомлення про відмову вже надіслано: договір буде розірвано через 12 годин після його отримання');
+    if (ground === 'payment_overdue') {
+      const today = todayUtc();
+      const overdue = this.planOf(deal).some((pl) => {
+        const st = deal.payments?.find((x) => x.n === pl.n);
+        return !st?.cancelled && (st?.ownerReceived ?? 0) < pl.amount && today > addDays(pl.dueDate, OVERDUE_GRACE_DAYS);
+      });
+      if (!overdue) throw new ConflictException(`Прострочки оплати понад ${OVERDUE_GRACE_DAYS} дні немає: платіж або ще не прострочено, або ви вже підтвердили його отримання`);
+    }
+    deal.terminationRequest = undefined;
+    deal.withdrawal = { by: user.role, ground, note: note.trim(), at: new Date() };
+    deal.markModified('withdrawal');
+    await deal.save();
+
+    // Повідомлення на пошту другої сторони; доставлене — фіксуємо час (інакше отримання зафіксує відкриття угоди в застосунку)
+    const c = deal.contract!;
+    const otherId = user.role === 'owner' ? deal.renterId : deal.ownerId;
+    const other = await this.users.findById(otherId, 'email').lean().exec();
+    const sent = other?.email
+      ? await this.mail.send(
+          other.email,
+          `Повідомлення про відмову від договору № ${c.terms.number}`,
+          `${user.role === 'owner' ? 'Орендодавець' : 'Орендар'} ${user.role === 'owner' ? c.terms.owner.name : c.terms.renter.name} відмовився від договору оренди № ${c.terms.number} в односторонньому порядку.\nПідстава: ${GROUND_LABELS[ground] ?? ground}.${note.trim() ? `\nКоментар: ${note.trim()}` : ''}\n\nДоговір буде розірвано через 12 годин після отримання цього повідомлення. Деталі й журнал подій доступні в застосунку Kolo, розділ «Оренди».`,
+        )
+      : false;
+    if (sent) {
+      deal.withdrawal = { ...deal.withdrawal!, emailDeliveredAt: new Date() };
+      deal.markModified('withdrawal');
+      await deal.save();
+    }
+    this.pingBoth(deal, 'rentals', 'offers', 'wanted');
+    return this.viewFor(user, deal);
+  }
+
+  /** Відмова набрала чинності (минуло 12 годин після отримання): договір розірвано, авто вільне. true — розірвано щойно */
+  async finalizeWithdrawal(deal: DealDocument): Promise<boolean> {
+    const w = deal.withdrawal;
+    if (deal.status !== 'active' || !w || !isEffective(w)) return false;
+    await this.close(deal, w.by, w.note || GROUND_LABELS[w.ground] || w.ground, `${w.by === 'owner' ? 'Орендодавець' : 'Орендар'} відмовився від договору в односторонньому порядку`);
+    this.pingBoth(deal, 'rentals', 'offers', 'wanted');
+    return true;
+  }
+
+  /** Розриває договори, у яких відмова набрала чинності (для планувальника) */
+  async finalizeWithdrawals() {
+    const due = await this.deals.find({ status: 'active', 'withdrawal.at': { $exists: true } }).limit(200).exec();
+    let n = 0;
+    for (const d of due) if (await this.finalizeWithdrawal(d)) n += 1;
+    return n;
+  }
+
+  /**
+   * Друга сторона відкрила угоду після відмови: це й є отримання повідомлення, фіксуємо його (ч. 3 ст. 651 ЦК, п. 11.2).
+   * Тут же розриваємо договір, якщо відмова вже набрала чинності.
+   */
+  private async touchWithdrawal(user: AuthUser, deal: DealDocument) {
+    if (deal.withdrawal && user.role !== deal.withdrawal.by && !deal.withdrawal.readAt) {
+      deal.withdrawal = { ...deal.withdrawal, readAt: new Date() };
+      deal.markModified('withdrawal');
+      await deal.save();
+    }
+    await this.finalizeWithdrawal(deal);
+  }
+
   // ---- договір ----
 
   /** Текст договору, підписи й відбиток умов для екрана */
   async contract(user: AuthUser, id: string) {
     const deal = await this.mine(user, id);
+    await this.touchWithdrawal(user, deal);
     const c = this.requireContract(deal);
     return {
       dealId: String(deal._id),
@@ -266,6 +348,8 @@ export class DealsService {
       signedAt: c.signedAt ?? null,
       mySigned: !!c.signatures?.[user.role],
       signing: this.signingView(deal.startDate),
+      withdrawal: this.withdrawalView(deal),
+      payments: this.paymentsView(deal, user.role === 'renter' ? 'renter' : 'owner'),
     };
   }
 
@@ -403,7 +487,7 @@ export class DealsService {
         if (!deal) throw new NotFoundException('Оренду не знайдено');
         const c = this.requireContract(deal);
         if (deal.status !== 'active') throw new ConflictException('Платежі підтверджуються після підписання договору');
-        const plan = c.terms.payments?.find((p) => p.n === n);
+        const plan = this.planOf(deal).find((p) => p.n === n);
         const state = deal.payments?.find((p) => p.n === n);
         if (!plan || !state) throw new NotFoundException('Платіж не знайдено');
         if (state.cancelled) throw new ConflictException('Цей платіж скасовано');
@@ -422,7 +506,7 @@ export class DealsService {
         deal.markModified('payments');
         await deal.save({ session });
 
-        const count = c.terms.payments.length;
+        const count = this.planOf(deal).length;
         const mine = user.role === 'renter';
         const filter = { userId: user.id, dealId: deal._id, paymentN: n, auto: 'contract' };
         const note = `Платіж ${n} з ${count} за договором № ${c.terms.number}`;
@@ -531,7 +615,7 @@ export class DealsService {
       // Лише найстаріший невиплачений платіж: при щотижневій чи щоденній оплаті питання не мають заважати купою
       // Якщо його відкладено («ще ні»), до завтра нічого не питаємо
       const next = this.paymentsView(d, as, today).find((p) => p.available && !p.cancelled && p.remaining > 0);
-      if (next && !next.snoozed) out.push({ dealId: String(d._id), title: d.title, counterpart: name, count: d.contract!.terms.payments.length, ...next });
+      if (next && !next.snoozed) out.push({ dealId: String(d._id), title: d.title, counterpart: name, count: this.planOf(d).length, ...next });
     }
     return out;
   }
@@ -543,7 +627,7 @@ export class DealsService {
 
   private cancelFuturePayments(deal: DealDocument) {
     const today = todayUtc();
-    const plan = deal.contract?.terms.payments ?? [];
+    const plan = this.planOf(deal);
     let changed = false;
     for (const st of deal.payments ?? []) {
       const due = plan.find((p) => p.n === st.n)?.dueDate ?? today;
@@ -557,7 +641,7 @@ export class DealsService {
 
   /** Платежі для екрана: графік з відповідями обох сторін, розбіжності й що можна підтвердити зараз */
   private paymentsView(d: DealDocument, as: 'renter' | 'owner', today = todayUtc()) {
-    const plan = d.contract?.terms.payments ?? [];
+    const plan = this.planOf(d);
     return plan.map((p) => {
       const st = d.payments?.find((x) => x.n === p.n);
       const mine = (as === 'renter' ? st?.renterPaid : st?.ownerReceived) ?? 0;
@@ -597,7 +681,8 @@ export class DealsService {
   private settlementView(d: DealDocument) {
     const c = d.contract;
     if (d.status !== 'terminated' || !c?.signedAt) return null;
-    const used = settledAmount(c.terms.pricePerDay, c.terms.startDate, c.terms.endDate, (d.terminatedAt ?? new Date()).toISOString().slice(0, 10));
+    const until = (d.terminatedAt ?? new Date()).toISOString().slice(0, 10);
+    const used = settledAmount(c.terms.pricePerDay, c.terms.startDate, c.terms.endDate, until);
     const paid = (d.payments ?? []).reduce((s, p) => s + (p.renterPaid ?? 0), 0);
     const received = (d.payments ?? []).reduce((s, p) => s + (p.ownerReceived ?? 0), 0);
     return { due: used, paid: Math.round(paid * 100) / 100, received: Math.round(received * 100) / 100 };
@@ -678,14 +763,35 @@ export class DealsService {
   }
 
   /** Друга сторона оренди бачить зміну одразу */
-  private pingOther(user: AuthUser, deal: DealDocument, ...extra: ('rentals' | 'offers' | 'wanted' | 'cars')[]) {
+  pingOther(user: AuthUser, deal: DealDocument, ...extra: ('rentals' | 'offers' | 'wanted' | 'cars')[]) {
     this.realtime.changed([user.role === 'renter' ? deal.ownerId : deal.renterId], 'deals', ...extra);
   }
 
   /** Обидві сторони; авто власника змінило статус */
-  private pingBoth(deal: DealDocument, ...extra: ('rentals' | 'offers' | 'wanted')[]) {
+  pingBoth(deal: DealDocument, ...extra: ('rentals' | 'offers' | 'wanted')[]) {
     this.realtime.changed([deal.ownerId, deal.renterId], 'deals', ...extra);
     this.realtime.changed([deal.ownerId], 'cars');
+  }
+
+  /** Графік платежів договору */
+  planOf(d: DealDocument) {
+    return d.contract?.terms.payments ?? [];
+  }
+
+  /** Відмова для екрана: хто, чому, коли отримано й коли договір буде розірвано */
+  withdrawalView(d: DealDocument) {
+    const w = d.withdrawal;
+    if (!w) return null;
+    return {
+      by: w.by,
+      ground: w.ground,
+      groundLabel: GROUND_LABELS[w.ground] ?? w.ground,
+      note: w.note,
+      at: w.at,
+      delivered: !!(w.emailDeliveredAt || w.readAt),
+      readAt: w.readAt ?? null,
+      effectiveAt: effectiveAt(w),
+    };
   }
 
   private side(user: AuthUser) {
@@ -703,7 +809,7 @@ export class DealsService {
     if (todayUtc() > deal.endDate) throw new ConflictException('Оренду вже завершено');
   }
 
-  private async viewFor(user: AuthUser, d: DealDocument) {
+  async viewFor(user: AuthUser, d: DealDocument) {
     const as = user.role === 'renter' ? 'renter' : 'owner';
     return this.view(d, as, await this.people([as === 'renter' ? d.ownerId : d.renterId]));
   }
@@ -742,6 +848,7 @@ export class DealsService {
       terminationRequest: d.terminationRequest ? { by: d.terminationRequest.by, at: d.terminationRequest.at, note: d.terminationRequest.note ?? '', mine: d.terminationRequest.by === as } : null,
       terminatedBy: d.terminatedBy,
       terminatedAt: d.terminatedAt,
+      withdrawal: this.withdrawalView(d),
       terminationNote: d.terminationNote ?? '',
       // Для орендаря це власник, для власника — орендар
       // Номер телефону віддається лише в чаті

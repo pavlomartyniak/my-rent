@@ -109,6 +109,13 @@ export class Deal {
     ownerLaterUntil?: string;
   };
 
+  /**
+   * Одностороння відмова власника від договору: підстава, коментар, коли надіслано й коли друга сторона отримала повідомлення
+   * (e-mail доставлено чи відкрито в застосунку). Дата отримання — момент, з якого відмову вважають повідомленою.
+   */
+  @Prop({ type: MongooseSchema.Types.Mixed })
+  withdrawal?: { by: 'owner' | 'renter'; ground: string; note: string; at: Date; emailDeliveredAt?: Date; readAt?: Date };
+
   /** Власник відповів «оренда триває» на підказку звільнити авто після закінчення оренди */
   @Prop({ default: false })
   releaseDismissed: boolean;

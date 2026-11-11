@@ -25,6 +25,10 @@ export class PendingRegistration {
   @Prop({ type: String, default: 'owner' })
   role: string;
 
+  /** Посвідчення водія, вказане при реєстрації орендаря (необов'язкове) */
+  @Prop({ type: Object })
+  license?: { series: string; number: string; categories: string[]; validUntil: string };
+
   @Prop({ type: String, required: true })
   codeHash: string;
 

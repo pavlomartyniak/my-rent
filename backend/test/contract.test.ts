@@ -30,7 +30,7 @@ describe('contract terms', () => {
   });
   it('зміна умов змінює відбиток', () => assert.notEqual(contractHash({ ...terms, pricePerDay: 1300 }), contractHash(terms)));
   it('текст містить сторони, авто, період і ціну', () => {
-    const text = buildSections(terms).flatMap((s) => [s.title, ...s.paragraphs]).join('\n');
+    const text = buildSections({ ...terms, templateVersion: 3 }).flatMap((s) => [s.title, ...s.paragraphs]).join('\n');
     for (const part of ['Петро Власенко', 'Олена Тестова', 'Skoda Octavia 2020', 'TMBJG7NE0L0000000', '01.11.2026', '11.11.2026', '10 діб', '1 200 грн', '12 000 грн', '120 000 км']) assert.ok(text.includes(part), part);
   });
 });
@@ -184,6 +184,7 @@ describe('план оплати', () => {
     const text = termsFor('daily', '2026-11-11');
     assert.ok(text.includes('щодня наперед') && text.includes('10 платежів') && !text.includes('Платіж 2:'));
   });
+  // Текст пунктів про заставу чинний у версії 3; у версії 4 він інший (розд. 5)
   const withDeposit = (deposit?: number) =>
     buildTerms({
       number: 'MR-1', createdAt: new Date('2026-10-25T10:00:00Z'), city: 'Львів', owner: { name: 'А', phone: '' }, renter: { name: 'Б', phone: '' },
@@ -193,14 +194,14 @@ describe('план оплати', () => {
     const t = withDeposit(10_000);
     assert.equal(t.deposit, 10_000);
     assert.equal(t.total, 10_000); // 10 діб × 1000: застава окремо
-    const text = buildSections(t).flatMap((x) => x.paragraphs).join('\n');
+    const text = buildSections({ ...t, templateVersion: 3 }).flatMap((x) => x.paragraphs).join('\n');
     assert.ok(text.includes('3.4. Гарантійний платіж (застава) становить 10 000 грн') && text.includes('3.5. За прострочення') && text.includes('не входить до її суми'));
   });
   it('без застави в умовах немає поля, а відбиток такий самий, як раніше', () => {
     for (const none of [undefined, 0]) {
       const t = withDeposit(none);
       assert.ok(!('deposit' in t));
-      assert.ok(buildSections(t).flatMap((x) => x.paragraphs).join('\n').includes('3.4. За прострочення'));
+      assert.ok(buildSections({ ...t, templateVersion: 3 }).flatMap((x) => x.paragraphs).join('\n').includes('3.4. За прострочення'));
     }
     assert.equal(contractHash(withDeposit(0)), contractHash(withDeposit(undefined)));
     assert.notEqual(contractHash(withDeposit(5000)), contractHash(withDeposit(0)));

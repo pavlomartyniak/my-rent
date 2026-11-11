@@ -47,6 +47,9 @@ export function CarForm({ car }: { car?: Car }) {
   const [year, setYear] = useState(car ? String(car.year) : '');
   const [price, setPrice] = useState(car ? String(car.price) : '');
   const [vin, setVin] = useState(car?.vin ?? '');
+  const [plate, setPlate] = useState(car?.plate ?? '');
+  const [regCertificate, setRegCertificate] = useState(car?.regCertificate ?? '');
+  const [color, setColor] = useState(car?.color ?? '');
   const [mileage, setMileage] = useState(car ? String(car.mileage) : '');
   const [fuel, setFuel] = useState<FuelType | ''>(car?.fuel ?? '');
   const [driver, setDriver] = useState(car?.driver ?? '');
@@ -66,6 +69,7 @@ export function CarForm({ car }: { car?: Car }) {
     year: Number.isInteger(yearNum) && yearNum >= MIN_YEAR && yearNum <= MAX_YEAR ? '' : 'Оберіть рік випуску',
     price: Number(price) > 0 ? '' : 'Потрібна для розрахунку окупності',
     vin: !vin.trim() || vin.trim().length === 17 ? '' : 'VIN має містити 17 символів',
+    plate: plate.trim().length >= 4 ? '' : 'Вкажіть державний номер авто',
   };
   const err = (k: keyof typeof errors) => (submitted ? errors[k] : undefined);
 
@@ -127,6 +131,9 @@ export function CarForm({ car }: { car?: Car }) {
       year: yearNum,
       price: Number(price),
       vin: vin.trim().toUpperCase(),
+      plate: plate.trim().toUpperCase(),
+      regCertificate: regCertificate.trim().toUpperCase(),
+      color: color.trim(),
       mileage: Math.round(Number(mileage)) || 0,
       fuel,
       rentStart: isValidISODate(rentStart) ? rentStart : todayISO(),
@@ -161,7 +168,7 @@ export function CarForm({ car }: { car?: Car }) {
 
   return (
     <Screen>
-      {!car ? <Hint id="car-form">Оберіть марку й модель зі списку, вкажіть рік, вартість і пробіг. VIN і водія можна залишити порожніми.</Hint> : null}
+      {!car ? <Hint id="car-form">Оберіть марку й модель зі списку, вкажіть рік, вартість і пробіг. VIN і водія можна залишити порожніми, державний номер обов’язковий, а свідоцтво знадобиться для публікації.</Hint> : null}
       <PhotoPicker value={photos} onChange={setPhotos} error={err('photo')} />
       <PickerField label="Марка" value={brand} placeholder="Оберіть марку" onPress={pickBrand} error={err('brand')} />
       <PickerField
@@ -188,6 +195,12 @@ export function CarForm({ car }: { car?: Car }) {
         <Segmented scroll options={FUEL_TYPES} value={fuel as FuelType} onChange={(f) => setFuel(f === fuel ? '' : f)} />
       </View>
       <Field label="VIN" value={vin} onChangeText={setVin} error={err('vin')} autoCapitalize="characters" autoCorrect={false} maxLength={17} placeholder="17 символів" />
+      <Field label="Державний номер" value={plate} onChangeText={setPlate} error={err('plate')} autoCapitalize="characters" autoCorrect={false} maxLength={12} placeholder="AA 1234 BB" />
+      <Field label="Свідоцтво про реєстрацію (серія й номер)" value={regCertificate} onChangeText={setRegCertificate} autoCapitalize="characters" autoCorrect={false} maxLength={12} placeholder="ТХК 123456" />
+      <Field label="Колір" value={color} onChangeText={setColor} maxLength={30} placeholder="Сірий" />
+      <ThemedText type="small" themeColor="textSecondary">
+        Державний номер обов’язковий. Свідоцтво про реєстрацію й колір потрібні для договору: без них авто не можна опублікувати.
+      </ThemedText>
 
       <View style={styles.group}>
         <ThemedText type="smallBold">

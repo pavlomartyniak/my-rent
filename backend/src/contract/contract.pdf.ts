@@ -25,7 +25,7 @@ export function renderContractPdf(terms: ContractTerms, hash: string, signatures
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    doc.font(BOLD).fontSize(15).text('ДОГОВІР ОРЕНДИ ТРАНСПОРТНОГО ЗАСОБУ', { align: 'center' });
+    doc.font(BOLD).fontSize(15).text((terms.templateVersion ?? 1) >= 4 ? 'ДОГОВІР НАЙМУ (ОРЕНДИ) ТРАНСПОРТНОГО ЗАСОБУ БЕЗ ЕКІПАЖУ' : 'ДОГОВІР ОРЕНДИ ТРАНСПОРТНОГО ЗАСОБУ', { align: 'center' });
     doc.font(BOLD).fontSize(12).text(`№ ${terms.number}`, { align: 'center' });
     doc.moveDown(0.6);
     doc.font(REGULAR).fontSize(10).fillColor('#333333').text(`${terms.city || 'Україна'}, ${terms.createdAt.slice(8, 10)}.${terms.createdAt.slice(5, 7)}.${terms.createdAt.slice(0, 4)}`, { align: 'center' });
@@ -53,6 +53,8 @@ export function renderContractPdf(terms: ContractTerms, hash: string, signatures
       } else {
         doc.font(REGULAR).fontSize(10).fillColor('#B45309').text('Очікує підпису');
       }
+      // Місце для власноручного підпису: договір можна роздрукувати у двох примірниках
+      doc.font(REGULAR).fontSize(9).fillColor('#555555').text('Власноручний підпис: ______________________   Дата: ____________');
       doc.fillColor('#000000').moveDown(0.8);
     };
     block('Орендодавець', terms.owner.name, signatures.owner);

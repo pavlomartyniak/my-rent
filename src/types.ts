@@ -13,6 +13,11 @@ export type Car = {
   model: string;
   year: number;
   vin: string;
+  /** Державний номер і свідоцтво про реєстрацію: потрібні, щоб опублікувати авто й скласти договір */
+  plate?: string;
+  regCertificate?: string;
+  /** Колір: для договору */
+  color?: string;
   mileage: number;
   /** Тип палива; порожній — не вказано */
   fuel?: FuelType | '';

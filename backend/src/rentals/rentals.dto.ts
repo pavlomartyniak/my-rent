@@ -24,6 +24,11 @@ export class CreateRentalDto {
   @IsOptional()
   @IsIn(PAYMENT_PLANS)
   paymentPlan?: (typeof PAYMENT_PLANS)[number];
+
+  /** Мета використання: особисті потреби, перевезення пасажирів чи доставка (потрапляє в договір) */
+  @IsOptional()
+  @IsIn(['personal', 'passengers', 'delivery'])
+  purpose?: 'personal' | 'passengers' | 'delivery';
 }
 
 export class DeclineRentalDto {

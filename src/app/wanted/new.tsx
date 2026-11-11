@@ -12,6 +12,7 @@ import { PickerField } from '@/components/ui/picker-field';
 import { Screen } from '@/components/ui/screen';
 import { Spacing } from '@/constants/theme';
 import { api, ApiError } from '@/lib/api';
+import { handleLegalGate } from '@/lib/legal-gate';
 import { fetchBrands } from '@/lib/catalog';
 import { openCatalogPicker } from '@/lib/catalog-picker';
 import { fromISODate, toISODate } from '@/lib/date';
@@ -92,6 +93,7 @@ export default function NewWantedScreen() {
       router.navigate({ pathname: '/renter/requests', params: { tab: 'wanted' } });
       Alert.alert('Заявку створено', 'Власники побачать її й запропонують свої авто. Пропозиції з’являться в «Моїх заявках».');
     } catch (e) {
+      if (handleLegalGate(e, router)) return;
       Alert.alert('Не вдалося створити заявку', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
     } finally {
       setSending(false);

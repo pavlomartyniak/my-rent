@@ -14,7 +14,7 @@ type AuthContextValue = {
   /** Повертає текст помилки або null, якщо успішно */
   login: (email: string, password: string) => Promise<string | null>;
   /** Перший крок реєстрації: надсилає код на пошту, акаунта ще немає. Повертає помилку або секунди до можливості надіслати код ще раз */
-  register: (email: string, password: string, profile: Profile, role: Role) => Promise<{ error?: string; resendInSeconds?: number }>;
+  register: (email: string, password: string, profile: Profile, role: Role, license?: { series: string; number: string; categories: string[]; validUntil: string }) => Promise<{ error?: string; resendInSeconds?: number }>;
   /** Другий крок: код із листа створює акаунт і входить. Повертає текст помилки або null */
   confirmRegistration: (email: string, code: string) => Promise<string | null>;
   /** Надсилає код реєстрації ще раз */
@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       status: loading ? 'loading' : token ? 'in' : 'out',
       token,
       login: (email, password) => authenticate('/auth/login', { email: email.trim(), password }),
-      register: async (email, password, profile, role) => {
+      register: async (email, password, profile, role, license) => {
         try {
           const res = await api<{ resendInSeconds: number }>('POST', '/auth/register', {
             role,
@@ -82,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             firstName: profile.firstName.trim(),
             lastName: profile.lastName.trim(),
             phone: profile.phone.trim(),
+            ...(license ? { license } : {}),
           });
           return { resendInSeconds: res.resendInSeconds };
         } catch (e) {

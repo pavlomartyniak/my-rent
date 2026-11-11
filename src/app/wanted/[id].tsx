@@ -14,6 +14,7 @@ import { WantedCard } from '@/components/wanted-card';
 import { Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { api, ApiError } from '@/lib/api';
+import { handleLegalGate } from '@/lib/legal-gate';
 import { promptContract } from '@/lib/contract-prompt';
 import { wantedTitle, type OfferView, type WantedOffers } from '@/lib/wanted';
 import { useFleet } from '@/store/fleet';
@@ -34,7 +35,7 @@ export default function WantedDetailsScreen() {
       retry();
       after?.(result);
     } catch (e) {
-      Alert.alert(failTitle, e instanceof ApiError ? e.message : 'Спробуйте ще раз');
+      if (!handleLegalGate(e, router)) Alert.alert(failTitle, e instanceof ApiError ? e.message : 'Спробуйте ще раз');
       retry();
     } finally {
       setBusy(null);

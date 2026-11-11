@@ -49,6 +49,17 @@ export class Car {
   @Prop({ default: '' })
   vin: string;
 
+  /** Державний номер і свідоцтво про реєстрацію: потрібні для договору, нормалізовані (великі літери, без пробілів) */
+  @Prop({ type: String, default: '' })
+  plate: string;
+
+  @Prop({ type: String, default: '' })
+  regCertificate: string;
+
+  /** Колір: потрібен для договору */
+  @Prop({ type: String, default: '' })
+  color: string;
+
   @Prop({ default: 0 })
   mileage: number;
 
