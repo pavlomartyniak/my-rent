@@ -52,14 +52,14 @@ function setup(opts: { mailOk?: boolean; existingEmail?: string } = {}) {
   return { auth, pending, created, outbox, lastCode, state };
 }
 
-const form = { email: 'Pavlo@Example.com', password: 'password123', firstName: 'Павло', lastName: 'Мартиняк', phone: '', role: 'renter' };
+const form = { email: 'Ivan@Example.com', password: 'password123', firstName: 'Іван', lastName: 'Шевченко', phone: '+380671234567', role: 'renter' };
 
 describe('реєстрація з підтвердженням пошти', () => {
   it('після форми акаунта ще немає, а код іде на пошту', async () => {
     const { auth, created, outbox } = setup();
     await auth.register(form);
     assert.equal(created.length, 0);
-    assert.equal(outbox[0]!.to, 'pavlo@example.com');
+    assert.equal(outbox[0]!.to, 'ivan@example.com');
   });
 
   it('правильний код створює акаунт із даними форми й одразу входить', async () => {
@@ -68,9 +68,9 @@ describe('реєстрація з підтвердженням пошти', () =
     const res = await auth.verifyRegistration({ email: form.email, code: lastCode() });
     assert.equal(res.token, 'token');
     assert.equal(created.length, 1);
-    assert.equal(created[0]!.email, 'pavlo@example.com');
+    assert.equal(created[0]!.email, 'ivan@example.com');
     assert.equal(created[0]!.role, 'renter');
-    assert.equal(created[0]!.firstName, 'Павло');
+    assert.equal(created[0]!.firstName, 'Іван');
     assert.notEqual(created[0]!.passwordHash, form.password);
   });
 
@@ -110,7 +110,7 @@ describe('реєстрація з підтвердженням пошти', () =
   });
 
   it('зайнята пошта відхиляється до надсилання листа', async () => {
-    const { auth, outbox } = setup({ existingEmail: 'pavlo@example.com' });
+    const { auth, outbox } = setup({ existingEmail: 'ivan@example.com' });
     await assert.rejects(auth.register(form), /уже існує/);
     assert.equal(outbox.length, 0);
   });

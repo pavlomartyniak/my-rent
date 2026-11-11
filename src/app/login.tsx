@@ -215,10 +215,10 @@ export default function LoginScreen() {
               })}
             </View>
           </View>
-          <Field label="Ім’я" value={firstName} onChangeText={setFirstName} autoCapitalize="words" autoComplete="given-name" textContentType="givenName" maxLength={50} placeholder="Павло" />
-          <Field label="Прізвище" value={lastName} onChangeText={setLastName} autoCapitalize="words" autoComplete="family-name" textContentType="familyName" maxLength={50} placeholder="Мартиняк" />
+          <Field label="Ім’я" value={firstName} onChangeText={setFirstName} autoCapitalize="words" autoComplete="given-name" textContentType="givenName" maxLength={50} placeholder="Іван" />
+          <Field label="Прізвище" value={lastName} onChangeText={setLastName} autoCapitalize="words" autoComplete="family-name" textContentType="familyName" maxLength={50} placeholder="Шевченко" />
           <Field
-            label="Телефон (необов’язково)"
+            label="Телефон"
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
@@ -226,7 +226,7 @@ export default function LoginScreen() {
             textContentType="telephoneNumber"
             maxLength={20}
             placeholder="+380 67 123 45 67"
-            error={isValidPhone(phone) ? undefined : 'Невірний формат телефону'}
+            error={phone.trim() && !isValidPhone(phone) ? 'Невірний формат телефону' : undefined}
           />
         </>
       ) : null}

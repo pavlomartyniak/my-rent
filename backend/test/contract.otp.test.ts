@@ -32,7 +32,7 @@ describe('повторне надсилання коду', () => {
 });
 
 describe('maskEmail', () => {
-  it('ховає ім’я, лишає домен', () => assert.equal(maskEmail('pavlo.martyniak@gmail.com'), 'p***@gmail.com'));
+  it('ховає ім’я, лишає домен', () => assert.equal(maskEmail('ivan.shevchenko@gmail.com'), 'i***@gmail.com'));
 });
 
 describe('підпис за кодом', () => {

@@ -25,7 +25,7 @@ export function validateRange(startDate: string, endDate: string, today: string)
   return null;
 }
 
-/** «Павло Мартиняк» → «Павло М.»: до підтвердження запиту прізвище приховане */
+/** «Іван Шевченко» → «Іван Ш.»: до підтвердження запиту прізвище приховане */
 export function maskedName(firstName: string, lastName: string) {
   const initial = lastName.trim().charAt(0);
   return [firstName.trim(), initial ? `${initial.toUpperCase()}.` : ''].filter(Boolean).join(' ');

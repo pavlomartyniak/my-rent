@@ -1,4 +1,4 @@
-import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, ValidateIf } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
 import { THEMES } from '../common/constants';
 import { PHONE_PATTERN, Trim } from '../common/profile';
@@ -18,11 +18,11 @@ export class UpdateMeDto {
   @MaxLength(50, { message: 'Прізвище занадто довге' })
   lastName?: string;
 
-  /** Порожній рядок очищає телефон */
+  /** Телефон обов'язковий: очистити його не можна */
   @Trim()
   @IsOptional()
-  @ValidateIf((o: UpdateMeDto) => !!o.phone)
   @IsString()
+  @IsNotEmpty({ message: 'Вкажіть номер телефону' })
   @Matches(PHONE_PATTERN, { message: 'Невірний формат телефону' })
   phone?: string;
 

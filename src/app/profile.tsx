@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Screen } from '@/components/ui/screen';
-import { isValidPhone } from '@/lib/profile';
+import { phoneError } from '@/lib/profile';
 import { useFleet } from '@/store/fleet';
 
 /** Редагування профілю: ім'я, прізвище, телефон. Email змінити не можна. */
@@ -21,7 +21,7 @@ export default function ProfileScreen() {
   const errors = {
     firstName: firstName.trim() ? '' : 'Вкажіть ім’я',
     lastName: lastName.trim() ? '' : 'Вкажіть прізвище',
-    phone: isValidPhone(phone) ? '' : 'Невірний формат телефону',
+    phone: phoneError(phone),
   };
 
   async function onSave() {
@@ -39,7 +39,7 @@ export default function ProfileScreen() {
       <Field label="Ім’я" value={firstName} onChangeText={setFirstName} error={submitted ? errors.firstName : undefined} autoCapitalize="words" textContentType="givenName" maxLength={50} />
       <Field label="Прізвище" value={lastName} onChangeText={setLastName} error={submitted ? errors.lastName : undefined} autoCapitalize="words" textContentType="familyName" maxLength={50} />
       <Field
-        label="Телефон (необов’язково)"
+        label="Телефон"
         value={phone}
         onChangeText={setPhone}
         error={submitted || phone ? errors.phone || undefined : undefined}

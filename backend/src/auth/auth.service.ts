@@ -55,7 +55,7 @@ export class AuthService {
           passwordHash: await bcrypt.hash(dto.password, ROUNDS),
           firstName: dto.firstName,
           lastName: dto.lastName,
-          phone: dto.phone ?? '',
+          phone: dto.phone,
           role: dto.role ?? 'owner',
           codeHash: registrationHash(email, code),
           expiresAt: new Date(now.getTime() + OTP_MINUTES * 60_000),

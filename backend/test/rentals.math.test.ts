@@ -34,11 +34,11 @@ describe('validateRange', () => {
 });
 
 describe('імена', () => {
-  it('maskedName ховає прізвище', () => assert.equal(maskedName('Павло', 'Мартиняк'), 'Павло М.'));
-  it('maskedName без прізвища', () => assert.equal(maskedName('Павло', ''), 'Павло'));
+  it('maskedName ховає прізвище', () => assert.equal(maskedName('Іван', 'Шевченко'), 'Іван Ш.'));
+  it('maskedName без прізвища', () => assert.equal(maskedName('Іван', ''), 'Іван'));
   it('fullName', () => {
-    assert.equal(fullName(' Павло ', ' Мартиняк '), 'Павло Мартиняк');
-    assert.equal(fullName('Павло', ''), 'Павло');
+    assert.equal(fullName(' Іван ', ' Шевченко '), 'Іван Шевченко');
+    assert.equal(fullName('Іван', ''), 'Іван');
   });
 });
 

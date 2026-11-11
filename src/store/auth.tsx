@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             password,
             firstName: profile.firstName.trim(),
             lastName: profile.lastName.trim(),
-            ...(profile.phone.trim() ? { phone: profile.phone.trim() } : {}),
+            phone: profile.phone.trim(),
           });
           return { resendInSeconds: res.resendInSeconds };
         } catch (e) {
