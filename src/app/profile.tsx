@@ -42,8 +42,8 @@ export default function ProfileScreen() {
 
   return (
     <Screen>
-      <Field label="Ім’я" value={firstName} onChangeText={(v) => { setFirstName(v); clear('firstName'); }} error={serverErrors.firstName ?? (submitted ? errors.firstName : undefined)} autoCapitalize="words" textContentType="givenName" maxLength={50} />
       <Field label="Прізвище" value={lastName} onChangeText={(v) => { setLastName(v); clear('lastName'); }} error={serverErrors.lastName ?? (submitted ? errors.lastName : undefined)} autoCapitalize="words" textContentType="familyName" maxLength={50} />
+      <Field label="Ім’я" value={firstName} onChangeText={(v) => { setFirstName(v); clear('firstName'); }} error={serverErrors.firstName ?? (submitted ? errors.firstName : undefined)} autoCapitalize="words" textContentType="givenName" maxLength={50} />
       <Field label="По батькові" value={middleName} onChangeText={(v) => { setMiddleName(v); clear('middleName'); }} error={serverErrors.middleName ?? (submitted ? errors.middleName : undefined)} autoCapitalize="words" maxLength={50} placeholder="Петрович" />
       <Field
         label="Телефон"

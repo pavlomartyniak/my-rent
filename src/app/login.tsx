@@ -223,8 +223,8 @@ export default function LoginScreen() {
               })}
             </View>
           </View>
-          <Field label="Ім’я" value={firstName} onChangeText={(v) => { setFirstName(v); clearField('firstName'); }} error={fieldErrors.firstName} autoCapitalize="words" autoComplete="given-name" textContentType="givenName" maxLength={50} placeholder="Іван" />
           <Field label="Прізвище" value={lastName} onChangeText={(v) => { setLastName(v); clearField('lastName'); }} error={fieldErrors.lastName} autoCapitalize="words" autoComplete="family-name" textContentType="familyName" maxLength={50} placeholder="Шевченко" />
+          <Field label="Ім’я" value={firstName} onChangeText={(v) => { setFirstName(v); clearField('firstName'); }} error={fieldErrors.firstName} autoCapitalize="words" autoComplete="given-name" textContentType="givenName" maxLength={50} placeholder="Іван" />
           <Field label="По батькові" value={middleName} onChangeText={(v) => { setMiddleName(v); clearField('middleName'); }} error={fieldErrors.middleName} autoCapitalize="words" maxLength={50} placeholder="Петрович" />
           <ThemedText type="small" themeColor="textSecondary">
             Прізвище, ім’я й по батькові потрібні, щоб у договорі були вказані ваші ПІБ повністю. Інших особистих даних (паспорт, РНОКПП, адреса) застосунок не вимагає.
