@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
@@ -13,7 +12,6 @@ import { useReport } from '@/hooks/use-report';
 import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/date';
 import { promptContract } from '@/lib/contract-prompt';
-import { handleLegalGate } from '@/lib/legal-gate';
 import type { RentalView } from '@/lib/rentals';
 import { useFleet } from '@/store/fleet';
 
@@ -21,7 +19,6 @@ const ORDER = { pending: 0, accepted: 1, ended: 2, declined: 3, cancelled: 4 } a
 
 /** Запити орендарів на мої опубліковані авто: прийняти або відхилити */
 export function OwnerRentals() {
-  const router = useRouter();
   const { reload, invalidate } = useFleet();
   const { data, loading, error, retry } = useReport<RentalView[]>('/rentals/incoming', { refetchOnFocus: true });
   const [busy, setBusy] = useState<string | null>(null);
@@ -40,7 +37,7 @@ export function OwnerRentals() {
       retry();
       if (action === 'accept') promptContract(res.dealId);
     } catch (e) {
-      if (!handleLegalGate(e, router)) Alert.alert('Не вдалося', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
+      Alert.alert('Не вдалося', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
       retry();
     } finally {
       setBusy(null);

@@ -17,7 +17,6 @@ import { api, ApiError } from '@/lib/api';
 import { fromISODate, toISODate } from '@/lib/date';
 import { formatMoney, plural } from '@/lib/format';
 import { effectivePlan, type ChoosablePlan } from '@/lib/payment-plan';
-import { handleLegalGate } from '@/lib/legal-gate';
 import type { MarketCar } from '@/lib/rentals';
 import { useFleet } from '@/store/fleet';
 
@@ -78,7 +77,6 @@ export default function RentalRequestScreen() {
       if (res.chatId) router.push({ pathname: '/chats/[id]', params: { id: res.chatId } });
       else Alert.alert('Запит надіслано', 'Власник отримає його й відповість. Відповідь з’явиться у «Моїх запитах».');
     } catch (e) {
-      if (handleLegalGate(e, router)) return;
       Alert.alert('Не вдалося надіслати', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
     } finally {
       setSending(false);

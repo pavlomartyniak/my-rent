@@ -19,7 +19,6 @@ import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
 import { formatMoney } from '@/lib/format';
 import { effectivePlan, type ChoosablePlan } from '@/lib/payment-plan';
-import { handleLegalGate } from '@/lib/legal-gate';
 import type { WantedView } from '@/lib/wanted';
 import { useFleet } from '@/store/fleet';
 
@@ -79,7 +78,6 @@ export default function OfferScreen() {
       if (res.chatId) router.push({ pathname: '/chats/[id]', params: { id: res.chatId } });
       else Alert.alert('Пропозицію надіслано', 'Орендар побачить її й відповість. Статус видно в «Моїх пропозиціях».');
     } catch (e) {
-      if (handleLegalGate(e, router, car.id)) return;
       Alert.alert('Не вдалося надіслати', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
     } finally {
       setSending(false);

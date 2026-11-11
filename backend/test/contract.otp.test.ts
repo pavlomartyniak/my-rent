@@ -65,20 +65,11 @@ describe('шаблон договору', () => {
     assert.match(text(t), /одноразовим кодом/);
     assert.match(text(t), /паперову копію/);
   });
-  it('договір версії 3 містить повні дані сторін і авто, а версії 2 — лише імена', () => {
-    const legal = { partyType: 'fop' as const, kved: '49.32', rnokpp: '3000000008', idDoc: { type: 'id_card' as const, series: '', number: '123456789', issuedBy: '1234', issuedAt: '2022-05-01' }, address: 'м. Київ, вул. Хрещатик, 1, кв. 2' };
-    const full = buildTerms({
-      ...input,
-      owner: { name: 'Власенко Петро Іванович', phone: '+380501112233', legal },
-      renter: { name: 'Тестова Олена Петрівна', phone: '', legal: { ...legal, partyType: 'individual', kved: undefined, license: { series: 'ААА', number: '123456', validUntil: '2030-01-01', categories: ['B', 'C'] } } },
-      car: { ...input.car, plate: 'AA1234BB' },
-    });
-    const s = text({ ...full, templateVersion: 3 });
-    assert.match(s, /Орендодавець: Власенко Петро Іванович, ФОП, КВЕД 49\.32, РНОКПП 3000000008, ID-картка № 123456789, виданий 1234 01\.05\.2022, адреса: м\. Київ/);
-    assert.match(s, /Орендар: Тестова Олена Петрівна, фізична особа, РНОКПП 3000000008.*посвідчення водія серії ААА № 123456, категорії B, C/); // старі договори зберігають категорії, якщо вони були
-    assert.match(s, /державний номер AA1234BB/);
-    const v2 = text({ ...buildTerms(input), templateVersion: 2 });
-    assert.doesNotMatch(v2, /РНОКПП|державний номер/);
+  it('договір версії 3 (як і 2) показує лише імена сторін: особисті дані застосунок не збирає', () => {
+    const v3 = text({ ...buildTerms(input), templateVersion: 3 });
+    assert.match(v3, /Орендодавець: Петро Власенко/);
+    assert.doesNotMatch(v3, /РНОКПП|документ про особу|посвідчення водія/);
+    assert.match(text({ ...buildTerms(input), templateVersion: 2 }), /Орендар: Олена Тестова/);
   });
   it('договір без версії читається за старим текстом, без нових пунктів', () => {
     const { templateVersion: _v, ...legacy } = buildTerms(input);

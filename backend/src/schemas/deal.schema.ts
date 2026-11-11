@@ -74,9 +74,6 @@ export class Deal {
     terms: ContractTerms;
     hash: string;
     signatures: { owner?: Signature; renter?: Signature };
-    /** Хто з сторін натиснув «Укласти договір». Коли обидві, умови формуються наново з їхніми даними (formedAt) */
-    intent?: { owner?: Date; renter?: Date };
-    formedAt?: Date;
     /** Код підтвердження підпису, що чекає введення, для кожної зі сторін */
     otp?: { owner?: PendingCode; renter?: PendingCode };
     signedAt?: Date;

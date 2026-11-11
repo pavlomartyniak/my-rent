@@ -1,25 +1,18 @@
 import { Types } from 'mongoose';
 
-import type { LegalProfile } from '../common/legal';
 import type { Purpose } from '../contract/contract.terms';
 import { type ContractParty, buildTerms, contractHash, contractNumber } from '../contract/contract.terms';
 import { fullName } from '../rentals/rentals.math';
 import type { PaymentPlan } from './payment-plan';
 
-type PersonDoc = { firstName: string; lastName: string; phone?: string; legal?: LegalProfile };
+type PersonDoc = { firstName: string; lastName: string; middleName?: string; phone?: string };
 type CarDoc = { brand: string; model: string; year: number; vin: string; mileage: number; plate?: string; color?: string; fuel?: string };
 
-/** Сторона договору. З юридичними даними ім'я записується як у документах (Прізвище Ім'я По батькові) */
-export const party = (u: PersonDoc): ContractParty => {
-  const phone = u.phone ?? '';
-  if (!u.legal) return { name: fullName(u.firstName, u.lastName) || 'Користувач', phone };
-  const { partyType, kved, rnokpp, idDoc, address, license } = u.legal;
-  return {
-    name: [u.lastName, u.firstName, u.legal.middleName].filter(Boolean).join(' '),
-    phone,
-    legal: { partyType, ...(kved ? { kved } : {}), rnokpp, idDoc, address, ...(license ? { license } : {}) },
-  };
-};
+/** Сторона договору: ПІБ повністю, як у документах (Прізвище Ім'я По батькові), і телефон */
+export const party = (u: PersonDoc): ContractParty => ({
+  name: [u.lastName, u.firstName, u.middleName].filter(Boolean).join(' ') || 'Користувач',
+  phone: u.phone ?? '',
+});
 
 /** Дані авто для умов договору */
 export const carTerms = (title: string, car: CarDoc) => ({
@@ -65,9 +58,8 @@ export function newDealData(input: {
     number: contractNumber(createdAt, String(_id)),
     createdAt,
     city: input.city,
-    // Юридичні дані сторін потрапляють у договір лише тоді, коли обидві натиснуть «Укласти договір» (formContract)
-    owner: party({ firstName: input.owner.firstName, lastName: input.owner.lastName, phone: input.owner.phone }),
-    renter: party({ firstName: input.renter.firstName, lastName: input.renter.lastName, phone: input.renter.phone }),
+    owner: party(input.owner),
+    renter: party(input.renter),
     car: carTerms(input.title, input.car),
     startDate: input.startDate,
     endDate: input.endDate,
@@ -90,8 +82,7 @@ export function newDealData(input: {
     source: input.source,
     sourceId: input.sourceId,
     status: 'awaiting',
-    // Договір ще чернетка: його формують і підписують, коли обидві сторони натиснуть «Укласти договір» (intent)
-    contract: { terms, hash: contractHash(terms), signatures: {}, intent: {} },
+    contract: { terms, hash: contractHash(terms), signatures: {} },
     payments: terms.payments.map((p) => ({ n: p.n, renterPaid: 0, ownerReceived: 0 })),
   };
 }

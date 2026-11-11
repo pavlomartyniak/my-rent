@@ -29,5 +29,5 @@ export function useAwaitingSignature() {
 
 /** Лише ті, що пора підписувати прямо зараз (відкрите вікно підписання): вони потрапляють у лічильники */
 export function useSigningNow() {
-  return useAwaitingSignature().filter((d) => d.contract?.formed && d.contract.signing.state === 'open');
+  return useAwaitingSignature().filter((d) => d.contract?.signing.state === 'open');
 }

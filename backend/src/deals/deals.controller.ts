@@ -101,13 +101,6 @@ export class DealsController {
     return new StreamableFile(pdf, { type: 'application/pdf', disposition: `attachment; filename="${filename}"` });
   }
 
-  /** «Укласти договір»: перевіряє дані сторони, а коли натиснули обидві, формує договір для підписання */
-  @HttpCode(200)
-  @Post(':id/contract/intent')
-  intent(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
-    return this.deals.intend(user, id);
-  }
-
   /** Надіслати на пошту код для підписання договору */
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(200)

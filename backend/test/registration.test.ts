@@ -2,7 +2,7 @@ import { phoneKey } from '../src/common/profile';
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { BadRequestException, HttpException } from '@nestjs/common';
+import { HttpException } from '@nestjs/common';
 
 import { AuthService } from '../src/auth/auth.service';
 
@@ -54,7 +54,7 @@ function setup(opts: { mailOk?: boolean; existingEmail?: string; takenPhone?: st
   return { auth, pending, created, outbox, lastCode, state };
 }
 
-const form = { email: 'Ivan@Example.com', password: 'password123', firstName: 'Іван', lastName: 'Шевченко', phone: '+380671234567', role: 'renter' };
+const form = { email: 'Ivan@Example.com', password: 'password123', firstName: 'Іван', lastName: 'Шевченко', middleName: 'Петрович', phone: '+380671234567', role: 'renter' };
 
 describe('реєстрація з підтвердженням пошти', () => {
   it('після форми акаунта ще немає, а код іде на пошту', async () => {
@@ -111,34 +111,11 @@ describe('реєстрація з підтвердженням пошти', () =
     assert.equal(created.length, 0);
   });
 
-  it('посвідчення при реєстрації орендаря необов’язкове: без нього акаунт створюється без нього', async () => {
+  it('по батькові зберігається в акаунті', async () => {
     const { auth, created, lastCode } = setup();
-    await auth.register({ ...form, role: 'renter' });
+    await auth.register(form);
     await auth.verifyRegistration({ email: form.email, code: lastCode() });
-    assert.equal(created.length, 1);
-    assert.ok(!('legal' in created[0]!));
-  });
-
-  it('повне чинне посвідчення зберігається в профілі після підтвердження пошти', async () => {
-    const { auth, created, lastCode } = setup();
-    const license = { series: 'ааа', number: '123456', validUntil: '2099-01-01' };
-    await auth.register({ ...form, role: 'renter', license });
-    await auth.verifyRegistration({ email: form.email, code: lastCode() });
-    assert.deepEqual((created[0] as { legal: unknown }).legal, { license: { series: 'ААА', number: '123456', validUntil: '2099-01-01' } });
-  });
-
-  it('частково заповнене чи прострочене посвідчення відхиляється до надсилання листа', async () => {
-    const { auth, outbox } = setup();
-    await assert.rejects(auth.register({ ...form, role: 'renter', license: { number: '123456' } }), (e: unknown) => e instanceof BadRequestException);
-    await assert.rejects(auth.register({ ...form, role: 'renter', license: { series: 'ААА', number: '123456', validUntil: '2020-01-01' } }), (e: unknown) => e instanceof BadRequestException && /прострочено/.test(JSON.stringify(e.getResponse())));
-    assert.equal(outbox.length, 0);
-  });
-
-  it('власнику посвідчення не потрібне: якщо воно прийшло, його ігнорують', async () => {
-    const { auth, created, lastCode } = setup();
-    await auth.register({ ...form, role: 'owner', license: { number: 'x' } });
-    await auth.verifyRegistration({ email: form.email, code: lastCode() });
-    assert.ok(!('legal' in created[0]!));
+    assert.equal(created[0]!.middleName, 'Петрович');
   });
 
   it('зайнята пошта відхиляється до надсилання листа', async () => {

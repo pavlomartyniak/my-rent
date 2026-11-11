@@ -11,7 +11,6 @@ import { Field } from '@/components/ui/field';
 import { NumberField } from '@/components/ui/number-field';
 import { Screen } from '@/components/ui/screen';
 import { api, ApiError } from '@/lib/api';
-import { handleLegalGate } from '@/lib/legal-gate';
 import { useFleet } from '@/store/fleet';
 import { MAX_LISTINGS } from '@/types';
 
@@ -55,7 +54,6 @@ export default function ListingScreen() {
       reload();
       router.back();
     } catch (e) {
-      if (handleLegalGate(e, router, car.id)) return;
       Alert.alert('Не вдалося опублікувати', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
     } finally {
       setSaving(false);

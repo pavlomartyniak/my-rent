@@ -23,12 +23,23 @@ export const badField = (field: string, message: string) => badFields([{ field, 
 export const conflictField = (field: string, message: string) =>
   new ConflictException({ statusCode: 409, error: 'Conflict', message, fields: { [field]: message } });
 
+/**
+ * Яке з порушених правил показати: для порожнього поля «Вкажіть …» (isNotEmpty) важливіше за «занадто довге»
+ * чи «має бути рядком», тож спершу шукаємо змістовні правила.
+ */
+const PRIORITY = ['isNotEmpty', 'isDefined', 'isEmail', 'minLength', 'matches', 'isIn', 'isString'];
+function pickMessage(constraints: Record<string, string> | undefined): string | undefined {
+  if (!constraints) return undefined;
+  for (const key of PRIORITY) if (constraints[key]) return constraints[key];
+  return Object.values(constraints)[0];
+}
+
 /** Розгортає дерево помилок class-validator у плоский перелік «поле → перше повідомлення» */
 export function validationIssues(errors: ValidationError[], parent = ''): FieldIssue[] {
   const out: FieldIssue[] = [];
   for (const e of errors) {
     const path = parent ? `${parent}.${e.property}` : e.property;
-    const first = Object.values(e.constraints ?? {})[0];
+    const first = pickMessage(e.constraints);
     if (first) out.push({ field: path, message: first });
     if (e.children?.length) out.push(...validationIssues(e.children, path));
   }

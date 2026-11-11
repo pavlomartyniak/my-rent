@@ -3,7 +3,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 
 import { conflictField } from '../common/field-errors';
-import type { LegalProfile } from '../common/legal';
 import { PHONE_TAKEN, phoneKey } from '../common/profile';
 import { User, type UserDocument } from '../schemas/user.schema';
 
@@ -43,7 +42,7 @@ export class UsersService {
     return !!(await this.users.exists(filter));
   }
 
-  async create(data: { email: string; passwordHash: string; firstName: string; lastName: string; phone?: string; role?: string; legal?: Record<string, unknown> }) {
+  async create(data: { email: string; passwordHash: string; firstName: string; lastName: string; middleName?: string; phone?: string; role?: string }) {
     try {
       return await this.users.create({ ...data, ...(data.phone ? { phoneKey: phoneKey(data.phone) } : {}) } as never);
     } catch (e) {
@@ -51,19 +50,7 @@ export class UsersService {
     }
   }
 
-  /** Зберігає юридичні дані для договору; посвідчення водія, додане окремо, лишається як було */
-  async setLegal(id: string, legal: LegalProfile) {
-    const existing = await this.users.findById(id, 'legal').lean().exec();
-    const license = existing?.legal?.license;
-    return this.users.findByIdAndUpdate(id, { $set: { legal: { ...legal, ...(license ? { license } : {}) } } }, { new: true }).exec();
-  }
-
-  /** Зберігає посвідчення водія (окремо від решти даних для договору); null — прибрати */
-  setLicense(id: string, license: LegalProfile['license'] | null) {
-    return this.users.findByIdAndUpdate(id, license ? { $set: { 'legal.license': license } } : { $unset: { 'legal.license': '' } }, { new: true }).exec();
-  }
-
-  async update(id: string, patch: Partial<Pick<User, 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'phone'>>) {
+  async update(id: string, patch: Partial<Pick<User, 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'middleName' | 'phone'>>) {
     if (patch.phone && (await this.phoneTaken(patch.phone, id))) throw conflictField('phone', PHONE_TAKEN);
     try {
       return await this.users.findByIdAndUpdate(id, { $set: { ...patch, ...(patch.phone ? { phoneKey: phoneKey(patch.phone) } : {}) } }, { new: true }).exec();

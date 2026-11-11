@@ -15,7 +15,6 @@ import { DataModule } from './data/data.module';
 import { DealsModule } from './deals/deals.module';
 import { DatabaseModule } from './database/database.module';
 import { ExportModule } from './export/export.module';
-import { LegalModule } from './legal/legal.module';
 import { MailModule } from './mail/mail.module';
 import { HealthController } from './health.controller';
 import { MarketModule } from './market/market.module';
@@ -69,7 +68,6 @@ import { WantedModule } from './wanted/wanted.module';
     RentalsModule,
     MediaModule,
     ModerationModule,
-    LegalModule,
     WantedModule,
     DataModule,
   ],

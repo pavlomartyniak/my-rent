@@ -4,7 +4,7 @@ import type { Model } from 'mongoose';
 
 import { MAX_LISTINGS } from '../common/constants';
 import { badField } from '../common/field-errors';
-import { type CarLegal, normalizeCarLegal, plateValid } from '../common/legal';
+import { type CarLegal, normalizeCarLegal, plateValid } from '../common/car-plate';
 import { normalize } from '../common/normalize';
 import { MediaService } from '../media/media.service';
 import { Car } from '../schemas/car.schema';

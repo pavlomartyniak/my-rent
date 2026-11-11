@@ -11,9 +11,7 @@ import { generateCode, OTP_MAX_ATTEMPTS, OTP_MINUTES, OTP_RESEND_SECONDS, resend
 import { MailService } from '../mail/mail.service';
 import { SUSPENDED_MESSAGE } from '../moderation/moderation.constants';
 import { PendingRegistration, type PendingRegistrationDocument } from '../schemas/pending-registration.schema';
-import { badFields, conflictField } from '../common/field-errors';
-import { licenseIssues, normalizeLicense } from '../common/legal';
-import { todayUtc } from '../rentals/rentals.math';
+import { conflictField } from '../common/field-errors';
 import { PHONE_TAKEN } from '../common/profile';
 import { UsersService } from '../users/users.service';
 import type { LoginDto, RegisterDto, ResetPasswordDto, VerifyRegistrationDto } from './auth.dto';
@@ -48,13 +46,6 @@ export class AuthService {
     if (await this.users.findByEmail(email)) throw conflictField('email', 'Користувач з таким email уже існує');
     if (await this.users.phoneTaken(dto.phone)) throw conflictField('phone', PHONE_TAKEN);
 
-    // Посвідчення необов'язкове, але якщо його вказано, воно має бути повним і чинним
-    const license = dto.role === 'renter' ? normalizeLicense(dto.license) : undefined;
-    if (license) {
-      const issues = licenseIssues(license, todayUtc());
-      if (issues.length) throw badFields(issues);
-    }
-
     const now = new Date();
     const existing = await this.pending.findOne({ email }).exec();
     this.requireResendAllowed(existing, now);
@@ -67,9 +58,9 @@ export class AuthService {
           passwordHash: await bcrypt.hash(dto.password, ROUNDS),
           firstName: dto.firstName,
           lastName: dto.lastName,
+          middleName: dto.middleName,
           phone: dto.phone,
           role: dto.role ?? 'owner',
-          license: license ?? null,
           codeHash: registrationHash(email, code),
           expiresAt: new Date(now.getTime() + OTP_MINUTES * 60_000),
           attempts: 0,
@@ -120,7 +111,7 @@ export class AuthService {
     if (!consumed) throw new ConflictException('Код уже використано. Запросіть новий');
     if (await this.users.findByEmail(email)) throw conflictField('email', 'Користувач з таким email уже існує');
 
-    const user = await this.users.create({ email, passwordHash: doc.passwordHash, firstName: doc.firstName, lastName: doc.lastName, phone: doc.phone, role: doc.role, ...(doc.license ? { legal: { license: doc.license } } : {}) });
+    const user = await this.users.create({ email, passwordHash: doc.passwordHash, firstName: doc.firstName, lastName: doc.lastName, middleName: doc.middleName, phone: doc.phone, role: doc.role });
     return this.session(user.id, user.role, this.users.toPublic(user));
   }
 

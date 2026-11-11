@@ -28,13 +28,14 @@ type ServerData = {
   reminders: Reminder[];
 };
 
-const EMPTY: Data = { email: '', role: 'owner', firstName: '', lastName: '', phone: '', cars: [], reminders: [], onboarded: false, dismissedHints: [], theme: 'system' };
+const EMPTY: Data = { email: '', role: 'owner', firstName: '', lastName: '', middleName: '', phone: '', cars: [], reminders: [], onboarded: false, dismissedHints: [], theme: 'system' };
 
 const fromServer = ({ user, cars, reminders }: ServerData): Data => ({
   email: user.email,
   role: user.role === 'renter' ? 'renter' : 'owner',
   firstName: user.firstName ?? '',
   lastName: user.lastName ?? '',
+  middleName: user.middleName ?? '',
   phone: user.phone ?? '',
   cars,
   reminders,
@@ -248,7 +249,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
   );
 
   const updateMe = useCallback(
-    (changes: Partial<Pick<Data, 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'phone'>>, onFields?: FieldsHandler) =>
+    (changes: Partial<Pick<Data, 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'middleName' | 'phone'>>, onFields?: FieldsHandler) =>
       run(async () => {
         await api('PATCH', '/me', changes);
         patch((d) => ({ ...d, ...changes }));

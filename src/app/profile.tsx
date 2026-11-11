@@ -1,45 +1,31 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
-import { EMPTY_LICENSE, LicenseFields, licenseFill, type LicenseDraft } from '@/components/license-fields';
-import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Field } from '@/components/ui/field';
 import { Screen } from '@/components/ui/screen';
-import { Alert } from 'react-native';
-import { api, ApiError } from '@/lib/api';
 import { phoneError } from '@/lib/profile';
 import { useFleet } from '@/store/fleet';
 
-/** Редагування профілю: ім'я, прізвище, телефон й (для орендаря) посвідчення водія. Email змінити не можна. */
+/** Редагування профілю: прізвище, ім'я, по батькові (ПІБ у договорі) і телефон. Email змінити не можна. */
 export default function ProfileScreen() {
   const router = useRouter();
-  const { email, role, firstName: savedFirst, lastName: savedLast, phone: savedPhone, updateProfile, invalidate } = useFleet();
-  const isRenter = role === 'renter';
+  const { email, firstName: savedFirst, lastName: savedLast, middleName: savedMiddle, phone: savedPhone, updateProfile } = useFleet();
 
   const [firstName, setFirstName] = useState(savedFirst);
   const [lastName, setLastName] = useState(savedLast);
+  const [middleName, setMiddleName] = useState(savedMiddle);
   const [phone, setPhone] = useState(savedPhone);
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
-  // null — посвідчення ще завантажується
-  const [license, setLicense] = useState<LicenseDraft | null>(null);
-  const [licenseProblems, setLicenseProblems] = useState<string[]>([]);
-  // Помилки полів від сервера (зайнятий телефон, хибне посвідчення): підсвічують поля, поки їх не змінять
+  // Помилки полів від сервера (наприклад, телефон уже зайнятий): підсвічують поле, поки його не змінять
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
-  const clear = (...keys: string[]) => setServerErrors((f) => (keys.some((k) => k in f) ? Object.fromEntries(Object.entries(f).filter(([k]) => !keys.includes(k))) : f));
-
-  useEffect(() => {
-    if (!isRenter) return;
-    api<{ legal?: { license?: LicenseDraft } }>('GET', '/me')
-      .then((me) => setLicense({ ...EMPTY_LICENSE, ...me.legal?.license }))
-      .catch(() => setLicense(EMPTY_LICENSE));
-  }, [isRenter]);
+  const clear = (key: string) => setServerErrors((f) => (key in f ? Object.fromEntries(Object.entries(f).filter(([k]) => k !== key)) : f));
 
   const errors = {
     firstName: firstName.trim() ? '' : 'Вкажіть ім’я',
     lastName: lastName.trim() ? '' : 'Вкажіть прізвище',
+    middleName: middleName.trim() ? '' : 'Вкажіть по батькові',
     phone: phoneError(phone),
   };
 
@@ -47,27 +33,9 @@ export default function ProfileScreen() {
     if (saving) return;
     setSubmitted(true);
     if (Object.values(errors).some(Boolean)) return;
-    // Посвідчення: або порожнє (прибирається), або заповнене повністю
-    if (isRenter && license && licenseFill(license) === 'partial') {
-      setLicenseProblems(['Заповніть посвідчення повністю (серія, номер, строк дії) або залиште порожнім']);
-      return;
-    }
     setSaving(true);
-    setLicenseProblems([]);
     setServerErrors({});
-    const ok = await updateProfile({ firstName: firstName.trim(), lastName: lastName.trim(), phone: phone.trim() }, setServerErrors);
-    if (ok && isRenter && license) {
-      try {
-        await api('PUT', '/me/license', license);
-        invalidate();
-      } catch (e) {
-        setSaving(false);
-        if (e instanceof ApiError && e.fields) setServerErrors(e.fields);
-        else if (e instanceof ApiError && e.status === 400) setLicenseProblems(e.details?.length ? e.details : [e.message]);
-        else Alert.alert('Не вдалося зберегти посвідчення', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
-        return;
-      }
-    }
+    const ok = await updateProfile({ firstName: firstName.trim(), lastName: lastName.trim(), middleName: middleName.trim(), phone: phone.trim() }, setServerErrors);
     setSaving(false);
     if (ok) router.back();
   }
@@ -76,6 +44,7 @@ export default function ProfileScreen() {
     <Screen>
       <Field label="Ім’я" value={firstName} onChangeText={(v) => { setFirstName(v); clear('firstName'); }} error={serverErrors.firstName ?? (submitted ? errors.firstName : undefined)} autoCapitalize="words" textContentType="givenName" maxLength={50} />
       <Field label="Прізвище" value={lastName} onChangeText={(v) => { setLastName(v); clear('lastName'); }} error={serverErrors.lastName ?? (submitted ? errors.lastName : undefined)} autoCapitalize="words" textContentType="familyName" maxLength={50} />
+      <Field label="По батькові" value={middleName} onChangeText={(v) => { setMiddleName(v); clear('middleName'); }} error={serverErrors.middleName ?? (submitted ? errors.middleName : undefined)} autoCapitalize="words" maxLength={50} placeholder="Петрович" />
       <Field
         label="Телефон"
         value={phone}
@@ -90,35 +59,6 @@ export default function ProfileScreen() {
         placeholder="+380 67 123 45 67"
       />
       <Field label="Email (змінити не можна)" value={email} editable={false} selectTextOnFocus={false} style={{ opacity: 0.6 }} />
-      {isRenter ? (
-        <>
-          <Card>
-            <ThemedText type="smallBold">Посвідчення водія</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Посвідчення водія (серія, номер і строк дії) вказують у договорі. Його не вимагають, поки ви не захочете укласти договір, тоді воно має бути заповнене. Додати його можна й зараз, і пізніше.
-            </ThemedText>
-          </Card>
-          {license ? (
-            <LicenseFields
-              value={license}
-              onChange={(l) => {
-                setLicense(l);
-                clear('license.series', 'license.number', 'license.validUntil');
-              }}
-              errors={{ series: serverErrors['license.series'], number: serverErrors['license.number'], validUntil: serverErrors['license.validUntil'] }}
-            />
-          ) : null}
-          {licenseProblems.length ? (
-            <Card>
-              {licenseProblems.map((p) => (
-                <ThemedText key={p} type="small" themeColor="negative">
-                  • {p}
-                </ThemedText>
-              ))}
-            </Card>
-          ) : null}
-        </>
-      ) : null}
       <Button title={saving ? 'Зберігаємо…' : 'Зберегти'} disabled={saving} onPress={onSave} />
     </Screen>
   );

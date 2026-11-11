@@ -1,4 +1,4 @@
-import { IsEmail, IsIn, IsNotEmpty, IsObject, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 import { ROLES } from '../common/constants';
 import { PHONE_PATTERN, Trim } from '../common/profile';
@@ -23,14 +23,15 @@ export class RegisterDto {
 
   @Trim()
   @IsString()
+  @IsNotEmpty({ message: 'Вкажіть по батькові' })
+  @MaxLength(50, { message: 'По батькові занадто довге' })
+  middleName: string;
+
+  @Trim()
+  @IsString()
   @IsNotEmpty({ message: 'Вкажіть номер телефону' })
   @Matches(PHONE_PATTERN, { message: 'Невірний формат телефону' })
   phone: string;
-
-  /** Посвідчення водія при реєстрації орендаря: необов'язкове, але якщо вказане, то повністю й чинне */
-  @IsOptional()
-  @IsObject()
-  license?: { series?: string; number?: string; validUntil?: string };
 
   @IsEmail({}, { message: 'Невірний формат email' })
   @MaxLength(254)

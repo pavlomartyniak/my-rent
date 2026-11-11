@@ -14,7 +14,6 @@ import { Screen } from '@/components/ui/screen';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { isValidPhone } from '@/lib/profile';
-import { EMPTY_LICENSE, LicenseFields, licenseFill, type LicenseDraft } from '@/components/license-fields';
 import { useAuth } from '@/store/auth';
 
 const MODES = ['Вхід', 'Реєстрація'] as const;
@@ -31,10 +30,10 @@ export default function LoginScreen() {
   const [roleLabel, setRoleLabel] = useState<(typeof ROLES)[number]>(ROLES[0]);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [middleName, setMiddleName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [license, setLicense] = useState<LicenseDraft>(EMPTY_LICENSE);
   const [error, setError] = useState<string | null>(null);
   // Помилки полів від сервера (зайнятий телефон чи пошта, хибне посвідчення): підсвічують відповідні поля, поки їх не змінять
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -48,9 +47,7 @@ export default function LoginScreen() {
 
   const signingUp = mode === 'Реєстрація';
   const isRenter = roleLabel !== ROLES[0];
-  // Посвідчення при реєстрації необов'язкове: порожнє чи повністю заповнене
-  const licenseState = isRenter ? licenseFill(license) : 'empty';
-  const validProfile = !!firstName.trim() && !!lastName.trim() && isValidPhone(phone) && licenseState !== 'partial';
+  const validProfile = !!firstName.trim() && !!lastName.trim() && !!middleName.trim() && isValidPhone(phone);
   const valid = /\S+@\S+\.\S+/.test(email) && password.length >= (signingUp ? 8 : 1) && (!signingUp || validProfile);
 
   // Якщо відповідь іде довше за кілька секунд — пояснюємо чому
@@ -76,7 +73,7 @@ export default function LoginScreen() {
     setError(null);
     setFieldErrors({});
     if (signingUp) {
-      const res = await register(email, password, { firstName, lastName, phone }, isRenter ? 'renter' : 'owner', licenseState === 'full' ? license : undefined);
+      const res = await register(email, password, { firstName, lastName, middleName, phone }, isRenter ? 'renter' : 'owner');
       setBusy(false);
       // Якщо сервер вказав поля, підсвічуємо їх, а загального повідомлення внизу не показуємо
       if (res.fields && Object.keys(res.fields).length) return setFieldErrors(res.fields);
@@ -228,6 +225,10 @@ export default function LoginScreen() {
           </View>
           <Field label="Ім’я" value={firstName} onChangeText={(v) => { setFirstName(v); clearField('firstName'); }} error={fieldErrors.firstName} autoCapitalize="words" autoComplete="given-name" textContentType="givenName" maxLength={50} placeholder="Іван" />
           <Field label="Прізвище" value={lastName} onChangeText={(v) => { setLastName(v); clearField('lastName'); }} error={fieldErrors.lastName} autoCapitalize="words" autoComplete="family-name" textContentType="familyName" maxLength={50} placeholder="Шевченко" />
+          <Field label="По батькові" value={middleName} onChangeText={(v) => { setMiddleName(v); clearField('middleName'); }} error={fieldErrors.middleName} autoCapitalize="words" maxLength={50} placeholder="Петрович" />
+          <ThemedText type="small" themeColor="textSecondary">
+            Прізвище, ім’я й по батькові потрібні, щоб у договорі були вказані ваші ПІБ повністю. Інших особистих даних (паспорт, РНОКПП, адреса) застосунок не вимагає.
+          </ThemedText>
           <Field
             label="Телефон"
             value={phone}
@@ -242,27 +243,6 @@ export default function LoginScreen() {
             placeholder="+380 67 123 45 67"
             error={fieldErrors.phone ?? (phone.trim() && !isValidPhone(phone) ? 'Невірний формат телефону' : undefined)}
           />
-          {isRenter ? (
-            <>
-              <ThemedText type="smallBold">Посвідчення водія (необов’язково)</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                Знадобиться лише тоді, коли захочете укласти договір. Якщо не заповнювати зараз, додайте пізніше в профілі.
-              </ThemedText>
-              <LicenseFields
-                value={license}
-                onChange={(l) => {
-                  setLicense(l);
-                  clearField('license.series', 'license.number', 'license.validUntil');
-                }}
-                errors={{ series: fieldErrors['license.series'], number: fieldErrors['license.number'], validUntil: fieldErrors['license.validUntil'] }}
-              />
-              {licenseState === 'partial' ? (
-                <ThemedText type="small" themeColor="negative">
-                  Заповніть посвідчення повністю (серія, номер, строк дії) або залиште порожнім.
-                </ThemedText>
-              ) : null}
-            </>
-          ) : null}
         </>
       ) : null}
 
