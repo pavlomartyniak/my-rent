@@ -38,15 +38,26 @@ export async function uploadPolicy(carId: string, file: { uri: string; name: str
   return body as PolicyInfo;
 }
 
-/** Завантажує поліс із сервера (з токеном) у кеш пристрою й відкриває системне вікно «Поділитись»: звідти його можна переглянути, зберегти чи надіслати */
+const EXT: Record<string, string> = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/heic': 'heic' };
+const UTI: Record<string, string> = { 'application/pdf': 'com.adobe.pdf', 'image/jpeg': 'public.jpeg', 'image/png': 'public.png', 'image/webp': 'org.webmproject.webp', 'image/heic': 'public.heic' };
+
+/**
+ * Завантажує поліс із сервера (з токеном) у кеш пристрою й відкриває системне вікно «Поділитись»: звідти його можна переглянути,
+ * зберегти чи надіслати. Файл зберігається під фіксованою назвою з правильним розширенням: без розширення iOS не вміє його відкрити.
+ */
 export async function downloadPolicy(carId: string, mime: string) {
   const dir = new Directory(Paths.cache, 'insurance');
   dir.create({ idempotent: true });
+  const target = new File(dir, `Страховий поліс.${EXT[mime] ?? 'pdf'}`);
   // Стара копія не заважає: завантажуємо наново
-  for (const item of dir.list()) if (item instanceof File) item.delete();
-  const task = File.createDownloadTask(`${BASE_URL}/insurance/cars/${carId}/file`, dir, { headers: { Authorization: `Bearer ${getApiToken() ?? ''}` } });
-  const file = await task.downloadAsync();
-  if (!file) throw new Error('Не вдалося завантажити файл');
+  if (target.exists) target.delete();
+  const file = await File.downloadFileAsync(`${BASE_URL}/insurance/cars/${carId}/file`, target, { headers: { Authorization: `Bearer ${getApiToken() ?? ''}` } });
+  // Якщо сервер відповів помилкою, у файл потрапив би JSON: перевіряємо початок і не віддаємо такий файл
+  const head = new TextDecoder('latin1').decode((await file.bytes()).slice(0, 1024));
+  if (mime === 'application/pdf' ? !head.includes('%PDF-') : head.trimStart().startsWith('{')) {
+    file.delete();
+    throw new Error('Сервер не віддав файл. Спробуйте ще раз пізніше');
+  }
   if (!(await Sharing.isAvailableAsync())) throw new Error('На цьому пристрої не можна поділитись файлом');
-  await Sharing.shareAsync(file.uri, { mimeType: mime, dialogTitle: 'Страховий поліс' });
+  await Sharing.shareAsync(file.uri, { mimeType: mime, UTI: UTI[mime], dialogTitle: 'Страховий поліс' });
 }
