@@ -1,4 +1,3 @@
-import * as DocumentPicker from 'expo-document-picker';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 
@@ -8,7 +7,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
 import { formatDate, todayISO } from '@/lib/date';
 import { formatSize } from '@/lib/format';
-import { downloadPolicy, MAX_POLICY_BYTES, type PolicyInfo, uploadPolicy } from '@/lib/insurance';
+import { downloadPolicy, type PolicyInfo, pickPolicy, uploadPolicy } from '@/lib/insurance';
 
 import { ThemedText } from './themed-text';
 import { Button } from './ui/button';
@@ -42,13 +41,11 @@ export function InsuranceCard({ carId }: { carId: string }) {
   const dateValue = validUntil !== undefined ? validUntil : data.hasPolicy ? data.validUntil : null;
 
   async function pick() {
-    const res = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/*'], copyToCacheDirectory: true });
-    if (res.canceled || !res.assets[0]) return;
-    const a = res.assets[0];
-    if ((a.size ?? 0) > MAX_POLICY_BYTES) return Alert.alert('Файл завеликий', `Поліс має бути до ${MAX_POLICY_BYTES / 1024 / 1024} МБ. Стисніть файл чи завантажте фото.`);
+    const a = await pickPolicy();
+    if (!a) return;
     setBusy('upload');
     try {
-      await uploadPolicy(carId, { uri: a.uri, name: a.name, mime: a.mimeType }, dateValue);
+      await uploadPolicy(carId, a, dateValue);
       setValidUntil(undefined);
       retry();
     } catch (e) {

@@ -8,6 +8,7 @@ const pad = (b: number[], n = 16) => Buffer.concat([Buffer.from(b), Buffer.alloc
 describe('вид файлу полісу', () => {
   it('PDF, JPEG, PNG, WebP й HEIC визначаються за початком файлу', () => {
     assert.equal(sniffPolicy(Buffer.from('%PDF-1.7\n%âãÏÓ\n1 0 obj')), 'application/pdf');
+    assert.equal(sniffPolicy(Buffer.concat([Buffer.from('\uFEFF\r\n'), Buffer.from('%PDF-1.5\n1 0 obj')])), 'application/pdf');
     assert.equal(sniffPolicy(pad([0xff, 0xd8, 0xff, 0xe0])), 'image/jpeg');
     assert.equal(sniffPolicy(pad([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])), 'image/png');
     assert.equal(sniffPolicy(Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WEBPVP8 ')])), 'image/webp');
@@ -18,6 +19,7 @@ describe('вид файлу полісу', () => {
     assert.equal(sniffPolicy(Buffer.from('MZ\u0090\u0000\u0003\u0000\u0000\u0000\u0004\u0000\u0000\u0000')), null);
     assert.equal(sniffPolicy(Buffer.from('<html><script>alert(1)</script></html>')), null);
     assert.equal(sniffPolicy(Buffer.from('%PDF')), null);
+    assert.equal(sniffPolicy(Buffer.from('<html>' + 'x'.repeat(1100) + '%PDF-1.4 ...')), null);
   });
 });
 

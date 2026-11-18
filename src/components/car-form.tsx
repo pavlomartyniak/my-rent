@@ -9,12 +9,17 @@ import { isValidISODate, todayISO } from '@/lib/date';
 import { useFleet } from '@/store/fleet';
 import { CAR_STATUSES, FUEL_TYPES, MANUAL_CAR_STATUSES, type Car, type FuelType } from '@/types';
 
+import { InsuranceCard } from './insurance-card';
 import { DeleteCar } from './delete-car';
 import { Hint } from './hint';
+import { formatSize } from '@/lib/format';
+import { pickPolicy, type PickedPolicy, uploadPolicy } from '@/lib/insurance';
 import { PhotoPicker } from './photo-picker';
 import { Button } from './ui/button';
+import { Card } from './ui/card';
 import { DateField } from './ui/date-field';
 import { Field } from './ui/field';
+import { SectionHeader } from './ui/section-header';
 import { NumberField } from './ui/number-field';
 import { PickerField } from './ui/picker-field';
 import { Screen } from './ui/screen';
@@ -37,6 +42,9 @@ function yearOptions(range?: { from: number | null; to: number | null }) {
 export function CarForm({ car }: { car?: Car }) {
   const router = useRouter();
   const { addCar, updateCar } = useFleet();
+  // Поліс до збереження нового авто: файл вибираємо зараз, а завантажуємо, коли авто створено
+  const [policy, setPolicy] = useState<PickedPolicy | null>(null);
+  const [policyUntil, setPolicyUntil] = useState(todayISO());
 
   const [brand, setBrand] = useState(car?.brand ?? '');
   // id марки в каталозі; для збереженого авто невідомий, знаходимо за назвою, коли потрібно
@@ -152,6 +160,14 @@ export function CarForm({ car }: { car?: Car }) {
       return;
     }
     const created = await addCar(data, setServerErrors);
+    if (created && policy) {
+      try {
+        await uploadPolicy(created.id, policy, policyUntil);
+      } catch (e) {
+        // Авто вже створено: не блокуємо, а підказуємо, де додати поліс
+        Alert.alert('Поліс не завантажено', `${e instanceof Error ? e.message : 'Спробуйте ще раз'}. Авто додано: завантажте поліс на екрані авто, розділ «Страховий поліс».`);
+      }
+    }
     setSaving(false);
     if (!created) return;
     // Нове авто ще не бачать орендарі: поки його не опубліковано, воно лише в обліку власника
@@ -171,6 +187,37 @@ export function CarForm({ car }: { car?: Car }) {
     <Screen>
       {!car ? <Hint id="car-form">Оберіть марку й модель зі списку, вкажіть рік, вартість і пробіг. VIN і водія можна залишити порожніми, державний номер обов’язковий.</Hint> : null}
       <PhotoPicker value={photos} onChange={setPhotos} error={err('photo')} />
+      {car ? (
+        <>
+          <SectionHeader title="Страховий поліс" />
+          <InsuranceCard carId={car.id} />
+        </>
+      ) : (
+        <>
+          <SectionHeader title="Страховий поліс (необов’язково)" />
+          <Card style={styles.policy}>
+            {policy ? (
+              <>
+                <ThemedText type="default" style={{ fontWeight: 600 }} numberOfLines={2}>
+                  {policy.name}
+                </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {formatSize(policy.size)}
+                </ThemedText>
+                <DateField label="Діє до" value={policyUntil} onChange={setPolicyUntil} />
+                <Button title="Прибрати файл" variant="secondary" icon="close" onPress={() => setPolicy(null)} />
+              </>
+            ) : (
+              <>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Додайте поліс (PDF чи фото до 8 МБ): орендар зможе завантажити його зі сторінки оренди. Це можна зробити й пізніше.
+                </ThemedText>
+                <Button title="Додати поліс" variant="secondary" icon="cloud-upload-outline" onPress={() => void pickPolicy().then((p) => p && setPolicy(p))} />
+              </>
+            )}
+          </Card>
+        </>
+      )}
       <PickerField label="Марка" value={brand} placeholder="Оберіть марку" onPress={pickBrand} error={err('brand')} />
       <PickerField
         label="Модель"
@@ -224,5 +271,6 @@ export function CarForm({ car }: { car?: Car }) {
 }
 
 const styles = StyleSheet.create({
+  policy: { gap: Spacing.two },
   group: { gap: Spacing.one },
 });

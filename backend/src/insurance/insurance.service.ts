@@ -47,7 +47,7 @@ export class InsuranceService {
     if (!file?.buffer?.length) throw new BadRequestException('Додайте файл полісу');
     if (file.size > MAX_POLICY_BYTES) throw new PayloadTooLargeException(`Файл завеликий (до ${MAX_POLICY_BYTES / 1024 / 1024} МБ)`);
     const mime = sniffPolicy(file.buffer);
-    if (!mime) throw new BadRequestException('Підтримуються PDF і фото (JPEG, PNG, WebP, HEIC)');
+    if (!mime) throw new BadRequestException(`Підтримуються PDF і фото (JPEG, PNG, WebP, HEIC). Отримано файл ${file.buffer.length} Б, початок: ${file.buffer.subarray(0, 6).toString('hex') || 'порожньо'}`);
     if (validUntil && !isIsoDay(validUntil)) throw new BadRequestException('Дата має бути у форматі РРРР-ММ-ДД');
     const ownerId = (await this.cars.findById(carId, 'userId').lean().exec())!.userId;
     const saved = await this.files

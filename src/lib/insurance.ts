@@ -1,4 +1,6 @@
+import * as DocumentPicker from 'expo-document-picker';
 import { Directory, File, Paths } from 'expo-file-system';
+import { Alert } from 'react-native';
 import * as Sharing from 'expo-sharing';
 
 import { ApiError, BASE_URL, getApiToken } from './api';
@@ -9,6 +11,21 @@ export type PolicyInfo =
   | { canEdit: boolean; hasPolicy: true; name: string; mime: string; size: number; validUntil: string | null; expired: boolean; uploadedAt: string };
 
 export const MAX_POLICY_BYTES = 8 * 1024 * 1024;
+
+/** Вибраний файл полісу, який ще не завантажено на сервер */
+export type PickedPolicy = { uri: string; name: string; mime?: string | null; size: number };
+
+/** Вікно вибору файлу полісу (PDF чи фото); завеликий файл відхиляється з поясненням. null — нічого не вибрано */
+export async function pickPolicy(): Promise<PickedPolicy | null> {
+  const res = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/*'], copyToCacheDirectory: true });
+  if (res.canceled || !res.assets[0]) return null;
+  const a = res.assets[0];
+  if ((a.size ?? 0) > MAX_POLICY_BYTES) {
+    Alert.alert('Файл завеликий', `Поліс має бути до ${MAX_POLICY_BYTES / 1024 / 1024} МБ. Стисніть файл чи завантажте фото.`);
+    return null;
+  }
+  return { uri: a.uri, name: a.name, mime: a.mimeType, size: a.size ?? 0 };
+}
 
 /** Завантажує файл полісу на сервер (PDF чи фото); новий замінює попередній. Помилку сервера повертає як ApiError */
 export async function uploadPolicy(carId: string, file: { uri: string; name: string; mime?: string | null }, validUntil?: string | null): Promise<PolicyInfo> {
