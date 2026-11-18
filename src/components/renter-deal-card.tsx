@@ -6,10 +6,11 @@ import { openChat } from '@/lib/chat';
 import { openProfile } from '@/lib/profiles';
 import { daysUntil, formatDate } from '@/lib/date';
 import { dealStage, type DealOverview, type DealView } from '@/lib/deals';
-import { formatMoney, initials, plural } from '@/lib/format';
+import { formatMoney, plural } from '@/lib/format';
 
 import { ContractCard } from './contract-card';
 import { TerminateDeal } from './terminate-deal';
+import { Avatar } from './avatar';
 import { ThemedText } from './themed-text';
 import { Card } from './ui/card';
 import { IconButton } from './ui/icon-button';
@@ -33,11 +34,7 @@ export function RenterDealCard({ deal, overview }: { deal: DealView; overview?: 
 
       <View style={styles.person}>
         <Pressable accessibilityRole="button" accessibilityLabel={`Власник ${deal.counterpart.name}. Відкрити профіль`} onPress={() => openProfile(deal.counterpart.id)} style={[styles.person, styles.flex]}>
-          <View style={[styles.avatar, { backgroundColor: theme.accentSoft }]}>
-            <ThemedText type="smallBold" themeColor="accent">
-              {initials(deal.counterpart.name)}
-            </ThemedText>
-          </View>
+          <Avatar uri={deal.counterpart.photoUri} name={deal.counterpart.name} size={44} />
           <View style={styles.flex}>
             <ThemedText type="small" themeColor="textSecondary">
               Власник

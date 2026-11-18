@@ -13,7 +13,7 @@ import { User } from '../schemas/user.schema';
 export type MarketQuery = { city?: string; regionId?: number; q?: string; minPrice?: number; maxPrice?: number; maxDeposit?: number; brand?: string; model?: string; fuel?: string; page: number; limit: number };
 
 /** Лише публічні поля: без VIN, вартості авто, водія, контактів і прізвища власника */
-function publicView(car: CarDocument, ownerName: string) {
+function publicView(car: CarDocument, owner: { name: string; photoUri: string | null }) {
   const listing = car.listing!;
   return {
     id: String(car._id),
@@ -29,7 +29,8 @@ function publicView(car: CarDocument, ownerName: string) {
     pricePerDay: listing.pricePerDay,
     deposit: listing.deposit ?? 0,
     description: listing.description,
-    owner: ownerName,
+    owner: owner.name,
+    ownerPhotoUri: owner.photoUri,
     ownerId: String(car.userId),
   };
 }
@@ -94,7 +95,7 @@ export class MarketService {
       page: query.page,
       pages: Math.max(1, Math.ceil(total / query.limit)),
       total,
-      items: cars.map((c) => ({ ...publicView(c, owners.get(String(c.userId)) ?? ''), myRequest: requests.get(String(c._id)) ?? null })),
+      items: cars.map((c) => ({ ...publicView(c, owners.get(String(c.userId)) ?? { name: '', photoUri: null }), myRequest: requests.get(String(c._id)) ?? null })),
     };
   }
 
@@ -103,7 +104,7 @@ export class MarketService {
     if (!car || (renterId && (await this.moderation.isBlocked(renterId, String(car.userId))))) throw new NotFoundException('Оголошення не знайдено або вже недоступне');
     const owners = await this.owners([car.userId]);
     const requests = await this.pendingRequests(renterId, [car._id]);
-    return { ...publicView(car, owners.get(String(car.userId)) ?? ''), myRequest: requests.get(String(car._id)) ?? null };
+    return { ...publicView(car, owners.get(String(car.userId)) ?? { name: '', photoUri: null }), myRequest: requests.get(String(car._id)) ?? null };
   }
 
   /** Мої запити на ці авто, що чекають відповіді: орендарю не дозволяємо надсилати повторний запит */
@@ -114,7 +115,7 @@ export class MarketService {
   }
 
   private async owners(ids: Types.ObjectId[]) {
-    const users = await this.users.find({ _id: { $in: [...new Set(ids.map(String))] } }, 'firstName lastName').lean().exec();
-    return new Map(users.map((u) => [String(u._id), maskedName(u.firstName, u.lastName)]));
+    const users = await this.users.find({ _id: { $in: [...new Set(ids.map(String))] } }, 'firstName lastName photoUri').lean().exec();
+    return new Map(users.map((u) => [String(u._id), { name: maskedName(u.firstName, u.lastName), photoUri: u.photoUri || null }]));
   }
 }

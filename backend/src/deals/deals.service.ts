@@ -25,7 +25,7 @@ import { User } from '../schemas/user.schema';
 const OVERDUE_GRACE_DAYS = 2;
 const addDays = (iso: string, days: number) => new Date(new Date(`${iso}T00:00:00.000Z`).getTime() + days * 86_400_000).toISOString().slice(0, 10);
 
-type Person = { firstName: string; lastName: string; phone: string };
+type Person = { firstName: string; lastName: string; phone: string; photoUri?: string };
 
 @Injectable()
 export class DealsService {
@@ -817,7 +817,7 @@ export class DealsService {
 
   private async people(ids: DealDocument['ownerId'][]) {
     const unique = [...new Set(ids.map(String))];
-    const users = await this.users.find({ _id: { $in: unique } }, 'firstName lastName phone').lean().exec();
+    const users = await this.users.find({ _id: { $in: unique } }, 'firstName lastName phone photoUri').lean().exec();
     return new Map<string, Person>(users.map((u) => [String(u._id), u]));
   }
 
@@ -853,7 +853,7 @@ export class DealsService {
       terminationNote: d.terminationNote ?? '',
       // Для орендаря це власник, для власника — орендар
       // Номер телефону віддається лише в чаті
-      counterpart: { id: String(as === 'renter' ? d.ownerId : d.renterId), name: p ? fullName(p.firstName, p.lastName) || fallback : fallback },
+      counterpart: { id: String(as === 'renter' ? d.ownerId : d.renterId), name: p ? fullName(p.firstName, p.lastName) || fallback : fallback, photoUri: p?.photoUri || null },
       createdAt: d.createdAt,
     };
   }

@@ -21,6 +21,8 @@ export type MarketCar = {
   /** Ім'я власника з ініціалом прізвища */
   owner: string;
   ownerId: string;
+  /** Фото профілю власника, якщо додано */
+  ownerPhotoUri?: string | null;
   /** Мій запит на це авто, що чекає відповіді (повторний надіслати не можна) */
   myRequest?: { id: string; status: string } | null;
 };
@@ -50,7 +52,7 @@ export type RentalView = {
   respondedAt: string | null;
   car: { title: string; city: string; pricePerDay: number; deposit?: number; photoUri?: string };
   /** Для орендаря — власник, для власника — орендар; телефон віддається лише в чаті */
-  counterpart: { id: string; name: string };
+  counterpart: { id: string; name: string; photoUri?: string | null };
 };
 
 export const STATUS_LABEL: Record<RentalStatus, string> = {

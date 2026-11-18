@@ -18,6 +18,7 @@ import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/date';
 import { formatMoney } from '@/lib/format';
 import { confirmBlock, type ReportTarget } from '@/lib/moderation';
+import { Avatar } from '@/components/avatar';
 import { openProfile } from '@/lib/profiles';
 import { clock, dayLabel, differentDays, newClientId, type ChatMessage, type ChatSummary, type MessagesPage } from '@/lib/chat';
 import { useChat, useChatEvents } from '@/store/chat';
@@ -223,13 +224,16 @@ export default function ChatScreen() {
 
       <View style={[styles.header, { paddingTop: insets.top + Spacing.two, borderBottomColor: theme.border, backgroundColor: theme.backgroundElement }]}>
         <IconButton icon="chevron-back" label="Назад" onPress={() => router.back()} />
-        <Pressable accessibilityRole="button" accessibilityLabel="Відкрити профіль" disabled={!chat} onPress={() => chat && openProfile(chat.counterpart.id)} style={styles.flex}>
-          <ThemedText type="default" style={styles.bold} numberOfLines={1}>
-            {chat?.counterpart.name ?? 'Розмова'}
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-            {chat?.counterpart.phone ?? (chat?.context?.title || ' ')}
-          </ThemedText>
+        <Pressable accessibilityRole="button" accessibilityLabel="Відкрити профіль" disabled={!chat} onPress={() => chat && openProfile(chat.counterpart.id)} style={[styles.flex, { flexDirection: 'row', alignItems: 'center', gap: Spacing.two }]}>
+          {chat ? <Avatar uri={chat.counterpart.photoUri} name={chat.counterpart.name} size={36} /> : null}
+          <View style={styles.flex}>
+            <ThemedText type="default" style={styles.bold} numberOfLines={1}>
+              {chat?.counterpart.name ?? 'Розмова'}
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+              {chat?.counterpart.phone ?? (chat?.context?.title || ' ')}
+            </ThemedText>
+          </View>
         </Pressable>
         {chat?.counterpart.phone ? (
           <IconButton icon="call" label={`Зателефонувати: ${chat.counterpart.phone}`} onPress={() => callPhone(chat.counterpart.phone!)} />

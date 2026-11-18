@@ -23,7 +23,7 @@ import type { CreateOfferDto } from './offers.dto';
 
 const MAX_PENDING_PER_WANTED = 30;
 
-type Person = { firstName: string; lastName: string; phone: string };
+type Person = { firstName: string; lastName: string; phone: string; photoUri?: string };
 
 @Injectable()
 export class OffersService {
@@ -276,7 +276,7 @@ export class OffersService {
 
   private async people(ids: Types.ObjectId[]) {
     const unique = [...new Set(ids.map(String))];
-    const users = await this.users.find({ _id: { $in: unique } }, 'firstName lastName phone').lean().exec();
+    const users = await this.users.find({ _id: { $in: unique } }, 'firstName lastName phone photoUri').lean().exec();
     return new Map<string, Person>(users.map((u) => [String(u._id), u]));
   }
 
@@ -290,9 +290,9 @@ export class OffersService {
     const otherId = String(as === 'renter' ? o.ownerId : o.renterId);
     const counterpart = other
       ? accepted
-        ? { id: otherId, name: fullName(other.firstName, other.lastName) }
-        : { id: otherId, name: maskedName(other.firstName, other.lastName) }
-      : { id: otherId, name: 'Користувач видалений' };
+        ? { id: otherId, name: fullName(other.firstName, other.lastName), photoUri: other.photoUri || null }
+        : { id: otherId, name: maskedName(other.firstName, other.lastName), photoUri: other.photoUri || null }
+      : { id: otherId, name: 'Користувач видалений', photoUri: null };
 
     return {
       id: String(o._id),

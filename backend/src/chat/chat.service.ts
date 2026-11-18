@@ -18,7 +18,7 @@ import { ChatGateway } from './chat.gateway';
 import { cleanMessage, preview } from './chat.math';
 
 type Side = 'owner' | 'renter';
-type Person = { firstName: string; lastName: string; phone?: string };
+type Person = { firstName: string; lastName: string; phone?: string; photoUri?: string };
 type Source = { kind: 'request' | 'offer'; id: Types.ObjectId };
 /** Стан розмови: чи можна писати, чи відкрито повне ім'я й на якому етапі домовленість */
 type Info = { stage: string; dealId: string | null; wantedId: string | null; canSend: boolean; full: boolean };
@@ -348,7 +348,7 @@ export class ChatService implements OnModuleInit {
 
   private async people(ids: Types.ObjectId[]) {
     const unique = [...new Set(ids.map(String))];
-    const users = await this.users.find({ _id: { $in: unique } }, 'firstName lastName phone').lean().exec();
+    const users = await this.users.find({ _id: { $in: unique } }, 'firstName lastName phone photoUri').lean().exec();
     return new Map<string, Person>(users.map((u) => [String(u._id), u]));
   }
 
@@ -369,7 +369,7 @@ export class ChatService implements OnModuleInit {
       return {
         id: String(c._id),
         // Номер телефону відкритий лише тут і лише після домовленості (прийнято запит чи пропозицію, або є оренда)
-        counterpart: { id: String(otherId), name, phone: i.full && p?.phone ? p.phone : null },
+        counterpart: { id: String(otherId), name, phone: i.full && p?.phone ? p.phone : null, photoUri: p?.photoUri || null },
         /** Авто й умови, про які розмова: показуються в шапці чату */
         context: c.context
           ? {

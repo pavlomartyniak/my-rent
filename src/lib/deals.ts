@@ -33,7 +33,7 @@ export type DealView = {
   terminatedAt?: string;
   terminationNote: string;
   /** Для орендаря — власник, для власника — орендар */
-  counterpart: { id: string; name: string };
+  counterpart: { id: string; name: string; photoUri?: string | null };
 };
 
 export type DealOverview = Totals & {

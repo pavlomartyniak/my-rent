@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HeroButton } from '@/components/hero-button';
+import { Avatar } from '@/components/avatar';
 import { RatingLine } from '@/components/rating-stars';
 import { ReportSheet } from '@/components/report-sheet';
 import { PhotoGallery } from '@/components/photo-gallery';
@@ -19,7 +20,7 @@ import { Screen } from '@/components/ui/screen';
 import { Radius, Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
-import { formatKm, formatMoney, initials } from '@/lib/format';
+import { formatKm, formatMoney } from '@/lib/format';
 import { confirmBlock } from '@/lib/moderation';
 import { openProfile, type ProfileView } from '@/lib/profiles';
 import type { MarketCar } from '@/lib/rentals';
@@ -112,11 +113,7 @@ export default function MarketCarScreen() {
           </View>
 
           <Pressable accessibilityRole="button" accessibilityLabel={`Власник ${car.owner}. Відкрити профіль`} onPress={() => openProfile(car.ownerId)} style={styles.owner}>
-            <View style={[styles.avatar, { backgroundColor: theme.accentSoft }]}>
-              <ThemedText type="smallBold" themeColor="accent">
-                {initials(car.owner)}
-              </ThemedText>
-            </View>
+            <Avatar uri={car.ownerPhotoUri} name={car.owner} size={44} />
             <View style={{ flex: 1, gap: 2 }}>
               <ThemedText type="small" themeColor="textSecondary">
                 Власник

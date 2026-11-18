@@ -21,7 +21,7 @@ import { fullName, maskedName, rentalDays, todayUtc, totalPrice, validateRange }
 
 const MAX_PENDING_PER_RENTER = 10;
 
-type Person = { id: string; name: string };
+type Person = { id: string; name: string; photoUri?: string | null };
 
 @Injectable()
 export class RentalsService {
@@ -244,7 +244,7 @@ export class RentalsService {
 
   private async people(ids: Types.ObjectId[]) {
     const unique = [...new Set(ids.map(String))];
-    const users = await this.users.find({ _id: { $in: unique } }, 'firstName lastName phone').lean().exec();
+    const users = await this.users.find({ _id: { $in: unique } }, 'firstName lastName phone photoUri').lean().exec();
     return new Map(users.map((u) => [String(u._id), u]));
   }
 
@@ -252,16 +252,16 @@ export class RentalsService {
    * Подання запиту для клієнта. Співрозмовник: для орендаря — власник, для власника — орендар.
    * Телефон показується лише після підтвердження; орендар до того бачить лише ім'я власника й ініціал.
    */
-  private view(r: RentalRequestDocument, as: 'renter' | 'owner', people: Map<string, { firstName: string; lastName: string; phone: string }>, deal?: { dealId: string; dealStage: string; contract: boolean }) {
+  private view(r: RentalRequestDocument, as: 'renter' | 'owner', people: Map<string, { firstName: string; lastName: string; phone: string; photoUri?: string }>, deal?: { dealId: string; dealStage: string; contract: boolean }) {
     const other = people.get(String(as === 'renter' ? r.ownerId : r.renterId));
     // Після прийняття (і після завершення оренди) відкриті повне ім'я й телефон
     const accepted = r.status === 'accepted' || r.status === 'ended';
     const otherId = String(as === 'renter' ? r.ownerId : r.renterId);
     const counterpart: Person = other
       ? as === 'owner' || accepted
-        ? { id: otherId, name: fullName(other.firstName, other.lastName) }
-        : { id: otherId, name: maskedName(other.firstName, other.lastName) }
-      : { id: otherId, name: 'Користувач видалений' };
+        ? { id: otherId, name: fullName(other.firstName, other.lastName), photoUri: other.photoUri || null }
+        : { id: otherId, name: maskedName(other.firstName, other.lastName), photoUri: other.photoUri || null }
+      : { id: otherId, name: 'Користувач видалений', photoUri: null };
 
     return {
       id: String(r._id),
