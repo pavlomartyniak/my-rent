@@ -19,6 +19,12 @@ import { useAuth } from '@/store/auth';
 const MODES = ['Вхід', 'Реєстрація'] as const;
 const ROLES = ['Я власник авто', 'Шукаю авто в оренду'] as const;
 
+/** Картки вибору ролі: що кожна означає, щоб вибір був свідомим */
+const ROLE_OPTIONS: { label: (typeof ROLES)[number]; icon: 'key-outline' | 'search-outline'; text: string; points: string[] }[] = [
+  { label: ROLES[0], icon: 'key-outline', text: 'Я здаю свої авто в оренду.', points: ['Облік доходів і витрат по кожному авто', 'Запити й договори з орендарями', 'Публікація авто для пошуку'] },
+  { label: ROLES[1], icon: 'search-outline', text: 'Я беру авто в оренду в власників.', points: ['Пошук вільних авто в потрібному місті', 'Запит і договір із власником', 'Облік заробітку й витрат'] },
+];
+
 export default function LoginScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -27,7 +33,9 @@ export default function LoginScreen() {
   const { login, register, confirmRegistration, resendRegistration } = useAuth();
 
   const [mode, setMode] = useState<(typeof MODES)[number]>('Вхід');
-  const [roleLabel, setRoleLabel] = useState<(typeof ROLES)[number]>(ROLES[0]);
+  // Роль обирають на окремому екрані й без значення за замовчуванням: щоб її не проминули. Потім змінити не можна.
+  const [roleLabel, setRoleLabel] = useState<(typeof ROLES)[number] | null>(null);
+  const [picked, setPicked] = useState<(typeof ROLES)[number] | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [middleName, setMiddleName] = useState('');
@@ -46,7 +54,7 @@ export default function LoginScreen() {
   const [wait, setWait] = useState(0);
 
   const signingUp = mode === 'Реєстрація';
-  const isRenter = roleLabel !== ROLES[0];
+  const isRenter = roleLabel === ROLES[1];
   const validProfile = !!firstName.trim() && !!lastName.trim() && !!middleName.trim() && isValidPhone(phone);
   const valid = /\S+@\S+\.\S+/.test(email) && password.length >= (signingUp ? 8 : 1) && (!signingUp || validProfile);
 
@@ -106,6 +114,71 @@ export default function LoginScreen() {
     if (res.error) return setError(res.error);
     setWait(res.resendInSeconds ?? 60);
     setCode('');
+  }
+
+  // Реєстрація починається з окремого екрана вибору ролі
+  if (signingUp && !roleLabel && !awaitingCode) {
+    return (
+      <Screen contentContainerStyle={{ paddingTop: insets.top + Spacing.four }} gap={Spacing.three}>
+        <View style={styles.header}>
+          <View style={styles.brand}>
+            <Image source={require('@/assets/images/kolo-mark.png')} style={styles.mark} accessibilityLabel="Kolo" />
+            <ThemedText type="subtitle" style={styles.wordmark}>
+              Kolo
+            </ThemedText>
+          </View>
+          <ThemedText type="subtitle" style={styles.hero} accessibilityRole="header">
+            Хто ви?
+          </ThemedText>
+          <ThemedText type="default" themeColor="textSecondary">
+            Оберіть, що вам потрібно. Тип акаунта потім змінити не можна.
+          </ThemedText>
+        </View>
+
+        <View style={styles.bigRoles} accessibilityRole="radiogroup">
+          {ROLE_OPTIONS.map((o) => {
+            const on = picked === o.label;
+            return (
+              <Pressable
+                key={o.label}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: on, selected: on }}
+                accessibilityLabel={`${o.label}. ${o.text}`}
+                onPress={() => setPicked(o.label)}
+                style={({ pressed }) => [styles.bigRole, { borderColor: on ? theme.accent : theme.borderStrong, borderWidth: on ? 2 : 1, backgroundColor: on ? theme.accentSoft : theme.backgroundElement }, pressed && { opacity: 0.85 }]}>
+                <View style={styles.bigRoleHead}>
+                  <View style={[styles.bigRoleIcon, { backgroundColor: on ? theme.accent : theme.backgroundSelected }]}>
+                    <Icon name={o.icon} size={28} color={on ? theme.onAccent : theme.text} />
+                  </View>
+                  <Icon name={on ? 'radio-button-on' : 'radio-button-off'} size={26} color={on ? 'accent' : 'textSecondary'} />
+                </View>
+                <ThemedText type="title">{o.label}</ThemedText>
+                <ThemedText type="body" themeColor="textSecondary">
+                  {o.text}
+                </ThemedText>
+                <View style={styles.bullets}>
+                  {o.points.map((pt) => (
+                    <View key={pt} style={styles.bullet}>
+                      <Icon name="checkmark-circle" size={18} color="accent" />
+                      <ThemedText type="callout" style={styles.flex}>
+                        {pt}
+                      </ThemedText>
+                    </View>
+                  ))}
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <Button title="Продовжити" disabled={!picked} disabledReason={!picked ? 'Оберіть, хто ви, щоб продовжити' : undefined} onPress={() => setRoleLabel(picked)} />
+        <Pressable accessibilityRole="button" onPress={() => setMode('Вхід')} hitSlop={8} style={{ alignSelf: 'center' }}>
+          <ThemedText type="smallBold" themeColor="accent">
+            Вже є акаунт? Увійти
+          </ThemedText>
+        </Pressable>
+      </Screen>
+    );
   }
 
   if (awaitingCode) {
@@ -175,7 +248,7 @@ export default function LoginScreen() {
           {signingUp ? 'Створіть акаунт' : 'З поверненням'}
         </ThemedText>
         <ThemedText type="default" themeColor="textSecondary">
-          {signingUp ? 'Облік авто або пошук оренди — оберіть, що вам потрібно.' : 'Увійдіть, щоб побачити свої авто, оренди й повідомлення.'}
+          {signingUp ? 'Заповніть дані: їх буде видно в договорі.' : 'Увійдіть, щоб побачити свої авто, оренди й повідомлення.'}
         </ThemedText>
       </View>
 
@@ -199,29 +272,26 @@ export default function LoginScreen() {
 
       {signingUp ? (
         <>
-          <View style={styles.role}>
-            <ThemedText type="smallBold">Хто ви? Тип акаунта потім змінити не можна</ThemedText>
-            <View style={styles.roles}>
-              {ROLES.map((r) => {
-                const on = r === roleLabel;
-                return (
-                  <Pressable
-                    key={r}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: on }}
-                    onPress={() => setRoleLabel(r)}
-                    style={[styles.roleCard, { borderColor: on ? theme.ink : theme.border, borderWidth: on ? 2 : 1, backgroundColor: on ? theme.backgroundSelected : theme.backgroundElement }]}>
-                    <Icon name={r === ROLES[0] ? 'key-outline' : 'search-outline'} size={24} color="text" />
-                    <ThemedText type="default" style={{ fontWeight: 600 }}>
-                      {r === ROLES[0] ? 'Я власник авто' : 'Шукаю авто'}
-                    </ThemedText>
-                    <ThemedText type="small" themeColor="textSecondary">
-                      {r === ROLES[0] ? 'Облік, оренди й прибуток' : 'Пошук і оренда'}
-                    </ThemedText>
-                  </Pressable>
-                );
-              })}
+          <View style={[styles.chosen, { backgroundColor: theme.accentSoft }]}>
+            <Icon name={isRenter ? 'search-outline' : 'key-outline'} size={22} color="accent" />
+            <View style={styles.flex}>
+              <ThemedText type="caption" themeColor="textSecondary">
+                Ви реєструєтесь як
+              </ThemedText>
+              <ThemedText type="headline">{roleLabel}</ThemedText>
             </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Змінити тип акаунта"
+              hitSlop={8}
+              onPress={() => {
+                setPicked(roleLabel);
+                setRoleLabel(null);
+              }}>
+              <ThemedText type="smallBold" themeColor="accent">
+                Змінити
+              </ThemedText>
+            </Pressable>
           </View>
           <Field label="Прізвище" value={lastName} onChangeText={(v) => { setLastName(v); clearField('lastName'); }} error={fieldErrors.lastName} autoCapitalize="words" autoComplete="family-name" textContentType="familyName" maxLength={50} placeholder="Шевченко" />
           <Field label="Ім’я" value={firstName} onChangeText={(v) => { setFirstName(v); clearField('firstName'); }} error={fieldErrors.firstName} autoCapitalize="words" autoComplete="given-name" textContentType="givenName" maxLength={50} placeholder="Іван" />
@@ -322,9 +392,14 @@ const styles = StyleSheet.create({
   mark: { width: 52, height: 52 },
   tabs: { flexDirection: 'row', gap: Spacing.four, borderBottomWidth: 1 },
   tab: { paddingVertical: Spacing.two, borderBottomWidth: 2, borderBottomColor: 'transparent', marginBottom: -1 },
-  role: { gap: Spacing.two },
-  roles: { flexDirection: 'row', gap: Spacing.two },
-  roleCard: { flex: 1, borderRadius: Radius.lg, padding: Spacing.three, gap: 4 },
+  flex: { flex: 1 },
+  chosen: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, borderRadius: Radius.md, padding: Spacing.three },
+  bigRoles: { gap: Spacing.three },
+  bigRole: { borderRadius: Radius.lg, padding: Spacing.three, gap: Spacing.two },
+  bigRoleHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  bigRoleIcon: { width: 52, height: 52, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  bullets: { gap: Spacing.one, marginTop: Spacing.one },
+  bullet: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   center: { textAlign: 'center' },
   codeInput: { ...Type.figure, letterSpacing: 8, textAlign: 'center' },
 });
