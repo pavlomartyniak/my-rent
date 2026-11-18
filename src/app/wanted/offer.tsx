@@ -150,5 +150,5 @@ const styles = StyleSheet.create({
   car: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.two, borderRadius: Radius.md, borderWidth: 1.5 },
   thumb: { width: 56, height: 56, borderRadius: Radius.sm },
   flex: { flex: 1 },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600 },
 });

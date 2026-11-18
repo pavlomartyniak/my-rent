@@ -13,7 +13,7 @@ export function ThemedText({ style, type = 'default', themeColor, ...rest }: The
 
   // linkPrimary бере акцент із теми (у темній темі він світліший), а не хардкод
   const color = type === 'linkPrimary' && !themeColor ? theme.accent : theme[themeColor ?? 'text'];
-  return <Text maxFontSizeMultiplier={MaxFontScale} style={[{ color }, styles[type], style]} {...rest} />;
+  return <Text maxFontSizeMultiplier={MaxFontScale} style={[{ color, fontVariant: ['tabular-nums'] }, styles[type], style]} {...rest} />;
 }
 
 const styles = StyleSheet.create({

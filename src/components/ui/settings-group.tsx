@@ -57,11 +57,11 @@ export function SettingsRow({ icon, leading, title, subtitle, onPress, danger, r
         </View>
       )}
       <View style={styles.text}>
-        <ThemedText type="default" themeColor={danger ? 'negative' : 'text'} style={styles.rowTitle}>
+        <ThemedText type="body" themeColor={danger ? 'negative' : 'text'} style={styles.rowTitle}>
           {title}
         </ThemedText>
         {subtitle ? (
-          <ThemedText type="small" themeColor="textSecondary">
+          <ThemedText type="callout" themeColor="textSecondary">
             {subtitle}
           </ThemedText>
         ) : null}
@@ -87,6 +87,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.three },
   icon: { width: 36, height: 36, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
   text: { flex: 1 },
-  rowTitle: { fontWeight: 500 },
+  rowTitle: { fontWeight: 600 },
   pressed: { opacity: 0.6 },
 });

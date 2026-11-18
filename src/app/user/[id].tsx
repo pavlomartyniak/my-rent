@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
   statNumber: { ...Type.title },
   details: { gap: Spacing.three },
   detail: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  detailIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  detailIcon: { width: 36, height: 36, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1, gap: 2 },
   bold: { fontWeight: 600 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },

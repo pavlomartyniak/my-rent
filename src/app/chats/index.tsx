@@ -81,7 +81,7 @@ export default function ChatsScreen() {
                 <Avatar uri={c.counterpart.photoUri} name={c.counterpart.name} size={52} />
                 <View style={styles.flex}>
                   <View style={styles.top}>
-                    <ThemedText type="default" style={styles.bold} numberOfLines={1}>
+                    <ThemedText type="default" style={[styles.bold, styles.flex]} numberOfLines={1}>
                       {c.counterpart.name}
                     </ThemedText>
                     {c.lastMessage ? (
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.three },
   flex: { flex: 1 },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600 },
   badge: { minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   badgeText: { ...Type.caption, fontWeight: 700 },
 });

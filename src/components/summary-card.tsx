@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 
-import { Spacing, Type } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { formatMoney } from '@/lib/format';
 
@@ -104,12 +104,12 @@ export function SummaryCard({ title, profit, income, expense, note, change, marg
 }
 
 const styles = StyleSheet.create({
-  card: { gap: Spacing.one, paddingVertical: Spacing.four, paddingHorizontal: Spacing.four },
+  card: { gap: Spacing.one },
   delta: { alignSelf: 'center' },
   valueRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   value: { ...Type.hero, flexShrink: 1 },
   row: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.two },
-  chip: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.two, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 10 },
+  chip: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.two, borderRadius: Radius.md, paddingVertical: 10, paddingHorizontal: 10 },
   iconBox: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   chipText: { flex: 1, gap: 0 },
   chipLabel: { ...Type.caption },

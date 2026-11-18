@@ -9,6 +9,7 @@ import { PURPOSE_LABELS, type ProfileExtras, type RentPurpose } from '@/lib/prof
 
 import { Avatar } from './avatar';
 import { ThemedText } from './themed-text';
+import { CityField } from './place-field';
 import { Field } from './ui/field';
 import { Icon } from './ui/icon';
 import { NumberField } from './ui/number-field';
@@ -64,7 +65,7 @@ export function ProfileExtrasForm({ value, onChange, name, renter, submitted }: 
         </View>
       </View>
 
-      <Field label="Місто (необов’язково)" value={value.city} onChangeText={(city) => onChange({ city })} autoCapitalize="words" maxLength={60} placeholder="Київ" />
+      <CityField label="Місто (необов’язково)" value={value.city} onChange={(city) => onChange({ city })} clearable />
       <Field
         label="Про себе (необов’язково)"
         value={value.about}

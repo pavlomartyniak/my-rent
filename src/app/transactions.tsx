@@ -203,7 +203,7 @@ export default function TransactionsScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600 },
   range: { flexDirection: 'row', gap: Spacing.three },
   stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   head: { gap: 2 },

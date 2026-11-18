@@ -89,6 +89,6 @@ const styles = StyleSheet.create({
   play: { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
   size: { position: 'absolute', right: 8, bottom: 6 },
   file: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, minWidth: 200, maxWidth: 240 },
-  fileIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  fileIcon: { width: 40, height: 40, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
   fileText: { flex: 1, gap: 1 },
 });

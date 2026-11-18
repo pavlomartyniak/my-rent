@@ -61,11 +61,11 @@ export function RenterDealCard({ deal, overview }: { deal: DealView; overview?: 
                 : `${overview?.totalDays ?? ''} ${plural(overview?.totalDays ?? 0, 'доба', 'доби', 'діб')}`.trim()}
             </ThemedText>
           </View>
-          <View style={styles.dates}>
-            <ThemedText type="small" themeColor="textSecondary">
-              {formatDate(deal.startDate)} – {formatDate(deal.endDate)}
+          <View style={styles.price}>
+            <ThemedText type="headline">{formatMoney(deal.pricePerDay)}</ThemedText>
+            <ThemedText type="caption" themeColor="textSecondary">
+              за добу
             </ThemedText>
-            <ThemedText type="smallBold">{formatMoney(deal.pricePerDay)} / доба</ThemedText>
           </View>
         </View>
         {stage === 'active' && overview ? (
@@ -73,11 +73,18 @@ export function RenterDealCard({ deal, overview }: { deal: DealView; overview?: 
             <View style={[styles.track, { backgroundColor: `${theme.accent}33` }]}>
               <View style={[styles.fill, { backgroundColor: theme.accent, width: `${Math.max(2, Math.round(progress * 100))}%` }]} />
             </View>
-            <ThemedText type="small" themeColor="textSecondary">
-              Минуло {overview.elapsedDays} з {overview.totalDays} діб
-            </ThemedText>
           </>
         ) : null}
+        <View style={styles.footnote}>
+          <ThemedText type="callout" themeColor="textSecondary">
+            {formatDate(deal.startDate)} – {formatDate(deal.endDate)}
+          </ThemedText>
+          {stage === 'active' && overview ? (
+            <ThemedText type="callout" themeColor="textSecondary">
+              Минуло {overview.elapsedDays} з {overview.totalDays} діб
+            </ThemedText>
+          ) : null}
+        </View>
       </View>
 
       <ContractCard deal={deal} as="renter" />
@@ -99,11 +106,12 @@ const styles = StyleSheet.create({
   person: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600 },
   panel: { borderRadius: Radius.md, padding: Spacing.three, gap: Spacing.two },
-  between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
+  between: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: Spacing.two },
   big: { ...Type.figure },
-  dates: { alignItems: 'flex-end', gap: 2, flexShrink: 1 },
+  price: { alignItems: 'flex-end', flexShrink: 0 },
+  footnote: { gap: 2 },
   track: { height: 6, borderRadius: 3, overflow: 'hidden' },
   fill: { height: 6, borderRadius: 3 },
 });

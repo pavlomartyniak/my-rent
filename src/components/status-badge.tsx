@@ -39,7 +39,7 @@ export function StatusBadge({ status, dot, plain }: { status: string; /** Кра
   return (
     <View style={[styles.badge, { backgroundColor: plain ? 'transparent' : bg }, plain && styles.plain]}>
       {dot ? <View style={[styles.dot, { backgroundColor: fg }]} /> : null}
-      <ThemedText type="small" style={[styles.text, { color: fg }]}>
+      <ThemedText type="small" numberOfLines={1} style={[styles.text, { color: fg }]}>
         {label}
       </ThemedText>
     </View>
@@ -47,7 +47,7 @@ export function StatusBadge({ status, dot, plain }: { status: string; /** Кра
 }
 
 const styles = StyleSheet.create({
-  badge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.pill },
+  badge: { alignSelf: 'flex-start', flexShrink: 0, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.pill },
   plain: { paddingHorizontal: 0, paddingVertical: 0 },
   dot: { width: 7, height: 7, borderRadius: 4 },
   text: { ...Type.caption, fontWeight: 600 },

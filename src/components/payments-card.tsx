@@ -99,7 +99,7 @@ export function PaymentsCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
             <ThemedText type="small" themeColor="textSecondary" style={{ flex: 1 }}>
               {as === 'renter' ? 'Сплачено' : 'Отримано'} <ThemedText type="smallBold">{formatMoney(paid)}</ThemedText>
             </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="small" themeColor="textSecondary" style={styles.amountEnd}>
               з {formatMoney(total)} · {payments.filter(done).length} з {payments.length}
             </ThemedText>
           </View>
@@ -175,16 +175,17 @@ export function PaymentsCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
 
 const styles = StyleSheet.create({
   bold: { ...Type.headline },
-  plan: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.pill },
+  plan: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.pill, flexShrink: 0 },
   planText: { ...Type.caption, fontWeight: 600 },
   progress: { gap: Spacing.one },
   track: { height: 6, borderRadius: 3, overflow: 'hidden' },
   fill: { height: 6, borderRadius: 3 },
   next: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.md },
   nextIcon: { width: 40, height: 40, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
-  amount: { fontWeight: 700 },
+  amount: { fontWeight: 700, flexShrink: 0, textAlign: 'right' },
   check: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   row: { gap: Spacing.two, paddingTop: Spacing.three, borderTopWidth: StyleSheet.hairlineWidth },
+  amountEnd: { flexShrink: 0, textAlign: 'right' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.two },
   warn: { padding: Spacing.three, borderRadius: Radius.md, gap: Spacing.one },
 });

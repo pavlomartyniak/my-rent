@@ -64,7 +64,7 @@ export function Button({ title, variant = 'primary', icon, disabled, loading, di
       {...rest}>
       <View style={styles.content}>
         {loading ? <ActivityIndicator size="small" color={look.fg} /> : icon ? <Icon name={icon} size={20} color={look.fg} /> : null}
-        <ThemedText type="headline" style={{ color: look.fg }} numberOfLines={1}>
+        <ThemedText type="headline" style={[styles.label, { color: look.fg }]} numberOfLines={2}>
           {title}
         </ThemedText>
       </View>
@@ -92,6 +92,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   content: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.two },
+  label: { textAlign: 'center', flexShrink: 1 },
   pressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.45 },
   reasonWrap: { gap: Spacing.one },

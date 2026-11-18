@@ -116,10 +116,10 @@ export function ActiveDealCard({ deal }: { deal: DealView }) {
 }
 
 const styles = StyleSheet.create({
-  card: { padding: Spacing.three, gap: Spacing.three, borderRadius: 24 },
+  card: { padding: Spacing.three, gap: Spacing.three },
   content: { gap: Spacing.three },
   top: { flexDirection: 'row', gap: Spacing.three },
-  photo: { width: 104, height: 104, borderRadius: 18 },
+  photo: { width: 104, height: 104, borderRadius: Radius.md },
   badge: { position: 'absolute', left: 6, bottom: 6 },
   info: { flex: 1, gap: 6, justifyContent: 'center' },
   flex: { flex: 1 },
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   owner: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   facts: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, flexWrap: 'wrap' },
   panel: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.md },
-  dates: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  dates: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 },
   track: { height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 4 },
   fill: { height: 6, borderRadius: 3 },
   price: { alignItems: 'center', paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, borderRadius: Radius.md },

@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
   person: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600 },
   panel: { borderRadius: Radius.md, padding: Spacing.three, gap: Spacing.two },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
   track: { height: 6, borderRadius: 3, overflow: 'hidden' },

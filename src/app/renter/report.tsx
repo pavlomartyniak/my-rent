@@ -142,7 +142,7 @@ export default function RenterReportScreen() {
                       <ThemedText type="default" style={[styles.bold, styles.flex]} numberOfLines={1}>
                         {deal.title}
                       </ThemedText>
-                      <ThemedText type="default" style={styles.bold} themeColor={period.profit >= 0 ? 'positive' : 'negative'}>
+                      <ThemedText type="default" style={styles.value} themeColor={period.profit >= 0 ? 'positive' : 'negative'}>
                         {formatMoney(period.profit)}
                       </ThemedText>
                     </View>
@@ -180,7 +180,8 @@ const styles = StyleSheet.create({
   thumb: { width: 52, height: 52, borderRadius: Radius.md },
   top: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   flex: { flex: 1 },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600 },
+  value: { fontWeight: 600, textAlign: 'right', flexShrink: 0 },
   export: { marginTop: Spacing.two },
   paid: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   paidIcon: { width: 48, height: 48, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },

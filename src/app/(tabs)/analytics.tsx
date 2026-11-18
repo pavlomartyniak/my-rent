@@ -149,7 +149,7 @@ export default function ReportScreen() {
                         <ThemedText type="default" style={[styles.bold, styles.flex]} numberOfLines={1}>
                           {car.brand} {car.model}
                         </ThemedText>
-                        <ThemedText type="default" style={styles.bold} themeColor={main.good === null ? 'text' : main.good ? 'positive' : 'negative'}>
+                        <ThemedText type="default" style={styles.value} themeColor={main.good === null ? 'text' : main.good ? 'positive' : 'negative'}>
                           {main.text}
                         </ThemedText>
                       </View>
@@ -189,5 +189,6 @@ const styles = StyleSheet.create({
   track: { height: 6, borderRadius: 3, overflow: 'hidden', marginVertical: 4 },
   fill: { height: 6, borderRadius: 3 },
   export: { marginTop: Spacing.two },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600 },
+  value: { fontWeight: 600, textAlign: 'right', flexShrink: 0 },
 });

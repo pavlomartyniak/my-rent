@@ -28,10 +28,10 @@ export function TransactionRow({ tx, car, carFirst }: { tx: Transaction; /** –ù–
           </View>
 
           <View style={styles.flex}>
-            <ThemedText type="default" style={styles.title}>
+            <ThemedText type="body" style={styles.title}>
               {carFirst && car ? car : tx.category}
             </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
+            <ThemedText type="callout" themeColor="textSecondary" numberOfLines={2}>
               {details}
             </ThemedText>
           </View>
@@ -52,5 +52,5 @@ const styles = StyleSheet.create({
   emoji: { fontSize: 22, lineHeight: 28 },
   flex: { flex: 1 },
   title: { fontWeight: 600 },
-  amount: { fontWeight: 700 },
+  amount: { fontWeight: 700, textAlign: 'right', flexShrink: 0 },
 });

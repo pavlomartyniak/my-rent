@@ -250,7 +250,7 @@ function SignatureRow({ label, name, signature, you }: { label: string; name: st
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.three },
   flex: { flex: 1 },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600 },
   paragraph: { lineHeight: 20 },
   sign: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.md, borderWidth: 1 },
   hash: { ...Type.caption },

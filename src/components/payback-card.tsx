@@ -62,7 +62,7 @@ export function PaybackCard({ profit, price, eta, bare }: Props) {
         <ThemedText type="small" themeColor="textSecondary">
           Повернуто {formatMoney(returned)}
         </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
+        <ThemedText type="small" themeColor="textSecondary" style={styles.rowEnd}>
           з {formatMoney(price)}
         </ThemedText>
       </View>
@@ -95,7 +95,7 @@ export function PaybackCard({ profit, price, eta, bare }: Props) {
 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600 },
   percent: { ...Type.title },
   bare: { gap: Spacing.two, marginTop: Spacing.three },
   tiles: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.one },
@@ -104,4 +104,5 @@ const styles = StyleSheet.create({
   track: { height: 8, borderRadius: Radius.pill, overflow: 'hidden', marginVertical: Spacing.one },
   fill: { height: 8, borderRadius: Radius.pill },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.two },
+  rowEnd: { flexShrink: 0, textAlign: 'right' },
 });

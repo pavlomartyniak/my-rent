@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
@@ -153,7 +153,7 @@ export function InsuranceCard({ carId }: { carId: string }) {
 const styles = StyleSheet.create({
   card: { gap: Spacing.three },
   head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  icon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  icon: { width: 44, height: 44, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },
   bold: { fontWeight: 600 },
   row: { flexDirection: 'row', gap: Spacing.two },

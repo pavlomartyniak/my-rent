@@ -76,6 +76,6 @@ const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   thumb: { width: 52, height: 52, borderRadius: Radius.sm },
   flex: { flex: 1 },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600 },
   row: { flexDirection: 'row', gap: Spacing.two },
 });

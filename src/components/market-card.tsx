@@ -81,7 +81,7 @@ export function MarketCard({ car }: { car: MarketCar }) {
 
 const styles = StyleSheet.create({
   pressed: { opacity: 0.85 },
-  card: { padding: 0, gap: 0, borderRadius: 28 },
+  card: { padding: 0, gap: 0 },
   // Закруглюємо лише верх фото: overflow: hidden на картці прибрав би її тінь
   photo: { width: '100%', aspectRatio: 1.67, borderTopLeftRadius: 27, borderTopRightRadius: 27, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
   price: { position: 'absolute', left: 14, bottom: 14, paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.pill },
@@ -94,5 +94,5 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   divider: { height: StyleSheet.hairlineWidth },
   deposit: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600 },
 });

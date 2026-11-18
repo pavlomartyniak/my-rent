@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   safety: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.four, justifyContent: 'center', paddingVertical: Spacing.two },
   safetyLink: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 },
-  card: { gap: Spacing.three, padding: Spacing.four, borderRadius: 28 },
+  card: { gap: Spacing.three },
   price: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.two },
   priceValue: { ...Type.hero },
   deposit: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, borderRadius: Radius.md, padding: Spacing.three },
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   owner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600 },
   heading: { ...Type.title },
   // Кнопка закріплена внизу, щоб головна дія завжди була під рукою
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: Spacing.three, gap: Spacing.two, borderTopWidth: StyleSheet.hairlineWidth },

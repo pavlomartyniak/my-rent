@@ -54,7 +54,7 @@ export function DealCard({ deal, overview }: { deal: DealView; overview?: DealOv
 }
 
 const styles = StyleSheet.create({
-  card: { padding: Spacing.two + 4 },
+  card: { padding: Spacing.three },
   head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   thumb: { width: 84, height: 84, borderRadius: Radius.md },
   flex: { flex: 1 },

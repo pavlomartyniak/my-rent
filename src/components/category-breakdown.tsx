@@ -41,7 +41,7 @@ export function CategoryBreakdown({ items, onSelect, emptyText = 'Витрат �
             <View style={styles.row}>
               <View style={styles.name}>
                 <View style={[styles.dot, { backgroundColor: item.color }]} />
-                <ThemedText type="default" style={styles.bold}>
+                <ThemedText type="default" style={[styles.bold, styles.flex]} numberOfLines={1}>
                   {item.category}
                 </ThemedText>
                 {item.count ? (
@@ -76,10 +76,11 @@ const styles = StyleSheet.create({
   list: { gap: Spacing.three },
   name: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   dot: { width: 12, height: 12, borderRadius: 6 },
-  amount: { fontWeight: 600 },
+  amount: { fontWeight: 600, flexShrink: 0, textAlign: 'right' },
+  flex: { flexShrink: 1 },
   item: { gap: Spacing.one },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600 },
   track: { flex: 1, height: 8, borderRadius: Radius.pill, overflow: 'hidden' },
   fill: { height: 8, borderRadius: Radius.pill },
   percent: { width: 40, textAlign: 'right' },

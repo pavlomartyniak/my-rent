@@ -33,7 +33,7 @@ export function EarningsWidget({ title, profit, change, href }: Props) {
           {title}
         </ThemedText>
         <View style={styles.row}>
-          <ThemedText type="title" themeColor={profit >= 0 ? 'positive' : 'negative'} numberOfLines={1} adjustsFontSizeToFit>
+          <ThemedText type="title" themeColor={profit >= 0 ? 'positive' : 'negative'} numberOfLines={1} adjustsFontSizeToFit style={styles.value}>
             {formatMoney(profit)}
           </ThemedText>
           {change !== undefined ? <DeltaChip change={change} /> : null}
@@ -48,4 +48,5 @@ const styles = StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   text: { flex: 1, gap: 2 },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  value: { flexShrink: 1 },
 });

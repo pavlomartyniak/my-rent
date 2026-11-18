@@ -78,5 +78,5 @@ const styles = StyleSheet.create({
   list: { gap: Spacing.two },
   head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   flex: { flex: 1 },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600 },
 });

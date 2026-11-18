@@ -44,7 +44,7 @@ export function CurrentRentals() {
                     </ThemedText>
                     <View style={styles.person}>
                       <Avatar uri={d.counterpart.photoUri} name={d.counterpart.name} size={18} />
-                      <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                      <ThemedText type="small" themeColor="textSecondary" numberOfLines={1} style={styles.flex}>
                         {d.counterpart.name}
                       </ThemedText>
                     </View>
@@ -85,7 +85,7 @@ export function CurrentRentals() {
 
 const styles = StyleSheet.create({
   list: { gap: Spacing.three },
-  card: { padding: Spacing.two + 2, gap: Spacing.two },
+  card: { padding: Spacing.three, gap: Spacing.two },
   head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   thumb: { width: 56, height: 56, borderRadius: Radius.md },
   flex: { flex: 1, gap: 2 },
@@ -94,5 +94,5 @@ const styles = StyleSheet.create({
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
   track: { height: 6, borderRadius: 3, overflow: 'hidden' },
   fill: { height: 6, borderRadius: 3 },
-  bold: { fontWeight: 700 },
+  bold: { fontWeight: 600 },
 });
