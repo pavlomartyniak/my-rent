@@ -8,6 +8,7 @@ import { dealStage, type DealView } from '@/lib/deals';
 import { formatMoney, plural } from '@/lib/format';
 import { useTheme } from '@/hooks/use-theme';
 
+import { Avatar } from './avatar';
 import { CarPhoto } from './car-photo';
 import { StatusBadge } from './status-badge';
 import { ThemedText } from './themed-text';
@@ -42,7 +43,7 @@ export function CurrentRentals() {
                       {d.title}
                     </ThemedText>
                     <View style={styles.person}>
-                      <Icon name="person-outline" size={13} color="textSecondary" />
+                      <Avatar uri={d.counterpart.photoUri} name={d.counterpart.name} size={18} />
                       <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
                         {d.counterpart.name}
                       </ThemedText>

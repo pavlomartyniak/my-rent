@@ -34,6 +34,8 @@ export function SettingsGroup({ title, children }: { title?: string; children: R
 
 type RowProps = {
   icon: IconName;
+  /** Власний значок зліва замість іконки (наприклад, аватар) */
+  leading?: ReactNode;
   title: string;
   subtitle?: string;
   onPress?: () => void;
@@ -43,15 +45,17 @@ type RowProps = {
   right?: ReactNode;
 };
 
-export function SettingsRow({ icon, title, subtitle, onPress, danger, right }: RowProps) {
+export function SettingsRow({ icon, leading, title, subtitle, onPress, danger, right }: RowProps) {
   const theme = useTheme();
   const tone = danger ? 'negative' : 'text';
 
   const content = (
     <View style={styles.row}>
-      <View style={[styles.icon, { backgroundColor: danger ? theme.negativeSoft : theme.backgroundSelected }]}>
-        <Icon name={icon} size={20} color={tone} />
-      </View>
+      {leading ?? (
+        <View style={[styles.icon, { backgroundColor: danger ? theme.negativeSoft : theme.backgroundSelected }]}>
+          <Icon name={icon} size={20} color={tone} />
+        </View>
+      )}
       <View style={styles.text}>
         <ThemedText type="default" themeColor={danger ? 'negative' : 'text'} style={styles.rowTitle}>
           {title}

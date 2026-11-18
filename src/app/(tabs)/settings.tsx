@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Alert, Linking, View } from 'react-native';
 
+import { Avatar } from '@/components/avatar';
 import { ScreenTitle } from '@/components/screen-title';
 import { ThemedText } from '@/components/themed-text';
 import { Screen } from '@/components/ui/screen';
@@ -25,7 +26,7 @@ const THEMES: { label: string; value: ThemePreference }[] = [
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { role, email, firstName, lastName, phone, clearAll, resetHints, setTheme, deleteAccount } = useFleet();
+  const { role, email, firstName, lastName, phone, photoUri, clearAll, resetHints, setTheme, deleteAccount } = useFleet();
   const { signOut } = useAuth();
   const { preference } = useThemePreference();
   const owner = role === 'owner';
@@ -53,6 +54,7 @@ export default function SettingsScreen() {
       <SettingsGroup title="Акаунт">
         <SettingsRow
           icon="person-circle-outline"
+          leading={<Avatar uri={photoUri || null} name={fullName({ firstName, lastName }) || email} size={40} />}
           title={fullName({ firstName, lastName }) || email}
           subtitle={fullName({ firstName, lastName }) ? [email, phone].filter(Boolean).join(' · ') : 'Додайте ім’я та прізвище'}
           onPress={() => router.push('/profile')}

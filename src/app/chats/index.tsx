@@ -2,7 +2,7 @@ import { useRouter, Stack } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
-import { CarPhoto } from '@/components/car-photo';
+import { Avatar } from '@/components/avatar';
 import { ReportStatus } from '@/components/report-status';
 import { StatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
@@ -78,7 +78,7 @@ export default function ChatsScreen() {
           {shown.map((c, i) => (
             <Pressable key={c.id} accessibilityRole="button" onLongPress={() => confirmDelete(c)} onPress={() => router.push({ pathname: '/chats/[id]', params: { id: c.id } })}>
               <View style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }]}>
-                <CarPhoto uri={c.context?.photoUri ?? undefined} style={styles.avatar} iconSize={22} />
+                <Avatar uri={c.counterpart.photoUri} name={c.counterpart.name} size={52} />
                 <View style={styles.flex}>
                   <View style={styles.top}>
                     <ThemedText type="default" style={styles.bold} numberOfLines={1}>
@@ -124,7 +124,6 @@ export default function ChatsScreen() {
 const styles = StyleSheet.create({
   list: { paddingVertical: 0, gap: 0 },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.three },
-  avatar: { width: 52, height: 52, borderRadius: Radius.md },
   flex: { flex: 1 },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
   bold: { fontWeight: 700 },
