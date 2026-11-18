@@ -9,8 +9,13 @@ export class Message {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   senderId: Types.ObjectId;
 
-  @Prop({ required: true })
+  /** Може бути порожнім, якщо є вкладення */
+  @Prop({ default: '' })
   text: string;
+
+  /** Фото, відео й файли в хмарі (до 5) */
+  @Prop({ type: [{ kind: { type: String, enum: ['image', 'video', 'file'] }, url: String, name: String, size: Number, fileId: MongooseSchema.Types.ObjectId, _id: false }], default: [] })
+  attachments: { kind: 'image' | 'video' | 'file'; url: string; name: string; size: number; fileId?: Types.ObjectId }[];
 
   /** Ідентифікатор, який створює застосунок: повторна відправка того ж повідомлення (збій мережі) не дублює його */
   @Prop()

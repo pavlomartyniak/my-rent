@@ -1,13 +1,16 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, type OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { type Model, Types } from 'mongoose';
 
 import type { AuthUser } from '../common/current-user';
 import { dealStageOf } from '../deals/deal-stage';
 import { fullName, maskedName, todayUtc } from '../rentals/rentals.math';
+import { MediaService } from '../media/media.service';
 import { ModerationService } from '../moderation/moderation.service';
 import { Conversation, type ChatContext, type ConversationDocument } from '../schemas/conversation.schema';
 import { Deal } from '../schemas/deal.schema';
+import { ChatFile } from '../schemas/chat-file.schema';
 import { Message, type MessageDocument } from '../schemas/message.schema';
 import { Offer } from '../schemas/offer.schema';
 import { RentalRequest } from '../schemas/rental-request.schema';
@@ -15,7 +18,10 @@ import { WantedRequest } from '../schemas/wanted-request.schema';
 import { User } from '../schemas/user.schema';
 import type { OpenChatDto } from './chat.dto';
 import { ChatGateway } from './chat.gateway';
+import { type Attachment, AttachmentError, attachmentsLabel, parseAttachments } from './attachments';
 import { cleanMessage, preview } from './chat.math';
+import { ChatFileError, checkChatFile } from './chat-files';
+import { binaryToBuffer } from '../insurance/insurance.files';
 
 type Side = 'owner' | 'renter';
 type Person = { firstName: string; lastName: string; phone?: string; photoUri?: string };
@@ -37,8 +43,11 @@ export class ChatService implements OnModuleInit {
     @InjectModel(WantedRequest.name) private readonly wanted: Model<WantedRequest>,
     @InjectModel(Deal.name) private readonly deals: Model<Deal>,
     @InjectModel(User.name) private readonly users: Model<User>,
+    @InjectModel(ChatFile.name) private readonly chatFiles: Model<ChatFile>,
     private readonly gateway: ChatGateway,
     private readonly moderation: ModerationService,
+    private readonly config: ConfigService,
+    private readonly media: MediaService,
   ) {
     gateway.chat = this;
   }
@@ -78,13 +87,13 @@ export class ChatService implements OnModuleInit {
     }
     if (!source) {
       // Немає, до чого прив'язати: розмову не відновити
-      await this.messages.deleteMany({ conversationId: c._id });
+      await this.dropMessages({ conversationId: c._id });
       await this.conversations.deleteOne({ _id: c._id });
       return;
     }
     const taken = await this.conversations.exists({ sourceKind: source.kind, sourceId: source.id });
     if (taken) {
-      await this.messages.deleteMany({ conversationId: c._id });
+      await this.dropMessages({ conversationId: c._id });
       await this.conversations.deleteOne({ _id: c._id });
       return;
     }
@@ -206,20 +215,64 @@ export class ChatService implements OnModuleInit {
       .findOneAndUpdate({ _id: c._id }, { $addToSet: { hiddenFor: user.role }, $set: { [`clearedAt.${user.role}`]: new Date(), [`unread.${user.role}`]: 0 } }, { returnDocument: 'after', timestamps: false })
       .exec();
     if (updated?.hiddenFor.includes('owner') && updated.hiddenFor.includes('renter')) {
-      await this.messages.deleteMany({ conversationId: c._id });
+      await this.dropMessages({ conversationId: c._id });
       await this.conversations.deleteOne({ _id: c._id });
     }
     this.gateway.emitTo([user.id], 'removed', { conversationId: String(c._id) });
   }
 
-  // ---- надсилання й читання ----
+  // ---- файли ----
 
-  async send(user: AuthUser, id: string, rawText: string, clientId?: string) {
-    const text = cleanMessage(rawText);
-    if (!text) throw new BadRequestException('Напишіть повідомлення');
+  /** Завантажує файл у розмову (до 10 МБ); у повідомлення його додають окремим запитом надсилання, поки не надіслано — лежить не довше доби */
+  async uploadFile(user: AuthUser, id: string, file: { originalname: string; size: number; buffer: Buffer } | undefined) {
     const c = await this.mineOrThrow(user, id);
     await this.moderation.assertNotBlocked(String(c.ownerId), String(c.renterId), 'Писати цьому користувачу неможливо: один із вас заблокував іншого');
     if (!(await this.infoFor([c])).get(String(c._id))?.canSend) throw new ForbiddenException('Чат закрито: за цим запитом уже немає активної домовленості');
+    let checked: ReturnType<typeof checkChatFile>;
+    try {
+      checked = checkChatFile(file);
+    } catch (e) {
+      if (e instanceof ChatFileError) throw new BadRequestException(e.message);
+      throw e;
+    }
+    const saved = await this.chatFiles.create({ conversationId: c._id, uploaderId: user.id, name: checked.name, mime: checked.mime, size: file!.buffer.length, data: file!.buffer });
+    return { fileId: String(saved._id), name: saved.name, size: saved.size };
+  }
+
+  /** Файл із розмови: лише її учасникам (і автору, поки не надіслано) */
+  async downloadFile(user: AuthUser, id: string, fileId: string) {
+    const c = await this.mineOrThrow(user, id);
+    const f = await this.chatFiles.findOne({ _id: fileId, conversationId: c._id, $or: [{ messageId: { $exists: true } }, { uploaderId: user.id }] }).lean().exec();
+    if (!f) throw new NotFoundException('Файл не знайдено');
+    return { data: binaryToBuffer(f.data), mime: f.mime, name: f.name };
+  }
+
+  // ---- надсилання й читання ----
+
+  async send(user: AuthUser, id: string, rawText: string, clientId?: string, rawAttachments?: { url?: string; fileId?: string; name: string; size: number }[]) {
+    const text = cleanMessage(rawText) ?? '';
+    const fileIds = (rawAttachments ?? []).filter((a) => a.fileId).map((a) => a.fileId!);
+    if ((rawAttachments ?? []).some((a) => !a.url && !a.fileId)) throw new BadRequestException('Невірне вкладення');
+    if ((rawAttachments?.length ?? 0) > 5) throw new BadRequestException('Можна додати до 5 вкладень за раз');
+    let attachments: Attachment[];
+    try {
+      attachments = parseAttachments((rawAttachments ?? []).filter((a) => a.url), this.config.get<string>('CLOUDINARY_CLOUD_NAME'), user.id);
+    } catch (e) {
+      if (e instanceof AttachmentError) throw new BadRequestException(e.message);
+      throw e;
+    }
+    if (!text && !attachments.length && !fileIds.length) throw new BadRequestException('Напишіть повідомлення або додайте файл');
+    const c = await this.mineOrThrow(user, id);
+    await this.moderation.assertNotBlocked(String(c.ownerId), String(c.renterId), 'Писати цьому користувачу неможливо: один із вас заблокував іншого');
+    if (!(await this.infoFor([c])).get(String(c._id))?.canSend) throw new ForbiddenException('Чат закрито: за цим запитом уже немає активної домовленості');
+
+    // Файли, завантажені на сервер: мають бути вашими, з цієї розмови й ще не прикріпленими до повідомлення
+    if (fileIds.length) {
+      if (new Set(fileIds).size !== fileIds.length) throw new BadRequestException('Те саме вкладення додано двічі');
+      const owned = await this.chatFiles.find({ _id: { $in: fileIds }, uploaderId: user.id, conversationId: c._id, messageId: { $exists: false } }, '-data').lean().exec();
+      if (owned.length !== fileIds.length) throw new BadRequestException('Файл не знайдено: завантажте його ще раз');
+      for (const f of owned) attachments.push({ kind: 'file', url: '', name: f.name, size: f.size, fileId: String(f._id) });
+    }
 
     // Повторна відправка з тим самим clientId повертає вже збережене повідомлення
     if (clientId) {
@@ -229,7 +282,8 @@ export class ChatService implements OnModuleInit {
 
     let message: MessageDocument;
     try {
-      message = await this.messages.create({ conversationId: c._id, senderId: user.id, text, clientId });
+      message = await this.messages.create({ conversationId: c._id, senderId: user.id, text, attachments: attachments.map((a) => ({ ...a, fileId: a.fileId ? new Types.ObjectId(a.fileId) : undefined })), clientId });
+      if (fileIds.length) await this.chatFiles.updateMany({ _id: { $in: fileIds } }, { $set: { messageId: message._id } });
     } catch (e) {
       // Гонка двох однакових відправок: unique-індекс залишає одну, повертаємо її
       const dup = clientId ? await this.messages.findOne({ conversationId: c._id, senderId: user.id, clientId }).exec() : null;
@@ -242,7 +296,7 @@ export class ChatService implements OnModuleInit {
       .findOneAndUpdate(
         { _id: c._id },
         {
-          $set: { lastMessage: { text: preview(text, 200), senderId: new Types.ObjectId(user.id), at: message.createdAt }, lastActivityAt: message.createdAt },
+          $set: { lastMessage: { text: preview(text || attachmentsLabel(attachments), 200), senderId: new Types.ObjectId(user.id), at: message.createdAt }, lastActivityAt: message.createdAt },
           $inc: { [`unread.${other}`]: 1 },
           // Нове повідомлення повертає розмову співрозмовнику, який її видаляв
           $pull: { hiddenFor: other },
@@ -284,6 +338,8 @@ export class ChatService implements OnModuleInit {
    * домовленості (запит відхилено, оренда завершена чи розірвана), якщо в них давно нічого не писали.
    */
   async purgeInactive(cutoff: Date, limit = 200) {
+    // Файли, завантажені на сервер і так не надіслані, лежать не довше доби
+    await this.chatFiles.deleteMany({ messageId: { $exists: false }, createdAt: { $lt: new Date(Date.now() - 86_400_000) } }).exec();
     const idle = await this.conversations
       .find({ $or: [{ lastActivityAt: { $lt: cutoff } }, { lastMessage: { $exists: false }, createdAt: { $lt: new Date(Date.now() - 86_400_000) } }] })
       .limit(limit)
@@ -293,7 +349,7 @@ export class ChatService implements OnModuleInit {
     const dead = idle.filter((c) => !c.lastMessage || !['pending', 'accepted', 'signing', 'upcoming', 'active'].includes(info.get(String(c._id))?.stage ?? 'closed'));
     if (!dead.length) return 0;
     const ids = dead.map((c) => c._id);
-    await this.messages.deleteMany({ conversationId: { $in: ids } });
+    await this.dropMessages({ conversationId: { $in: ids } });
     await this.conversations.deleteMany({ _id: { $in: ids } });
     return dead.length;
   }
@@ -401,6 +457,25 @@ export class ChatService implements OnModuleInit {
   }
 
   private messageView(m: MessageDocument, viewerId: string) {
-    return { id: String(m._id), conversationId: String(m.conversationId), mine: String(m.senderId) === viewerId, text: m.text, createdAt: m.createdAt, clientId: m.clientId ?? null };
+    return {
+      id: String(m._id),
+      conversationId: String(m.conversationId),
+      mine: String(m.senderId) === viewerId,
+      text: m.text ?? '',
+      attachments: (m.attachments ?? []).map((a) => ({ kind: a.kind, url: a.url, name: a.name, size: a.size, fileId: a.fileId ? String(a.fileId) : null })),
+      createdAt: m.createdAt,
+      clientId: m.clientId ?? null,
+    };
+  }
+
+  /** Видаляє повідомлення за умовою й прибирає їхні вкладення з хмари (якщо на них більше ніхто не посилається) */
+  private async dropMessages(filter: Record<string, unknown>) {
+    const withFiles = await this.messages.find({ ...filter, 'attachments.0': { $exists: true } }, 'attachments').lean().exec();
+    await this.messages.deleteMany(filter);
+    const urls = withFiles.flatMap((m) => (m.attachments ?? []).map((a) => a.url)).filter(Boolean);
+    if (urls.length) void this.media.release(urls);
+    // Файли на нашому сервері видаляються разом з повідомленнями
+    const fileIds = withFiles.flatMap((m) => (m.attachments ?? []).map((a) => a.fileId)).filter(Boolean);
+    if (fileIds.length) await this.chatFiles.deleteMany({ _id: { $in: fileIds } });
   }
 }

@@ -8,15 +8,7 @@ import { todayUtc } from '../rentals/rentals.math';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
 import { InsuranceFile } from '../schemas/insurance-file.schema';
-import { cleanFileName, fixMulterName, MAX_POLICY_BYTES, normalizePolicy, policyExpired } from './insurance.files';
-
-/** Після `.lean()` двійкове поле приходить як BSON Binary, а не Buffer: `Buffer.from` на ньому дає порожній буфер, тому беремо його вміст явно */
-function binaryToBuffer(data: unknown): Buffer {
-  if (Buffer.isBuffer(data)) return data;
-  const raw = (data as { buffer?: Uint8Array } | null)?.buffer;
-  if (raw) return Buffer.from(raw);
-  return Buffer.from((data ?? []) as Uint8Array);
-}
+import { binaryToBuffer, cleanFileName, fixMulterName, MAX_POLICY_BYTES, normalizePolicy, policyExpired } from './insurance.files';
 
 export type UploadedFile = { originalname: string; size: number; buffer: Buffer };
 

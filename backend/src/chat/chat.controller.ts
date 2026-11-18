@@ -1,8 +1,10 @@
-import { Body, Controller, Delete, Get, Header, HttpCode, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, HttpCode, Param, Post, Query, StreamableFile, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 
 import { type AuthUser, CurrentUser } from '../common/current-user';
 import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
+import { MAX_CHAT_FILE_BYTES } from './chat-files';
 import { MessagesQuery, OpenChatDto, SendMessageDto } from './chat.dto';
 import { ChatService } from './chat.service';
 
@@ -43,10 +45,27 @@ export class ChatController {
     return this.chat.history(user, id, before, limit);
   }
 
+  /** Завантажити файл у розмову (поле форми `file`, до 10 МБ); повертає fileId для надсилання разом із повідомленням */
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_CHAT_FILE_BYTES, files: 1 } }))
+  @Post(':id/files')
+  uploadFile(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @UploadedFile() file: { originalname: string; size: number; buffer: Buffer } | undefined) {
+    return this.chat.uploadFile(user, id, file);
+  }
+
+  /** Файл із розмови для завантаження (лише учасникам) */
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  @Header('Cache-Control', 'no-store')
+  @Get(':id/files/:fileId')
+  async file(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Param('fileId', ParseObjectIdPipe) fileId: string) {
+    const f = await this.chat.downloadFile(user, id, fileId);
+    return new StreamableFile(f.data, { type: f.mime, disposition: `attachment; filename*=UTF-8''${encodeURIComponent(f.name)}` });
+  }
+
   @Throttle({ default: { limit: 40, ttl: 60_000 } })
   @Post(':id/messages')
   send(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Body() dto: SendMessageDto) {
-    return this.chat.send(user, id, dto.text, dto.clientId);
+    return this.chat.send(user, id, dto.text ?? '', dto.clientId, dto.attachments);
   }
 
   /** Видалити розмову зі свого списку (співрозмовник її зберігає) */

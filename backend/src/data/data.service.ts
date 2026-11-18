@@ -8,6 +8,7 @@ import { Car } from '../schemas/car.schema';
 import { Reminder } from '../schemas/reminder.schema';
 import { Conversation } from '../schemas/conversation.schema';
 import { Deal } from '../schemas/deal.schema';
+import { ChatFile } from '../schemas/chat-file.schema';
 import { InsuranceFile } from '../schemas/insurance-file.schema';
 import { Message } from '../schemas/message.schema';
 import { Offer } from '../schemas/offer.schema';
@@ -30,6 +31,7 @@ export class DataService {
     @InjectModel(Conversation.name) private readonly conversations: Model<Conversation>,
     @InjectModel(Message.name) private readonly messages: Model<Message>,
     @InjectModel(InsuranceFile.name) private readonly insurance: Model<InsuranceFile>,
+    @InjectModel(ChatFile.name) private readonly chatFiles: Model<ChatFile>,
     private readonly media: MediaService,
     private readonly moderation: ModerationService,
   ) {}
@@ -89,7 +91,11 @@ export class DataService {
     await this.deals.deleteMany({ renterId: userId });
     // Чати з усією перепискою: співрозмовник теж їх більше не побачить
     const chats = await this.conversations.find({ $or: [{ ownerId: userId }, { renterId: userId }] }, '_id').lean().exec();
-    await this.messages.deleteMany({ conversationId: { $in: chats.map((c) => c._id) } });
+    const chatIds = chats.map((c) => c._id);
+    const withFiles = await this.messages.find({ conversationId: { $in: chatIds }, 'attachments.0': { $exists: true } }, 'attachments').lean().exec();
+    photos.push(...withFiles.flatMap((m) => (m.attachments ?? []).map((a) => a.url)));
+    await this.chatFiles.deleteMany({ conversationId: { $in: chatIds } });
+    await this.messages.deleteMany({ conversationId: { $in: chatIds } });
     await this.conversations.deleteMany({ _id: { $in: chats.map((c) => c._id) } });
     await this.moderation.purgeUser(userId);
     await this.users.deleteOne({ _id: userId });

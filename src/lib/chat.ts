@@ -29,14 +29,20 @@ export type ChatSummary = {
   lastActivityAt: string;
 };
 
+/** Вкладення повідомлення: фото, відео чи файл у хмарі (для ще не надісланих `url` — локальний шлях) */
+export type Attachment = { kind: 'image' | 'video' | 'file'; url: string; name: string; size: number; /** Файл на нашому сервері (kind: file): віддається лише учасникам розмови */ fileId?: string | null };
+
 export type ChatMessage = {
   id: string;
   text: string;
+  attachments?: Attachment[];
   mine: boolean;
   createdAt: string;
   clientId: string | null;
   /** Лише для локальних повідомлень: ще надсилається чи не вдалося надіслати */
   status?: 'sending' | 'failed';
+  /** Лише для не надісланих: чому не вдалося (показується під повідомленням) */
+  error?: string;
 };
 
 export type MessagesPage = { items: ChatMessage[]; hasMore: boolean };

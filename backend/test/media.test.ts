@@ -51,7 +51,7 @@ const fakeModel = (docs: unknown[]) => ({
   }),
 });
 
-function setup(opts: { cars?: unknown[]; deals?: unknown[]; chats?: unknown[]; users?: unknown[]; listing?: { public_id: string; created_at: string }[] } = {}) {
+function setup(opts: { cars?: unknown[]; deals?: unknown[]; chats?: unknown[]; users?: unknown[]; messages?: unknown[]; listing?: { public_id: string; created_at: string }[] } = {}) {
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const u = String(input);
     calls.push({ method: init?.method ?? 'GET', url: u });
@@ -62,7 +62,7 @@ function setup(opts: { cars?: unknown[]; deals?: unknown[]; chats?: unknown[]; u
     return new Response(JSON.stringify({ resources: opts.listing ?? [] }), { status: 200 });
   }) as typeof fetch;
   const config = { get: (k: string) => ({ CLOUDINARY_CLOUD_NAME: CLOUD, CLOUDINARY_API_KEY: 'k', CLOUDINARY_API_SECRET: 's' })[k] };
-  return new MediaService(config as never, fakeModel(opts.cars ?? []) as never, fakeModel(opts.deals ?? []) as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel(opts.chats ?? []) as never, fakeModel(opts.users ?? []) as never);
+  return new MediaService(config as never, fakeModel(opts.cars ?? []) as never, fakeModel(opts.deals ?? []) as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel(opts.chats ?? []) as never, fakeModel(opts.users ?? []) as never, fakeModel(opts.messages ?? []) as never);
 }
 
 const deletedIds = () => calls.filter((c) => c.method === 'DELETE').flatMap((c) => new URL(c.url).searchParams.getAll('public_ids[]'));
@@ -129,7 +129,7 @@ describe('MediaService.sweep', () => {
 
   it('нічого не робить без налаштованого Cloudinary', async () => {
     setup();
-    const media = new MediaService({ get: () => undefined } as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel([]) as never);
+    const media = new MediaService({ get: () => undefined } as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel([]) as never);
     assert.equal(await media.sweep(), 0);
     assert.equal(calls.length, 0);
   });
@@ -141,5 +141,24 @@ describe('MediaService: фото профілю', () => {
     const media = setup({ users: [{ photoUri: url }] });
     assert.equal(await media.release([url]), 0);
     assert.deepEqual(deletedIds(), []);
+  });
+});
+
+describe('MediaService: вкладення чату', () => {
+  const url = (type: string, id: string) => `https://res.cloudinary.com/${CLOUD}/${type}/upload/v1/${id}`;
+
+  it('не видаляє вкладення, яке ще є в повідомленні', async () => {
+    const u = url('raw', 'my-rent/u1/chat/abc.pdf');
+    const media = setup({ messages: [{ attachments: [{ url: u }] }] });
+    assert.equal(await media.release([u]), 0);
+    assert.deepEqual(deletedIds(), []);
+  });
+
+  it('видаляє відео й файли зі своїх розділів Cloudinary', async () => {
+    const media = setup();
+    await media.release([url('video', 'my-rent/u1/chat/v1.mp4'), url('raw', 'my-rent/u1/chat/f1.pdf')]);
+    const dels = calls.filter((c) => c.method === 'DELETE');
+    assert.ok(dels.some((c) => c.url.includes('/resources/video/upload') && c.url.includes(encodeURIComponent('my-rent/u1/chat/v1'))));
+    assert.ok(dels.some((c) => c.url.includes('/resources/raw/upload') && c.url.includes(encodeURIComponent('my-rent/u1/chat/f1.pdf'))));
   });
 });

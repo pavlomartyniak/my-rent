@@ -7,9 +7,10 @@ import type { Car } from '../schemas/car.schema';
 import type { Conversation } from '../schemas/conversation.schema';
 import type { Deal } from '../schemas/deal.schema';
 import type { Offer } from '../schemas/offer.schema';
+import type { Message } from '../schemas/message.schema';
 import type { User } from '../schemas/user.schema';
 import type { RentalRequest } from '../schemas/rental-request.schema';
-import { chunk, MEDIA_PREFIX, ORPHAN_GRACE_HOURS, publicIdFromUrl } from './cloudinary';
+import { chunk, cloudRefFromUrl, type CloudType, MEDIA_PREFIX, ORPHAN_GRACE_HOURS, publicIdFromUrl } from './cloudinary';
 
 const HOUR_MS = 3_600_000;
 const DELETE_BATCH = 100;
@@ -41,6 +42,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     @InjectModel('Offer') private readonly offers: Model<Offer>,
     @InjectModel('Conversation') private readonly conversations: Model<Conversation>,
     @InjectModel('User') private readonly users: Model<User>,
+    @InjectModel('Message') private readonly messages: Model<Message>,
   ) {}
 
   onModuleInit() {
@@ -69,11 +71,18 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     try {
       const creds = this.creds;
       if (!creds) return 0;
-      const wanted = [...new Set(urls.filter((u): u is string => !!u))].filter((u) => publicIdFromUrl(u, creds.cloudName));
+      const wanted = [...new Set(urls.filter((u): u is string => !!u))].filter((u) => cloudRefFromUrl(u, creds.cloudName));
       if (!wanted.length) return 0;
       const used = await this.referencedAmong(wanted);
-      const ids = wanted.filter((u) => !used.has(u)).map((u) => publicIdFromUrl(u, creds.cloudName)!);
-      return await this.destroy(ids);
+      // Фото, відео й файли лежать у різних розділах Cloudinary, тому видаляємо по типах
+      const byType = new Map<CloudType, string[]>();
+      for (const u of wanted.filter((x) => !used.has(x))) {
+        const ref = cloudRefFromUrl(u, creds.cloudName)!;
+        byType.set(ref.type, [...(byType.get(ref.type) ?? []), ref.publicId]);
+      }
+      let deleted = 0;
+      for (const [type, ids] of byType) deleted += await this.destroy(ids, type);
+      return deleted;
     } catch (e) {
       this.log.warn(`Не вдалося прибрати фото: ${(e as Error).message}`);
       return 0;
@@ -84,20 +93,21 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
   async discard(userId: string, urls: string[]): Promise<number> {
     const creds = this.creds;
     if (!creds) return 0;
-    const own = urls.filter((u) => publicIdFromUrl(u, creds.cloudName)?.startsWith(`${MEDIA_PREFIX}${userId}/`));
+    const own = urls.filter((u) => cloudRefFromUrl(u, creds.cloudName)?.publicId.startsWith(`${MEDIA_PREFIX}${userId}/`));
     return this.release(own);
   }
 
   /** Які з переданих посилань досі використовуються в базі */
   private async referencedAmong(urls: string[]): Promise<Set<string>> {
     const hit = (u: string[]) => ({ $in: u });
-    const [cars, deals, rentals, offers, chats, people] = await Promise.all([
+    const [cars, deals, rentals, offers, chats, people, withFiles] = await Promise.all([
       this.cars.find({ $or: [{ photoUri: hit(urls) }, { photos: hit(urls) }] }, 'photoUri photos').lean().exec(),
       this.deals.find({ photoUri: hit(urls) }, 'photoUri').lean().exec(),
       this.rentals.find({ 'car.photoUri': hit(urls) }, 'car.photoUri').lean().exec(),
       this.offers.find({ $or: [{ 'car.photoUri': hit(urls) }, { 'car.photos': hit(urls) }] }, 'car.photoUri car.photos').lean().exec(),
       this.conversations.find({ 'context.photoUri': hit(urls) }, 'context.photoUri').lean().exec(),
       this.users.find({ photoUri: hit(urls) }, 'photoUri').lean().exec(),
+      this.messages.find({ 'attachments.url': hit(urls) }, 'attachments.url').lean().exec(),
     ]);
     const used = new Set<string>();
     const add = (u?: string | null) => u && used.add(u);
@@ -107,6 +117,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     for (const o of offers) [o.car?.photoUri, ...(o.car?.photos ?? [])].forEach(add);
     for (const c of chats) add(c.context?.photoUri);
     for (const u of people) add(u.photoUri);
+    for (const m of withFiles) (m.attachments ?? []).forEach((a) => add(a.url));
     return used;
   }
 
@@ -123,6 +134,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     for await (const o of this.offers.find({}, 'car.photoUri car.photos').lean().cursor()) [o.car?.photoUri, ...(o.car?.photos ?? [])].forEach(add);
     for await (const c of this.conversations.find({}, 'context.photoUri').lean().cursor()) add(c.context?.photoUri);
     for await (const u of this.users.find({ photoUri: { $ne: '' } }, 'photoUri').lean().cursor()) add(u.photoUri);
+    for await (const m of this.messages.find({ 'attachments.0': { $exists: true } }, 'attachments.url').lean().cursor()) (m.attachments ?? []).forEach((a) => add(a.url));
     return ids;
   }
 
@@ -145,7 +157,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
         }
         cursor = page.next_cursor;
       } while (cursor);
-      const deleted = await this.destroy(orphans);
+      const deleted = await this.destroy(orphans, 'image');
       this.log.log(`Прибирання Cloudinary: переглянуто ${scanned}, сиріт ${orphans.length}, видалено ${deleted}`);
       return deleted;
     } catch (e) {
@@ -156,10 +168,10 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async destroy(publicIds: string[]): Promise<number> {
+  private async destroy(publicIds: string[], type: CloudType = 'image'): Promise<number> {
     let deleted = 0;
     for (const batch of chunk(publicIds, DELETE_BATCH)) {
-      const res = await this.admin<{ deleted?: Record<string, string> }>('DELETE', 'resources/image/upload', {}, batch);
+      const res = await this.admin<{ deleted?: Record<string, string> }>('DELETE', `resources/${type}/upload`, {}, batch);
       deleted += Object.values(res.deleted ?? {}).filter((s) => s === 'deleted').length;
     }
     return deleted;

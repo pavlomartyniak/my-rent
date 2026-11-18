@@ -63,3 +63,12 @@ export function cleanFileName(name: string) {
 
 /** Чи поліс уже не діє на дату `today` (обидві YYYY-MM-DD) */
 export const policyExpired = (validUntil: string | undefined | null, today: string) => !!validUntil && validUntil < today;
+
+/** Після `.lean()` двійкове поле приходить як BSON Binary, а не Buffer: `Buffer.from` на ньому дає порожній буфер, тому беремо його вміст явно */
+export function binaryToBuffer(data: unknown): Buffer {
+  if (Buffer.isBuffer(data)) return data;
+  const raw = (data as { buffer?: Uint8Array } | null)?.buffer;
+  if (raw) return Buffer.from(raw);
+  return Buffer.from((data ?? []) as Uint8Array);
+}
+
