@@ -51,3 +51,12 @@ export const MAX_LISTINGS = 5;
 /** Для чого орендар бере авто (необов'язково, показується в його профілі) */
 export const RENT_PURPOSES = ['taxi', 'delivery', 'personal', 'business'] as const;
 export type RentPurpose = (typeof RENT_PURPOSES)[number];
+
+/** Відповіді орендаря «зі слів»: усе необов'язкове й не перевіряється сервісом; власник бачить їх у профілі */
+export const LICENSE_CATEGORIES = ['B', 'C', 'D'] as const;
+export const ACCIDENTS = ['none', 'one', 'several'] as const;
+export const RENT_EXPERIENCES = ['none', 'few', 'regular'] as const;
+export const OCCUPATIONS = ['employee', 'fop', 'business', 'driver', 'student', 'other'] as const;
+export const RENT_TERMS = ['week', 'month', 'long'] as const;
+export const DEPOSIT_READINESS = ['yes', 'discuss'] as const;
+export const TRANSMISSIONS = ['auto', 'manual', 'both'] as const;

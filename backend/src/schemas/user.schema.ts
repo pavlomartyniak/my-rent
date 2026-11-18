@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import type { HydratedDocument } from 'mongoose';
 
-import { RENT_PURPOSES, ROLES, THEMES } from '../common/constants';
+import { ACCIDENTS, DEPOSIT_READINESS, LICENSE_CATEGORIES, OCCUPATIONS, RENT_EXPERIENCES, RENT_PURPOSES, RENT_TERMS, ROLES, THEMES, TRANSMISSIONS } from '../common/constants';
 import { jsonOptions } from '../common/json-options';
 
 @Schema(jsonOptions([], ['passwordHash', 'resetCodeHash', 'resetExpires', 'resetAttempts', 'suspended', 'phoneKey']))
@@ -64,6 +64,34 @@ export class User {
   /** Для чого орендує авто (необов'язково) */
   @Prop({ type: [String], enum: RENT_PURPOSES, default: [] })
   purposes: string[];
+
+  /** Категорії прав (зі слів орендаря) */
+  @Prop({ type: [String], enum: LICENSE_CATEGORIES, default: [] })
+  licenseCategories: string[];
+
+  /** ДТП за останні 3 роки (зі слів); порожньо — не вказано */
+  @Prop({ type: String, enum: [...ACCIDENTS, ''], default: '' })
+  accidents: string;
+
+  /** Чи орендував авто раніше */
+  @Prop({ type: String, enum: [...RENT_EXPERIENCES, ''], default: '' })
+  rentExperience: string;
+
+  /** Чим займається */
+  @Prop({ type: String, enum: [...OCCUPATIONS, ''], default: '' })
+  occupation: string;
+
+  /** На який строк зазвичай бере авто */
+  @Prop({ type: String, enum: [...RENT_TERMS, ''], default: '' })
+  rentTerm: string;
+
+  /** Чи готовий внести заставу */
+  @Prop({ type: String, enum: [...DEPOSIT_READINESS, ''], default: '' })
+  depositReady: string;
+
+  /** Яка коробка передач підходить */
+  @Prop({ type: String, enum: [...TRANSMISSIONS, ''], default: '' })
+  transmission: string;
 
   @Prop({ enum: ROLES, default: 'owner' })
   role: string;

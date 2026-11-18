@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
-import { phoneError } from '@/lib/profile';
+import { EMPTY_EXTRAS, phoneError, type ProfileExtras } from '@/lib/profile';
 import { useFleet } from '@/store/fleet';
 
 /**
@@ -23,7 +23,7 @@ export default function ProfileScreen() {
   const [lastName, setLastName] = useState(me.lastName);
   const [middleName, setMiddleName] = useState(me.middleName);
   const [phone, setPhone] = useState(me.phone);
-  const [extras, setExtras] = useState({ city: me.city ?? '', photoUri: me.photoUri ?? '', about: me.about ?? '', drivingSince: me.drivingSince ?? null, purposes: me.purposes ?? [] });
+  const [extras, setExtras] = useState<ProfileExtras>({ ...EMPTY_EXTRAS, city: me.city ?? '', photoUri: me.photoUri ?? '', about: me.about ?? '', drivingSince: me.drivingSince ?? null, purposes: me.purposes ?? [], licenseCategories: me.licenseCategories ?? [], accidents: me.accidents ?? '', rentExperience: me.rentExperience ?? '', occupation: me.occupation ?? '', rentTerm: me.rentTerm ?? '', depositReady: me.depositReady ?? '', transmission: me.transmission ?? '' });
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
   // Помилки полів від сервера (наприклад, телефон уже зайнятий): підсвічують поле, поки його не змінять

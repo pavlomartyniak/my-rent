@@ -50,7 +50,7 @@ export class UsersService {
     }
   }
 
-  async update(id: string, patch: Partial<Pick<User, 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'middleName' | 'phone' | 'city' | 'photoUri' | 'about' | 'drivingSince' | 'purposes'>>) {
+  async update(id: string, patch: Partial<Pick<User, 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'middleName' | 'phone' | 'city' | 'photoUri' | 'about' | 'drivingSince' | 'purposes' | 'licenseCategories' | 'accidents' | 'rentExperience' | 'occupation' | 'rentTerm' | 'depositReady' | 'transmission'>>) {
     if (patch.phone && (await this.phoneTaken(patch.phone, id))) throw conflictField('phone', PHONE_TAKEN);
     try {
       return await this.users.findByIdAndUpdate(id, { $set: { ...patch, ...(patch.phone ? { phoneKey: phoneKey(patch.phone) } : {}) } }, { new: true }).exec();

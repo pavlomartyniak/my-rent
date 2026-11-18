@@ -20,17 +20,23 @@ const plural = (n: number) => (n % 10 === 1 && n % 100 !== 11 ? 'оцінка' :
 
 /** Рейтинг одним рядком: зірки, середнє й кількість оцінок; без оцінок — «Ще немає оцінок» */
 export function RatingLine({ rating, size = 14 }: { rating: RatingSummary; size?: number }) {
-  if (!rating.count || rating.avg === null) {
+  // Без оцінок показуємо стартовий рейтинг (5,0): нуль виглядав би як найгірша оцінка
+  const avg = rating.avg ?? 5;
+  if (!rating.count) {
     return (
-      <ThemedText type="small" themeColor="textSecondary">
-        Ще немає оцінок
-      </ThemedText>
+      <View style={styles.row}>
+        <RatingStars value={avg} size={size} />
+        <ThemedText type="smallBold">{avg.toFixed(1).replace('.', ',')}</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          · стартовий, ще без оцінок
+        </ThemedText>
+      </View>
     );
   }
   return (
     <View style={styles.row}>
-      <RatingStars value={rating.avg} size={size} />
-      <ThemedText type="smallBold">{rating.avg.toFixed(1).replace('.', ',')}</ThemedText>
+      <RatingStars value={avg} size={size} />
+      <ThemedText type="smallBold">{avg.toFixed(1).replace('.', ',')}</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
         · {rating.count} {plural(rating.count)}
       </ThemedText>

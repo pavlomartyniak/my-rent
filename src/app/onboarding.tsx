@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 're
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { drivingYearError, ProfileExtrasForm } from '@/components/profile-extras';
+import { EMPTY_EXTRAS, hasAnswers, type ProfileExtras } from '@/lib/profile';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Icon, type IconName } from '@/components/ui/icon';
@@ -29,7 +30,7 @@ export default function OnboardingScreen() {
   const { finishOnboarding, role, updateProfile, firstName, lastName } = useFleet();
   const STEPS = role === 'renter' ? RENTER_STEPS : OWNER_STEPS;
   const [step, setStep] = useState(0);
-  const [extras, setExtras] = useState({ city: '', photoUri: '', about: '', drivingSince: null as number | null, purposes: [] as ('taxi' | 'delivery' | 'personal' | 'business')[] });
+  const [extras, setExtras] = useState<ProfileExtras>(EMPTY_EXTRAS);
   const [saving, setSaving] = useState(false);
   // Після слайдів іде необов'язковий крок «Розкажіть про себе»
   const profileStep = step === STEPS.length;
@@ -40,7 +41,7 @@ export default function OnboardingScreen() {
     if (saving) return;
     if (drivingYearError(extras.drivingSince)) return;
     setSaving(true);
-    const filled = extras.city.trim() || extras.photoUri || extras.about.trim() || extras.drivingSince !== null || extras.purposes.length;
+    const filled = extras.city.trim() || extras.photoUri || extras.about.trim() || extras.drivingSince !== null || hasAnswers(extras);
     // Збережене в профілі можна змінити потім у «Профілі»; помилка збереження не має блокувати початок роботи
     if (filled) await updateProfile({ ...extras, city: extras.city.trim(), about: extras.about.trim() });
     await finishOnboarding();

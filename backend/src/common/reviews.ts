@@ -9,9 +9,15 @@ export const tagsFor = (targetRole: 'owner' | 'renter'): readonly string[] => (t
 
 export type RatingSummary = { count: number; avg: number | null; tags: { tag: string; count: number }[] };
 
-/** Середня оцінка (до десятих) і три найчастіші теги */
+/**
+ * Стартовий рейтинг без оцінок: максимальний, як у службах таксі. Нуль сприймався б як критично низька оцінка, а шкала
+ * тут 1–5. Щойно з'являються оцінки, рейтинг рахується лише по них.
+ */
+export const STARTING_RATING = 5;
+
+/** Середня оцінка (до десятих) і три найчастіші теги; без оцінок — стартовий рейтинг із `count: 0` */
 export function summarize(rows: { rating: number; tags?: string[] }[]): RatingSummary {
-  if (!rows.length) return { count: 0, avg: null, tags: [] };
+  if (!rows.length) return { count: 0, avg: STARTING_RATING, tags: [] };
   const counts = new Map<string, number>();
   for (const r of rows) for (const t of r.tags ?? []) counts.set(t, (counts.get(t) ?? 0) + 1);
   const avg = rows.reduce((n, r) => n + r.rating, 0) / rows.length;

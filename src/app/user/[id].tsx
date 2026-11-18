@@ -1,10 +1,9 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { Children, Fragment, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { CarPhoto } from '@/components/car-photo';
-import { RatingLine } from '@/components/rating-stars';
 import { ReportSheet } from '@/components/report-sheet';
 import { ReportStatus } from '@/components/report-status';
 import { ThemedText } from '@/components/themed-text';
@@ -18,27 +17,46 @@ import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { formatMoney, plural } from '@/lib/format';
 import { confirmBlock, type ReportTarget } from '@/lib/moderation';
-import { PURPOSE_LABELS } from '@/lib/profile';
+import { hasAnswers, RENTER_QUESTIONS } from '@/lib/profile';
 import type { ProfileView } from '@/lib/profiles';
 import { useFleet } from '@/store/fleet';
 
 const BADGE_ICON: Record<ProfileView['badges'][number]['key'], IconName> = { top: 'ribbon', experienced: 'shield-checkmark', new: 'sparkles' };
 
-/** Плитка підсумку: велике значення й підпис */
-function Stat({ value, label, icon }: { value: string; label: string; icon?: IconName }) {
+/** Плитка підсумку: велике значення, назва показника й дрібна примітка (однакова висота в усіх плиток) */
+function Stat({ value, label, note, icon }: { value: string; label: string; note?: string; icon?: IconName }) {
   const theme = useTheme();
   return (
-    <View style={[styles.stat, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+    <View style={[styles.stat, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]} accessible accessibilityLabel={`${label}: ${value}${note ? `, ${note}` : ''}`}>
       <View style={styles.statValue}>
         {icon ? <Icon name={icon} size={18} color="#F5A623" /> : null}
         <ThemedText style={styles.statNumber} numberOfLines={1} adjustsFontSizeToFit>
           {value}
         </ThemedText>
       </View>
-      <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+      <ThemedText type="callout" style={styles.statLabel} numberOfLines={1}>
         {label}
       </ThemedText>
+      <ThemedText type="caption" themeColor="textSecondary" numberOfLines={1}>
+        {note ?? ' '}
+      </ThemedText>
     </View>
+  );
+}
+
+/** Рядки відомостей розділені тонкими лініями, що починаються від тексту, а не від краю іконки */
+function Details({ children }: { children: React.ReactNode }) {
+  const theme = useTheme();
+  const rows = Children.toArray(children);
+  return (
+    <>
+      {rows.map((row, i) => (
+        <Fragment key={i}>
+          {i > 0 ? <View style={[styles.divider, { backgroundColor: theme.border }]} /> : null}
+          {row}
+        </Fragment>
+      ))}
+    </>
   );
 }
 
@@ -51,7 +69,7 @@ function Detail({ icon, label, children }: { icon: IconName; label: string; chil
         <Icon name={icon} size={18} color="accent" />
       </View>
       <View style={styles.flex}>
-        <ThemedText type="small" themeColor="textSecondary">
+        <ThemedText type="callout" themeColor="textSecondary">
           {label}
         </ThemedText>
         {children}
@@ -86,7 +104,7 @@ export default function UserProfileScreen() {
   const years = data.drivingSince ? new Date().getFullYear() - data.drivingSince : null;
   const call = (phone: string) => Linking.openURL(`tel:${phone.replace(/[^\d+]/g, '')}`).catch(() => Alert.alert('Не вдалося відкрити набір номера', `Номер: ${phone}`));
   const mail = (email: string) => Linking.openURL(`mailto:${email}`).catch(() => Alert.alert('Не вдалося відкрити пошту', email));
-  const hasDetails = !!data.city || years !== null || data.purposes.length > 0;
+  const hasDetails = !!data.city || years !== null || hasAnswers(data as never);
 
   return (
     <Screen contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingTop: 0 }}>
@@ -94,8 +112,10 @@ export default function UserProfileScreen() {
 
       {/* Шапка на всю ширину: м'який фон, фото, ім'я, позначки й рейтинг */}
       <View style={[styles.hero, { backgroundColor: theme.accentSoft }]}>
-        <Avatar uri={data.photoUri} name={data.name} size={112} />
-        <ThemedText type="subtitle" style={styles.center}>
+        <View style={[styles.avatarRing, { borderColor: theme.background }]}>
+          <Avatar uri={data.photoUri} name={data.name} size={104} />
+        </View>
+        <ThemedText style={[styles.name, styles.center]} accessibilityRole="header">
           {data.name}
         </ThemedText>
         <View style={styles.badges}>
@@ -113,11 +133,10 @@ export default function UserProfileScreen() {
             </View>
           ))}
         </View>
-        <RatingLine rating={data.rating} size={18} />
         {data.city ? (
           <View style={styles.badges}>
-            <Icon name="location-outline" size={15} color="textSecondary" />
-            <ThemedText type="small" themeColor="textSecondary">
+            <Icon name="location-outline" size={16} color="textSecondary" />
+            <ThemedText type="callout" themeColor="textSecondary">
               {data.city}
             </ThemedText>
           </View>
@@ -125,9 +144,14 @@ export default function UserProfileScreen() {
       </View>
 
       <View style={styles.stats}>
-        <Stat value={data.rating.avg !== null ? data.rating.avg.toFixed(1).replace('.', ',') : '—'} label={data.rating.count ? `${data.rating.count} ${plural(data.rating.count, 'оцінка', 'оцінки', 'оцінок')}` : 'Оцінок немає'} icon="star" />
-        <Stat value={String(data.stats.completedDeals)} label={plural(data.stats.completedDeals, 'оренда', 'оренди', 'оренд')} />
-        <Stat value={data.memberSince ? data.memberSince.slice(0, 4) : '—'} label="На Kolo з" />
+        <Stat
+          icon="star"
+          value={(data.rating.avg ?? 5).toFixed(1).replace('.', ',')}
+          label="Рейтинг"
+          note={data.rating.count ? `${data.rating.count} ${plural(data.rating.count, 'оцінка', 'оцінки', 'оцінок')}` : 'стартовий'}
+        />
+        <Stat value={String(data.stats.completedDeals)} label={plural(data.stats.completedDeals, 'Оренда', 'Оренди', 'Оренд')} note="завершено" />
+        <Stat value={data.memberSince ? data.memberSince.slice(0, 4) : '—'} label="На Kolo" note="з року" />
       </View>
 
       {data.about ? (
@@ -143,6 +167,7 @@ export default function UserProfileScreen() {
         <>
           <SectionHeader title="Відомості" />
           <Card style={styles.details}>
+            <Details>
             {years !== null ? (
               <Detail icon="speedometer-outline" label="Стаж водіння">
                 <ThemedText type="default" style={styles.bold}>
@@ -157,16 +182,34 @@ export default function UserProfileScreen() {
                 </ThemedText>
               </Detail>
             ) : null}
-            {data.purposes.length ? (
-              <Detail icon="car-sport-outline" label="Орендує для">
-                <View style={styles.chips}>
-                  {data.purposes.map((p) => (
-                    <View key={p} style={[styles.chip, { backgroundColor: theme.backgroundSelected }]}>
-                      <ThemedText type="smallBold">{PURPOSE_LABELS[p]}</ThemedText>
+            {RENTER_QUESTIONS.map((q) => {
+              const raw = data[q.key] as string | string[] | null;
+              const values = Array.isArray(raw) ? raw : raw ? [raw] : [];
+              if (values.length === 0) return null;
+              const label = (v: string) => q.options.find((o) => o.value === v)?.label ?? v;
+              return (
+                <Detail key={q.key} icon={q.icon as IconName} label={q.shown}>
+                  {q.multi ? (
+                    <View style={styles.chips}>
+                      {values.map((v) => (
+                        <View key={v} style={[styles.chip, { backgroundColor: theme.backgroundSelected }]}>
+                          <ThemedText type="smallBold">{label(v)}</ThemedText>
+                        </View>
+                      ))}
                     </View>
-                  ))}
-                </View>
-              </Detail>
+                  ) : (
+                    <ThemedText type="default" style={styles.bold}>
+                      {label(values[0])}
+                    </ThemedText>
+                  )}
+                </Detail>
+              );
+            })}
+            </Details>
+            {hasAnswers(data as never) ? (
+              <ThemedText type="caption" themeColor="textSecondary" style={styles.note}>
+                Відповіді вказав сам користувач, Kolo їх не перевіряє.
+              </ThemedText>
             ) : null}
           </Card>
         </>
@@ -293,13 +336,18 @@ const styles = StyleSheet.create({
   // Шапка на всю ширину екрана: скасовуємо бічні поля Screen і заходимо під прозорий хедер
   hero: { marginHorizontal: -20, alignItems: 'center', gap: Spacing.two, paddingTop: 110, paddingBottom: Spacing.four, paddingHorizontal: Spacing.four, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
   center: { textAlign: 'center' },
+  name: { ...Type.figure },
+  avatarRing: { borderWidth: 4, borderRadius: 60, shadowColor: '#000000', shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   badges: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 6 },
   badge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 5, borderRadius: Radius.pill },
   stats: { flexDirection: 'row', gap: Spacing.two },
-  stat: { flex: 1, borderRadius: Radius.md, borderWidth: StyleSheet.hairlineWidth, paddingVertical: Spacing.three, paddingHorizontal: Spacing.two, alignItems: 'center', gap: 2 },
+  stat: { flex: 1, borderRadius: Radius.md, borderWidth: 1, paddingVertical: Spacing.three, paddingHorizontal: Spacing.two, alignItems: 'center', gap: 2 },
+  statLabel: { fontWeight: 600 },
   statValue: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   statNumber: { ...Type.title },
   details: { gap: Spacing.three },
+  divider: { height: StyleSheet.hairlineWidth, marginLeft: 36 + Spacing.three },
+  note: { marginTop: Spacing.one },
   detail: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   detailIcon: { width: 36, height: 36, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1, gap: 2 },

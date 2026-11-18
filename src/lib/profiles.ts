@@ -21,6 +21,13 @@ export type ProfileView = {
   /** Рік, з якого водить */
   drivingSince: number | null;
   purposes: RentPurpose[];
+  licenseCategories: string[];
+  accidents: string | null;
+  rentExperience: string | null;
+  occupation: string | null;
+  rentTerm: string | null;
+  depositReady: string | null;
+  transmission: string | null;
   /** Позначки, виведені з фактів: новий, досвідчений, високий рейтинг */
   badges: { key: 'new' | 'experienced' | 'top'; title: string }[];
   memberSince: string | null;

@@ -1,6 +1,6 @@
 import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 
-import { RENT_PURPOSES, THEMES } from '../common/constants';
+import { ACCIDENTS, DEPOSIT_READINESS, LICENSE_CATEGORIES, OCCUPATIONS, RENT_EXPERIENCES, RENT_PURPOSES, RENT_TERMS, THEMES, TRANSMISSIONS } from '../common/constants';
 import { PHONE_PATTERN, Trim } from '../common/profile';
 
 export class UpdateMeDto {
@@ -64,6 +64,37 @@ export class UpdateMeDto {
   @ArrayMaxSize(4)
   @IsIn(RENT_PURPOSES, { each: true })
   purposes?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(3)
+  @IsIn(LICENSE_CATEGORIES, { each: true })
+  licenseCategories?: string[];
+
+  /** Порожній рядок прибирає відповідь */
+  @IsOptional()
+  @IsIn([...ACCIDENTS, ''])
+  accidents?: string;
+
+  @IsOptional()
+  @IsIn([...RENT_EXPERIENCES, ''])
+  rentExperience?: string;
+
+  @IsOptional()
+  @IsIn([...OCCUPATIONS, ''])
+  occupation?: string;
+
+  @IsOptional()
+  @IsIn([...RENT_TERMS, ''])
+  rentTerm?: string;
+
+  @IsOptional()
+  @IsIn([...DEPOSIT_READINESS, ''])
+  depositReady?: string;
+
+  @IsOptional()
+  @IsIn([...TRANSMISSIONS, ''])
+  transmission?: string;
 
   @IsOptional()
   @IsBoolean()

@@ -5,7 +5,7 @@ import { OWNER_TAGS, RENTER_TAGS, summarize, tagsFor } from '../src/common/revie
 
 describe('рейтинг', () => {
   it('без оцінок: нуль і без середнього', () => {
-    assert.deepEqual(summarize([]), { count: 0, avg: null, tags: [] });
+    assert.deepEqual(summarize([]), { count: 0, avg: 5, tags: [] });
   });
 
   it('середнє до десятих і три найчастіші теги', () => {
