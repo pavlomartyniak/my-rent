@@ -7,6 +7,8 @@ import { formatMoney } from '@/lib/format';
 import type { Car } from '@/types';
 
 import { CarPhoto } from './car-photo';
+import { ColorDot } from './color-dot';
+import { PlateBadge } from './plate-badge';
 import { ThemedText } from './themed-text';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -51,6 +53,12 @@ export function CarCard({ car, pricePerDay }: { car: Car; pricePerDay?: number }
               {car.year}
               {car.driver ? ` · ${car.driver}` : ' · без водія'}
             </ThemedText>
+            {car.plate || car.color ? (
+              <View style={styles.facts}>
+                {car.plate ? <PlateBadge plate={car.plate} small /> : null}
+                <ColorDot color={car.color} />
+              </View>
+            ) : null}
             <View style={styles.meta}>
               <View style={[styles.badge, { backgroundColor: bg }]}>
                 <ThemedText type="small" style={[styles.badgeText, { color: fg }]}>
@@ -81,6 +89,7 @@ const styles = StyleSheet.create({
   photo: { width: 72, height: 72, borderRadius: Radius.md },
   flex: { flex: 1, gap: 2 },
   name: { fontWeight: 700 },
+  facts: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, flexWrap: 'wrap', marginTop: 2 },
   meta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two, marginTop: 4 },
   badge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.pill },
   badgeText: { fontSize: 12, lineHeight: 18, fontWeight: 600 },

@@ -10,6 +10,8 @@ export type MarketCar = {
   mileage: number;
   /** Тип палива; порожній — не вказано */
   fuel: string;
+  /** Колір авто (необов'язково); державний номер публічно не показується */
+  color?: string;
   photoUri: string | null;
   /** Усі фото оголошення (https), обкладинка перша */
   photos: string[];

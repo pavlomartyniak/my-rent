@@ -24,7 +24,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
 import { useFleet } from '@/store/fleet';
 import { dealStage, type DealReport, type DealView } from '@/lib/deals';
-import { formatMoney, splitTitle } from '@/lib/format';
+import { formatKm, formatMoney, splitTitle } from '@/lib/format';
 
 /** Одна оренда: умови, баланс платежів власнику, прибуток і історія записів */
 export default function DealScreen() {
@@ -129,6 +129,22 @@ export default function DealScreen() {
       )}
 
       <RenterDealCard deal={d} overview={o} />
+
+      {d.car ? (
+        <>
+          <SectionHeader title="Про авто" />
+          <InfoGrid
+            items={[
+              d.car.plate ? { label: 'Держномер', value: d.car.plate } : null,
+              d.car.color ? { label: 'Колір', value: d.car.color } : null,
+              { label: 'Рік', value: String(d.car.year) },
+              d.car.fuel ? { label: 'Паливо', value: d.car.fuel } : null,
+              d.car.mileage ? { label: 'Пробіг при передачі', value: formatKm(d.car.mileage) } : null,
+              d.car.vin ? { label: 'VIN', value: d.car.vin, wide: true } : null,
+            ].filter((i): i is { label: string; value: string; wide?: boolean } => !!i)}
+          />
+        </>
+      ) : null}
 
       {stage === 'finished' || stage === 'terminated' ? <ReviewButton dealId={d.id} /> : null}
 

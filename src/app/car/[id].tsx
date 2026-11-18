@@ -71,6 +71,8 @@ export default function CarScreen() {
 
   type Tile = { label: string; value: string; wide?: boolean; right?: React.ReactNode };
   const aboutItems = ([
+    car.plate ? { label: 'Держномер', value: car.plate } : null,
+    car.color ? { label: 'Колір', value: car.color } : null,
     { label: 'Рік', value: String(car.year) },
     { label: 'Статус', value: car.status },
     car.driver ? { label: 'Водій', value: car.driver } : null,

@@ -22,6 +22,8 @@ function publicView(car: CarDocument, owner: { name: string; photoUri: string | 
     year: car.year,
     mileage: car.mileage,
     fuel: car.fuel ?? '',
+    // Колір публічний, а державний номер і VIN бачить лише сторона оренди
+    color: car.color ?? '',
     photoUri: car.photoUri ?? null,
     // У публічній галереї лише фото, доступні за https; обкладинка завжди перша
     photos: (car.photos?.length ? car.photos : car.photoUri ? [car.photoUri] : []).filter((u) => u.startsWith('https://')),

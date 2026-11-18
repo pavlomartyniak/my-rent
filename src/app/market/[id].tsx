@@ -81,7 +81,8 @@ export default function MarketCarScreen() {
           </View>
           <View style={styles.chips}>
             {car.city ? <SpecChip white icon="location-outline" text={car.city} /> : null}
-            {car.fuel ? <SpecChip white icon="color-fill-outline" text={car.fuel} /> : null}
+            {car.fuel ? <SpecChip white icon="flame-outline" text={car.fuel} /> : null}
+            {car.color ? <SpecChip white icon="color-fill-outline" text={car.color} /> : null}
             {car.mileage ? <SpecChip white icon="speedometer-outline" text={formatKm(car.mileage)} /> : null}
           </View>
         </View>

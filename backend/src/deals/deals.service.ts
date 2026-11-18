@@ -882,6 +882,8 @@ export class DealsService {
       terminatedAt: d.terminatedAt,
       withdrawal: this.withdrawalView(d),
       terminationNote: d.terminationNote ?? '',
+      // Дані авто зі знімка в умовах оренди (як їх погодили сторони): номер, колір, пробіг, паливо, VIN. Лише стороні оренди
+      car: d.contract?.terms.car ? { plate: d.contract.terms.car.plate ?? null, color: d.contract.terms.car.color ?? null, year: d.contract.terms.car.year, mileage: d.contract.terms.car.mileage, fuel: d.contract.terms.car.fuel ?? null, vin: d.contract.terms.car.vin || null } : null,
       // Для орендаря це власник, для власника — орендар
       // Номер телефону віддається лише в чаті
       counterpart: { id: String(as === 'renter' ? d.ownerId : d.renterId), name: p ? fullName(p.firstName, p.lastName) || fallback : fallback, photoUri: p?.photoUri || null },

@@ -7,6 +7,8 @@ import { dealStage, type DealView } from '@/lib/deals';
 import { formatMoney, splitTitle } from '@/lib/format';
 
 import { CarPhoto } from './car-photo';
+import { ColorDot } from './color-dot';
+import { PlateBadge } from './plate-badge';
 import { ContactChips } from './contact-chips';
 import { ContractCard } from './contract-card';
 import { StatusBadge } from './status-badge';
@@ -36,6 +38,12 @@ export function ActiveDealCard({ deal }: { deal: DealView }) {
               <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
                 {[year, deal.counterpart.name].filter(Boolean).join(' · ')}
               </ThemedText>
+              {deal.car?.plate || deal.car?.color ? (
+                <View style={styles.facts}>
+                  {deal.car.plate ? <PlateBadge plate={deal.car.plate} small /> : null}
+                  <ColorDot color={deal.car.color} />
+                </View>
+              ) : null}
               <View style={styles.meta}>
                 <StatusBadge status={stage} />
                 <ThemedText type="smallBold" themeColor="positive" numberOfLines={1}>
@@ -63,5 +71,6 @@ const styles = StyleSheet.create({
   photo: { width: 72, height: 72, borderRadius: Radius.md },
   flex: { flex: 1, gap: 2 },
   name: { fontWeight: 700 },
+  facts: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, flexWrap: 'wrap', marginTop: 2 },
   meta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two, marginTop: 4 },
 });
