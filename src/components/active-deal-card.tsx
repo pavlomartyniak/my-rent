@@ -1,7 +1,7 @@
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing, Type } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { carFacts } from '@/lib/car-info';
 import { contactActions } from '@/lib/contact-actions';
@@ -9,21 +9,21 @@ import { daysUntil, formatDate, rentalProgress } from '@/lib/date';
 import { dealStage, type DealView } from '@/lib/deals';
 import { formatMoney, plural, splitTitle } from '@/lib/format';
 
-import { Avatar } from './avatar';
 import { CarPhoto } from './car-photo';
 import { ColorDot } from './color-dot';
 import { ContactChips } from './contact-chips';
 import { ContractCard } from './contract-card';
+import { PersonLink } from './person-link';
 import { PlateBadge } from './plate-badge';
+import { FactTiles } from './request-facts';
 import { StatusBadge } from './status-badge';
 import { ThemedText } from './themed-text';
 import { Card } from './ui/card';
-import { Icon } from './ui/icon';
 
 /**
- * Авто, яке я орендую, у списку: фото зі станом, назва з роком, власник з аватаром, державний номер, колір і паливо, а нижче
- * панель оренди: скільки лишилось діб з прогресом і датами та ціна за добу. Тап відкриває оренду з платежами, історією й записами.
- * Поки договір не підписано (чи не підтверджено умови), під карткою стоїть картка підписання й швидкий чат.
+ * Авто, яке я орендую, у списку. Зверху фото зі станом оренди, під ним назва, номер і колір; далі власник (натискається,
+ * відкриває профіль), ключові умови плитками (дати, ціна за добу, скільки лишилось) і смуга прогресу. Тап по фото й назві
+ * відкриває оренду з платежами й договором. Поки договір не підписано, внизу стоїть чек-лист кроків і швидкий чат.
  */
 export function ActiveDealCard({ deal }: { deal: DealView }) {
   const theme = useTheme();
@@ -34,102 +34,73 @@ export function ActiveDealCard({ deal }: { deal: DealView }) {
   const progress = running ? rentalProgress(deal.startDate, deal.endDate) : 0;
   const facts = deal.car ? carFacts({ fuel: deal.car.fuel, mileage: deal.car.mileage }) : '';
 
+  const tiles = [
+    { icon: 'calendar-outline' as const, label: 'Дати оренди', value: `${formatDate(deal.startDate)} – ${formatDate(deal.endDate)}`, wide: true },
+    { icon: 'cash-outline' as const, label: 'Ціна за добу', value: formatMoney(deal.pricePerDay) },
+    ...(left !== null ? [{ icon: 'time-outline' as const, label: running ? 'Залишилось' : 'Початок через', value: `${left} ${plural(left, 'доба', 'доби', 'діб')}` }] : []),
+  ];
+
   return (
     <Card style={styles.card}>
       <Link href={{ pathname: '/deals/[id]', params: { id: deal.id } }} asChild>
         <Pressable accessibilityRole="button" accessibilityLabel={`${deal.title}. Відкрити оренду`}>
           {/* Розкладка — на внутрішньому View: стиль-функція Pressable під Link asChild не застосовується */}
-          <View style={styles.content}>
-            <View style={styles.top}>
-              <View>
-                <CarPhoto uri={deal.photoUri} style={styles.photo} iconSize={34} />
-                {/* Стан оренди лежить на фото, щоб назва мала всю ширину */}
-                <View style={styles.badge}>
-                  <StatusBadge status={stage} />
-                </View>
-              </View>
-              <View style={styles.info}>
-                <ThemedText type="default" style={styles.name} numberOfLines={1}>
-                  {name}
-                </ThemedText>
-                <View style={styles.owner}>
-                  <Avatar uri={deal.counterpart.photoUri} name={deal.counterpart.name} size={20} />
-                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={1} style={styles.flex}>
-                    {[year, deal.counterpart.name].filter(Boolean).join(' · ')}
-                  </ThemedText>
-                </View>
-                {deal.car?.plate || deal.car?.color ? (
-                  <View style={styles.facts}>
-                    {deal.car?.plate ? <PlateBadge plate={deal.car.plate} small /> : null}
-                    <ColorDot color={deal.car?.color} />
-                  </View>
-                ) : null}
-                {facts ? (
-                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                    {facts}
-                  </ThemedText>
-                ) : null}
+          <View>
+            <View>
+              <CarPhoto uri={deal.photoUri} style={styles.photo} iconSize={40} />
+              <View style={styles.status}>
+                <StatusBadge status={stage} />
               </View>
             </View>
-
-            {/* Панель оренди: строк і прогрес ліворуч, ціна праворуч */}
-            <View style={[styles.panel, { backgroundColor: theme.backgroundSelected }]}>
-              <View style={styles.flex}>
-                <View style={styles.dates}>
-                  <Icon name="calendar-outline" size={14} color="textSecondary" />
-                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                    {formatDate(deal.startDate)} – {formatDate(deal.endDate)}
-                  </ThemedText>
+            <View style={styles.head}>
+              <ThemedText type="headline" numberOfLines={2}>
+                {[name, year].filter(Boolean).join(' · ')}
+              </ThemedText>
+              {deal.car?.plate || deal.car?.color ? (
+                <View style={styles.plate}>
+                  {deal.car?.plate ? <PlateBadge plate={deal.car.plate} small /> : null}
+                  <ColorDot color={deal.car?.color} />
                 </View>
-                {left !== null ? (
-                  <ThemedText type="smallBold" themeColor="accent">
-                    {running ? 'Ще' : 'Через'} {left} {plural(left, 'доба', 'доби', 'діб')}
-                  </ThemedText>
-                ) : null}
-                {running ? (
-                  <View style={[styles.track, { backgroundColor: theme.accentSoft }]}>
-                    <View style={[styles.fill, { backgroundColor: theme.accent, width: `${Math.max(3, Math.round(progress * 100))}%` }]} />
-                  </View>
-                ) : null}
-              </View>
-              <View style={[styles.price, { backgroundColor: theme.positiveSoft }]}>
-                <ThemedText style={styles.priceValue} themeColor="positive" numberOfLines={1}>
-                  {formatMoney(deal.pricePerDay)}
+              ) : null}
+              {facts ? (
+                <ThemedText type="callout" themeColor="textSecondary" numberOfLines={1}>
+                  {facts}
                 </ThemedText>
-                <ThemedText type="small" themeColor="positive">
-                  за добу
-                </ThemedText>
-              </View>
+              ) : null}
             </View>
           </View>
         </Pressable>
       </Link>
 
-      {stage === 'signing' ? (
-        <>
-          <ContractCard deal={deal} as="renter" />
-          <ContactChips actions={contactActions({ chat: { dealId: deal.id } })} />
-        </>
-      ) : null}
+      <View style={styles.body}>
+        <PersonLink id={deal.counterpart.id} name={deal.counterpart.name} photoUri={deal.counterpart.photoUri} role="Власник" />
+
+        <FactTiles items={tiles} />
+
+        {running ? (
+          <View style={[styles.track, { backgroundColor: theme.accentSoft }]} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(progress * 100) }}>
+            <View style={[styles.fill, { backgroundColor: theme.accent, width: `${Math.max(3, Math.round(progress * 100))}%` }]} />
+          </View>
+        ) : null}
+
+        {stage === 'signing' ? (
+          <>
+            <ContractCard deal={deal} as="renter" />
+            <ContactChips actions={contactActions({ chat: { dealId: deal.id } })} />
+          </>
+        ) : null}
+      </View>
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { padding: Spacing.three, gap: Spacing.three },
-  content: { gap: Spacing.three },
-  top: { flexDirection: 'row', gap: Spacing.three },
-  photo: { width: 104, height: 104, borderRadius: Radius.md },
-  badge: { position: 'absolute', left: 6, bottom: 6 },
-  info: { flex: 1, gap: 6, justifyContent: 'center' },
-  flex: { flex: 1 },
-  name: { ...Type.headline },
-  owner: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  facts: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, flexWrap: 'wrap' },
-  panel: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.md },
-  dates: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 },
-  track: { height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 4 },
-  fill: { height: 6, borderRadius: 3 },
-  price: { alignItems: 'center', paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, borderRadius: Radius.md },
-  priceValue: { ...Type.headline },
+  card: { padding: 0, gap: 0 },
+  photo: { width: '100%', height: 156, borderRadius: 0 },
+  status: { position: 'absolute', top: Spacing.three, left: Spacing.three },
+  head: { paddingHorizontal: Spacing.three, paddingTop: Spacing.three, gap: Spacing.two },
+  plate: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, flexWrap: 'wrap' },
+  body: { padding: Spacing.three, gap: Spacing.three },
+  track: { height: 8, borderRadius: 4, overflow: 'hidden' },
+  fill: { height: 8, borderRadius: 4 },
 });

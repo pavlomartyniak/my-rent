@@ -3,6 +3,7 @@ import { Alert, StyleSheet, View } from 'react-native';
 
 import { CarPhoto } from '@/components/car-photo';
 import { PaymentsCard } from '@/components/payments-card';
+import { HeroBar } from '@/components/hero-bar';
 import { HeroButton } from '@/components/hero-button';
 import { ConditionCard } from '@/components/condition-card';
 import { InsuranceCard } from '@/components/insurance-card';
@@ -72,8 +73,9 @@ export default function DealScreen() {
 
   return (
     // Фото йде під прозорий хедер на всю ширину, тож системні відступи й бічні поля Screen скасовуємо
+    <View style={styles.root}>
     <Screen contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingTop: 0 }}>
-      <Stack.Screen options={{ title: '', headerTransparent: true, headerBackVisible: false, headerLeft: () => <HeroButton icon="chevron-back" label="Назад" onPress={() => router.back()} /> }} />
+      <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.hero}>
         <CarPhoto uri={d.photoUri} style={styles.photo} iconSize={44} />
@@ -124,7 +126,7 @@ export default function DealScreen() {
 
       <PaymentsCard deal={d} as="renter" />
 
-      <ConditionCard deal={d} />
+      <ConditionCard deal={d} as="renter" />
 
       {stage === 'finished' || stage === 'terminated' ? <ReviewButton dealId={d.id} /> : null}
 
@@ -156,10 +158,13 @@ export default function DealScreen() {
 
       {stage === 'terminated' || stage === 'finished' ? <Button title="Видалити оренду" icon="trash-outline" variant="danger" onPress={confirmDelete} /> : null}
     </Screen>
+    <HeroBar left={<HeroButton icon="chevron-back" label="Назад" onPress={() => router.back()} />} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   // Фото на всю ширину екрана: скасовуємо бічні поля Screen
   hero: { marginHorizontal: -20 },
   photo: { width: '100%', aspectRatio: 1.2, borderRadius: 0 },

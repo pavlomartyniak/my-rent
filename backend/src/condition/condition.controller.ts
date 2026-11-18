@@ -27,6 +27,14 @@ export class ConditionController {
     return this.condition.signature(user, dealId, dto.count);
   }
 
+  /** Орендар погоджується зі станом авто при передачі: після цього відкривається підписання */
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post(':dealId/confirm')
+  confirm(@CurrentUser() user: AuthUser, @Param('dealId', ParseObjectIdPipe) dealId: string) {
+    return this.condition.confirm(user, dealId);
+  }
+
   @Throttle({ default: { limit: 40, ttl: 60_000 } })
   @Put(':dealId/:phase/photo')
   putPhoto(@CurrentUser() user: AuthUser, @Param('dealId', ParseObjectIdPipe) dealId: string, @Param('phase', phasePipe) phase: Phase, @Body() dto: PhotoDto) {

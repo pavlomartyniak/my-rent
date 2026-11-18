@@ -11,6 +11,8 @@ import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Segmented } from '@/components/ui/segmented';
 import { useAttention } from '@/hooks/use-attention';
+import { useReport } from '@/hooks/use-report';
+import type { DealView } from '@/lib/deals';
 
 const SECTIONS = ['Активні', 'Запити', 'Заявки орендарів', 'Архів'] as const;
 type Section = (typeof SECTIONS)[number];
@@ -23,6 +25,7 @@ const FROM_PARAM: Record<string, Section> = { requests: 'Запити', wanted: 
 export default function RentalsScreen() {
   const params = useLocalSearchParams<{ section?: string }>();
   const { requests } = useAttention('owner');
+  const { data: current } = useReport<DealView[]>('/deals/current', { refetchOnFocus: true });
   // `?section=` відкриває потрібний сегмент (з чату чи з блоку «Потрібна ваша увага»); власний вибір діє, доки параметр той самий
   const [pick, setPick] = useState<{ param?: string; section: Section }>();
   const section: Section = pick && pick.param === params.section ? pick.section : (FROM_PARAM[params.section ?? ''] ?? 'Активні');
@@ -30,7 +33,7 @@ export default function RentalsScreen() {
   return (
     <Screen tabs>
       <ScreenTitle>Оренди</ScreenTitle>
-      <Segmented scroll options={SECTIONS} value={section} onChange={(s) => setPick({ param: params.section, section: s })} badges={{ Запити: requests }} />
+      <Segmented scroll options={SECTIONS} value={section} onChange={(s) => setPick({ param: params.section, section: s })} badges={{ Активні: current?.length ?? 0, Запити: requests }} />
 
       {section === 'Активні' ? (
         <CurrentRentals />

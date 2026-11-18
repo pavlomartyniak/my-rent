@@ -66,7 +66,7 @@ export function OwnerRentalCard({ deal }: { deal: DealView }) {
       </View>
 
       <ContractCard deal={deal} as="owner" />
-      <ConditionCard deal={deal} />
+      <ConditionCard deal={deal} as="owner" />
       {awaiting ? null : <TerminateDeal deal={deal} as="owner" />}
     </Card>
   );

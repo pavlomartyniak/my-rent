@@ -14,9 +14,11 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { Spacing } from '@/constants/theme';
-import { usePendingOffers } from '@/hooks/use-pending-requests';
 import { useReport } from '@/hooks/use-report';
+import { rentalArchived, wantedArchived } from '@/lib/archive';
 import { dealStage, type DealView } from '@/lib/deals';
+import type { RentalView } from '@/lib/rentals';
+import type { WantedView } from '@/lib/wanted';
 import { useFleet } from '@/store/fleet';
 
 const SECTIONS = ['Активні', 'Запити', 'Шукаю авто', 'Архів'] as const;
@@ -30,12 +32,17 @@ const FROM_PARAM: Record<string, Section> = { requests: 'Запити', wanted: 
 export default function RenterRentalsScreen() {
   const router = useRouter();
   const { invalidate } = useFleet();
-  const offers = usePendingOffers();
   const params = useLocalSearchParams<{ section?: string }>();
   // `?section=` відкриває потрібний сегмент (після створення запиту, з чату); власний вибір діє, доки параметр той самий
   const [pick, setPick] = useState<{ param?: string; section: Section }>();
   const section: Section = pick && pick.param === params.section ? pick.section : (FROM_PARAM[params.section ?? ''] ?? 'Активні');
   const deals = useReport<DealView[]>('/deals', { refetchOnFocus: true });
+
+  // Лічильники на кнопках розділів: скільки елементів у кожному (архів не лічимо)
+  const rentals = useReport<RentalView[]>('/rentals/mine', { refetchOnFocus: true });
+  const wanted = useReport<WantedView[]>('/wanted/mine', { refetchOnFocus: true });
+  const requestsCount = (rentals.data ?? []).filter((r) => !(r.dealId && r.status === 'accepted') && !rentalArchived(r)).length;
+  const wantedCount = (wanted.data ?? []).filter((w) => w.status === 'open' && !wantedArchived(w)).length;
 
   const current = (deals.data ?? []).filter((d) => dealStage(d) !== 'finished' && dealStage(d) !== 'terminated');
   const hasPast = (deals.data?.length ?? 0) > current.length;
@@ -46,7 +53,7 @@ export default function RenterRentalsScreen() {
 
       <AttentionList role="renter" />
 
-      <Segmented scroll options={SECTIONS} value={section} onChange={(s) => setPick({ param: params.section, section: s })} badges={{ 'Шукаю авто': offers }} />
+      <Segmented scroll options={SECTIONS} value={section} onChange={(s) => setPick({ param: params.section, section: s })} badges={{ Активні: current.length, Запити: requestsCount, 'Шукаю авто': wantedCount }} />
 
       {section === 'Активні' ? (
         !deals.data ? (

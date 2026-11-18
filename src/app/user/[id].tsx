@@ -4,6 +4,8 @@ import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-n
 
 import { Avatar } from '@/components/avatar';
 import { CarPhoto } from '@/components/car-photo';
+import { HeroBar } from '@/components/hero-bar';
+import { HeroButton } from '@/components/hero-button';
 import { ReportSheet } from '@/components/report-sheet';
 import { ReportStatus } from '@/components/report-status';
 import { ThemedText } from '@/components/themed-text';
@@ -108,8 +110,9 @@ export default function UserProfileScreen() {
   const hasDetails = !!data.city || years !== null || hasAnswers(data as never, data.role);
 
   return (
+    <View style={styles.root}>
     <Screen contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingTop: 0 }}>
-      <Stack.Screen options={{ title: '', headerTransparent: true, headerBackTitle: 'Назад' }} />
+      <Stack.Screen options={{ headerShown: false }} />
 
       {/* Шапка на всю ширину: м'який фон, фото, ім'я, позначки й рейтинг */}
       <View style={[styles.hero, { backgroundColor: theme.accentSoft }]}>
@@ -330,10 +333,13 @@ export default function UserProfileScreen() {
       )}
       <ReportSheet target={reporting} onClose={() => setReporting(null)} />
     </Screen>
+    <HeroBar left={<HeroButton icon="chevron-back" label="Назад" onPress={() => router.back()} />} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   // Шапка на всю ширину екрана: скасовуємо бічні поля Screen і заходимо під прозорий хедер
   hero: { marginHorizontal: -20, alignItems: 'center', gap: Spacing.two, paddingTop: 110, paddingBottom: Spacing.four, paddingHorizontal: Spacing.four, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
   center: { textAlign: 'center' },

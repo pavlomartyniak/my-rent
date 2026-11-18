@@ -47,9 +47,10 @@ export function Segmented<T extends string>({ options, value, onChange, badges, 
               {option}
             </ThemedText>
             {badges?.[option] ? (
-              <View style={[styles.badge, { backgroundColor: selected ? theme.onInk : theme.accent }]}>
-                <ThemedText type="smallBold" style={[styles.badgeText, { color: selected ? theme.ink : theme.onAccent }]}>
-                  {badges[option]}
+              // Лічильник сидить на верхньому куті кнопки, а не в рядку з назвою: так видно число, і кнопка не розтягується
+              <View style={[styles.badge, { backgroundColor: theme.negative, borderColor: theme.background }]} accessibilityLabel={`${badges[option]}`}>
+                <ThemedText type="smallBold" style={[styles.badgeText, { color: theme.onInk }]}>
+                  {badges[option]! > 99 ? '99+' : badges[option]}
                 </ThemedText>
               </View>
             ) : null}
@@ -61,9 +62,10 @@ export function Segmented<T extends string>({ options, value, onChange, badges, 
 }
 
 const styles = StyleSheet.create({
-  scroll: { flexGrow: 0, marginHorizontal: -20 },
-  scrollRow: { gap: Spacing.two, paddingHorizontal: 20 },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  // Верхній відступ лишає місце лічильнику над кнопкою, інакше горизонтальна прокрутка його обрізала б
+  scroll: { flexGrow: 0, marginHorizontal: -20, marginTop: -Spacing.one },
+  scrollRow: { gap: Spacing.two, paddingHorizontal: 20, paddingTop: Spacing.two, paddingRight: 28 },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, paddingTop: Spacing.one },
   chip: {
     minHeight: 38,
     paddingHorizontal: Spacing.three,
@@ -74,6 +76,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.two,
   },
-  badge: { minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
+  badge: { position: 'absolute', top: -8, right: -6, minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: Radius.pill, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   badgeText: { ...Type.caption },
 });

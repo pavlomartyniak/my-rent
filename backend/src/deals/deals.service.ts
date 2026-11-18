@@ -14,7 +14,7 @@ import { RealtimeService } from '../realtime/realtime.service';
 import { settledAmount } from './deal-payments';
 import { SIGN_DAYS_AFTER, signingState, signingWindow } from '../contract/contract.window';
 import { ConditionService } from '../condition/condition.service';
-import { handoverReady, missingSlots, REQUIRED_SLOTS } from '../condition/condition.rules';
+import { handoverAgreed, handoverReady, missingSlots, REQUIRED_SLOTS } from '../condition/condition.rules';
 import { MediaService } from '../media/media.service';
 import { fullName, todayUtc } from '../rentals/rentals.math';
 import { Car } from '../schemas/car.schema';
@@ -388,8 +388,18 @@ export class DealsService {
     }
     if (state === 'late') throw new ConflictException('Час на підписання минув. Домовтесь про нову оренду');
     if (c.signatures?.[user.role]) throw new ConflictException(mode === 'none' ? 'Ви вже підтвердили умови' : 'Ви вже підписали цей договір');
-    // Без зафіксованого стану авто (фото кузова й салону, одометр) оренду не починають: це захист обох сторін від суперечок
-    if (!handoverReady(deal.condition?.handover as never)) throw new ConflictException('Спершу зафіксуйте стан авто: додайте всі обов’язкові фото кузова й салону та показник одометра (розділ «Стан авто» на екрані оренди)');
+    // Без узгодженого стану авто оренду не починають: власник фіксує фото кузова й салону та одометр, орендар переглядає й
+    // підтверджує. Це захист обох сторін від суперечок.
+    if (!handoverReady(deal.condition?.handover as never)) {
+      throw new ConflictException(
+        user.role === 'owner'
+          ? 'Спершу зафіксуйте стан авто: додайте всі обов’язкові фото кузова й салону та показник одометра (розділ «Стан авто» на екрані оренди)'
+          : 'Власник ще не зафіксував стан авто. Підписання відкриється, коли він додасть усі обов’язкові фото й одометр',
+      );
+    }
+    if (!handoverAgreed(deal.condition as never)) {
+      throw new ConflictException(user.role === 'owner' ? 'Чекаємо, поки орендар перегляне фото й підтвердить стан авто' : 'Перегляньте фото стану авто й підтвердьте, що погоджуєтесь з ним (розділ «Стан авто» на екрані оренди)');
+    }
     return { deal, contract: c };
   }
 
@@ -838,7 +848,7 @@ export class DealsService {
       paymentPlan: d.contract?.terms.paymentPlan ?? null,
       payments: d.contract ? this.paymentsView(d, as) : [],
       // Скільки обов'язкових фото стану авто вже є (до активації оренди їх треба додати всі)
-      condition: { ready: handoverReady(d.condition?.handover as never), have: REQUIRED_SLOTS.length - missingSlots(d.condition?.handover as never).length, need: REQUIRED_SLOTS.length },
+      condition: { ready: handoverReady(d.condition?.handover as never), confirmed: !!d.condition?.renterAck, have: REQUIRED_SLOTS.length - missingSlots(d.condition?.handover as never).length, need: REQUIRED_SLOTS.length },
       deposit: this.depositView(d, as),
       settlement: this.settlementView(d),
       // Пропозиція про розірвання, що чекає відповіді; `mine` — чи її подав автор запиту

@@ -72,9 +72,25 @@ export function permissions(deal: DealLike, today: string, now: Date) {
   };
 }
 
-/** Чи можна цією ж дією (слот, фаза) змінити фото при поточних правах */
-export function canChange(phase: Phase, slot: string, perms: ReturnType<typeof permissions>) {
+/** Підтвердження орендарем стану авто при передачі: після нього відкривається підписання */
+export type ConditionState = { handover?: ConditionReport; return?: ConditionReport; renterAck?: { at: Date } };
+
+/**
+ * Стан авто при передачі узгоджено: власник зафіксував усі фото й одометр, а орендар переглянув їх і погодився. Лише тоді
+ * відкривається підписання договору. Якщо власник змінить фото чи одометр після підтвердження, підтвердження скидається.
+ */
+export function handoverAgreed(condition: ConditionState | undefined) {
+  return handoverReady(condition?.handover) && !!condition?.renterAck;
+}
+
+/**
+ * Чи може ця сторона зробити дію (слот, фаза) при поточних правах.
+ * — Передачу (обов'язкові фото й одометр) фіксує власник: він знає авто й відповідає за нього, а орендар лише перевіряє.
+ *   Орендар у цей час може додавати лише пошкодження, яких власник не показав, і підтверджувати стан.
+ * — Повернення необов'язкове й відкрите для обох сторін.
+ */
+export function canChange(phase: Phase, slot: string, perms: ReturnType<typeof permissions>, role: 'owner' | 'renter') {
   if (phase === 'return') return perms.returnEdit;
-  if (perms.handoverEdit) return true;
+  if (perms.handoverEdit) return role === 'owner' || slot === 'damage';
   return perms.handoverLateDamage && slot === 'damage';
 }

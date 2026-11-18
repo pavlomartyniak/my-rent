@@ -9,15 +9,15 @@ import { formatKm, formatMoney, plural } from '@/lib/format';
 import { wantedTitle, type OfferView } from '@/lib/wanted';
 
 import { CarPhoto } from './car-photo';
+import { PersonLink } from './person-link';
+import { FactTiles, TotalBar } from './request-facts';
 import { PhotoGallery } from './photo-gallery';
 import { ContactChips } from './contact-chips';
 import { StatusBadge } from './status-badge';
 import { planLabel } from '@/lib/payment-plan';
-import { openProfile } from '@/lib/profiles';
 import { ThemedText } from './themed-text';
 
 import { Card } from './ui/card';
-import { InfoRow, InfoRows } from './ui/info-rows';
 
 type Props = {
   offer: OfferView;
@@ -51,14 +51,18 @@ export function OfferCard({ offer: o, viewer, children }: Props) {
         <StatusBadge status={o.dealStage ?? o.status} />
       </View>
 
-      <InfoRows>
-        {viewer === 'owner' ? <InfoRow label="Заявка" value={`${wantedTitle(o.wanted)} · ${o.wanted.city}`} /> : null}
-        <InfoRow label="Дати" value={`${formatDate(o.wanted.startDate)} – ${formatDate(o.wanted.endDate)}`} />
-        {o.car.deposit ? <InfoRow label="Застава" value={formatMoney(o.car.deposit)} /> : null}
-        {o.paymentPlan !== 'lump' ? <InfoRow label="Оплата" value={planLabel(o.paymentPlan)} /> : null}
-        <InfoRow label={who} value={o.counterpart.name} onPress={() => openProfile(o.counterpart.id)} />
-        <InfoRow label={`${o.days} ${plural(o.days, 'доба', 'доби', 'діб')} × ${formatMoney(o.pricePerDay)}`} value={formatMoney(o.totalPrice)} strong />
-      </InfoRows>
+      <PersonLink id={o.counterpart.id} name={o.counterpart.name} photoUri={o.counterpart.photoUri} role={who} />
+
+      <FactTiles
+        items={[
+          ...(viewer === 'owner' ? [{ icon: 'document-text-outline' as const, label: 'Заявка', value: `${wantedTitle(o.wanted)} · ${o.wanted.city}`, wide: true }] : []),
+          { icon: 'calendar-outline' as const, label: 'Дати оренди', value: `${formatDate(o.wanted.startDate)} – ${formatDate(o.wanted.endDate)}`, wide: true },
+          ...(o.car.deposit ? [{ icon: 'shield-checkmark-outline' as const, label: 'Застава', value: formatMoney(o.car.deposit) }] : []),
+          ...(o.paymentPlan !== 'lump' ? [{ icon: 'card-outline' as const, label: 'Оплата', value: planLabel(o.paymentPlan) }] : []),
+        ]}
+      />
+
+      <TotalBar calc={`${o.days} ${plural(o.days, 'доба', 'доби', 'діб')} × ${formatMoney(o.pricePerDay)}`} total={formatMoney(o.totalPrice)} note="Орієнтовна сума" />
 
       {o.message ? (
         <ThemedText type="small" themeColor="textSecondary" style={styles.message}>

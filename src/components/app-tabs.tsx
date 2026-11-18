@@ -8,8 +8,8 @@ import { useChat } from '@/store/chat';
 export default function AppTabs() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
-  // Число на «Головній» збігається з числом у блоці «Потрібна ваша увага», на «Запитах» — нові запити чи пропозиції
-  const { urgent: home, requests } = useAttention('owner');
+  // «Авто» рахує лише те, що чекає саме там; запити на оренду — на «Орендах», щоб один запит не давав два бейджі
+  const { home, requests } = useAttention('owner');
   const { unread } = useChat();
 
   return (

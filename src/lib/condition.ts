@@ -13,7 +13,9 @@ export type ConditionReportView = { photos: ConditionPhoto[]; odometer: { km: nu
 export type ConditionView = {
   dealStatus: 'awaiting' | 'active' | 'terminated';
   slots: { id: string; label: string; required: boolean }[];
-  handover: ConditionReportView & { ready: boolean; canEdit: boolean; canAddDamage: boolean };
+  /** Хто дивиться: власник фіксує передачу, орендар перевіряє й підтверджує */
+  role: 'owner' | 'renter';
+  handover: ConditionReportView & { ready: boolean; confirmed: boolean; confirmedAt: string | null; canEdit: boolean; canAddDamage: boolean; canConfirm: boolean };
   return: ConditionReportView & { canEdit: boolean };
 };
 
@@ -48,4 +50,6 @@ export async function uploadConditionPhoto(dealId: string, uri: string): Promise
 
 export const savePhoto = (dealId: string, phase: Phase, body: { slot: string; url: string; note?: string }) => api<ConditionView>('PUT', `/condition/${dealId}/${phase}/photo`, body);
 export const removePhoto = (dealId: string, phase: Phase, photoId: string) => api<ConditionView>('DELETE', `/condition/${dealId}/${phase}/photo/${photoId}`);
+/** Орендар погоджується зі станом авто при передачі: після цього відкривається підписання */
+export const confirmCondition = (dealId: string) => api<ConditionView>('POST', `/condition/${dealId}/confirm`, {});
 export const saveOdometer = (dealId: string, phase: Phase, km: number) => api<ConditionView>('PUT', `/condition/${dealId}/${phase}/odometer`, { km });

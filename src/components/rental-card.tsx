@@ -2,20 +2,21 @@ import { useRouter } from 'expo-router';
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { formatDate } from '@/lib/date';
 import { formatMoney, plural } from '@/lib/format';
 import { contactActions } from '@/lib/contact-actions';
 import type { RentalView } from '@/lib/rentals';
 
 import { CarPhoto } from './car-photo';
+import { FactTiles, TotalBar } from './request-facts';
+import { PersonLink } from './person-link';
 import { ContactChips } from './contact-chips';
 import { StatusBadge } from './status-badge';
 import { planLabel } from '@/lib/payment-plan';
-import { openProfile } from '@/lib/profiles';
 import { ThemedText } from './themed-text';
 import { Card } from './ui/card';
-import { InfoRow, InfoRows } from './ui/info-rows';
+import { Icon } from './ui/icon';
 
 type Props = {
   rental: RentalView;
@@ -30,28 +31,41 @@ export function RentalCard({ rental: r, viewer, children }: Props) {
   const router = useRouter();
   const who = viewer === 'owner' ? 'Орендар' : 'Власник';
 
+  const facts = [
+    { icon: 'calendar-outline' as const, label: 'Дати оренди', value: `${formatDate(r.startDate)} – ${formatDate(r.endDate)}`, wide: true },
+    ...(r.car.deposit ? [{ icon: 'shield-checkmark-outline' as const, label: 'Застава', value: formatMoney(r.car.deposit) }] : []),
+    ...(r.paymentPlan !== 'lump' ? [{ icon: 'card-outline' as const, label: 'Оплата', value: planLabel(r.paymentPlan) }] : []),
+  ];
+
   return (
-    <Card>
-      <View style={styles.head}>
-        <CarPhoto uri={r.car.photoUri} style={styles.thumb} iconSize={22} />
-        <View style={styles.flex}>
-          <ThemedText type="default" style={styles.bold} numberOfLines={1}>
-            {r.car.title}
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {r.car.city}
-          </ThemedText>
+    <Card style={styles.card}>
+      <View>
+        <CarPhoto uri={r.car.photoUri} style={styles.photo} iconSize={40} />
+        <View style={styles.status}>
+          <StatusBadge status={r.dealStage ?? r.status} />
         </View>
-        <StatusBadge status={r.dealStage ?? r.status} />
       </View>
 
-      <InfoRows>
-        <InfoRow label="Дати" value={`${formatDate(r.startDate)} – ${formatDate(r.endDate)}`} />
-        {r.car.deposit ? <InfoRow label="Застава" value={formatMoney(r.car.deposit)} /> : null}
-        {r.paymentPlan !== 'lump' ? <InfoRow label="Оплата" value={planLabel(r.paymentPlan)} /> : null}
-        <InfoRow label={who} value={r.counterpart.name} onPress={() => openProfile(r.counterpart.id)} />
-        <InfoRow label={`${r.days} ${plural(r.days, 'доба', 'доби', 'діб')} × ${formatMoney(r.car.pricePerDay)}`} value={formatMoney(r.totalPrice)} strong />
-      </InfoRows>
+      <View style={styles.body}>
+        <View>
+          <ThemedText type="headline" numberOfLines={2}>
+            {r.car.title}
+          </ThemedText>
+          {r.car.city ? (
+            <View style={styles.city}>
+              <Icon name="location-outline" size={14} color="textSecondary" />
+              <ThemedText type="callout" themeColor="textSecondary">
+                {r.car.city}
+              </ThemedText>
+            </View>
+          ) : null}
+        </View>
+
+        <PersonLink id={r.counterpart.id} name={r.counterpart.name} photoUri={r.counterpart.photoUri} role={who} />
+
+        <FactTiles items={facts} />
+
+        <TotalBar calc={`${r.days} ${plural(r.days, 'доба', 'доби', 'діб')} × ${formatMoney(r.car.pricePerDay)}`} total={formatMoney(r.totalPrice)} note="Орієнтовна сума" />
 
       {r.message ? (
         <ThemedText type="small" themeColor="textSecondary" style={styles.message}>
@@ -73,17 +87,16 @@ export function RentalCard({ rental: r, viewer, children }: Props) {
             contract: r.hasContract && r.dealId && (r.status === 'accepted' || r.status === 'ended') ? () => router.push({ pathname: '/contracts/[id]', params: { id: r.dealId! } }) : undefined,
           })}
       />
+      </View>
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  thumb: { width: 64, height: 64, borderRadius: Radius.md },
-  flex: { flex: 1 },
-  bold: { fontWeight: 600 },
-  rows: { gap: Spacing.one, marginTop: Spacing.one },
-  row: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.three },
-  value: { flexShrink: 1, fontWeight: 600, textAlign: 'right' },
+  card: { padding: 0, gap: 0 },
+  photo: { width: '100%', height: 148, borderRadius: 0 },
+  status: { position: 'absolute', top: Spacing.three, left: Spacing.three },
+  body: { padding: Spacing.three, gap: Spacing.three },
+  city: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   message: { fontStyle: 'italic' },
 });

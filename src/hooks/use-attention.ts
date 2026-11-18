@@ -55,10 +55,14 @@ export function useAttention(role: 'owner' | 'renter' | null) {
 
   const items: AttentionItem[] = [];
 
-  for (const d of signing.filter((x) => x.contract?.signing.state === 'open' && x.condition && !x.condition.ready)) {
+  // Стан авто при передачі фіксує власник; орендар переглядає фото й підтверджує. Лише після цього відкривається підписання.
+  for (const d of signing.filter((x) => owner && x.contract?.signing.state === 'open' && x.condition && !x.condition.ready)) {
     items.push({ key: `cond-${d.id}`, tone: 'urgent', icon: 'camera', title: 'Зафіксуйте стан авто', action: 'Зробити фото', text: `${d.title}. Фото кузова й салону (${d.condition.have} з ${d.condition.need}) потрібні, щоб почати оренду`, count: 1, tab: 'home', target: { kind: 'condition', dealId: d.id } });
   }
-  for (const d of signing.filter((x) => x.contract?.signing.state === 'open' && (!x.condition || x.condition.ready))) {
+  for (const d of signing.filter((x) => renter && x.contract?.signing.state === 'open' && x.condition?.ready && !x.condition.confirmed)) {
+    items.push({ key: `confirm-${d.id}`, tone: 'urgent', icon: 'checkmark-circle', title: 'Підтвердьте стан авто', action: 'Переглянути', text: `${d.title}. Власник зафіксував фото й одометр: перегляньте й погодьтесь, щоб відкрилось підписання`, count: 1, tab: 'home', target: { kind: 'condition', dealId: d.id } });
+  }
+  for (const d of signing.filter((x) => x.contract?.signing.state === 'open' && (!x.condition || (x.condition.ready && x.condition.confirmed)))) {
     const none = d.contract?.mode === 'none';
     items.push({ key: `sign-${d.id}`, tone: 'success', icon: 'create', title: none ? 'Підтвердіть оренду без договору' : 'Час підписати договір', action: none ? 'Підтвердити' : 'Підписати', text: `${d.title}. ${none ? 'Підтверджуйте' : 'Підписуйте'} під час зустрічі, коли передаєте авто, ключі й гроші`, count: 1, tab: 'home', target: { kind: none ? 'deal' : 'contract', dealId: d.id } });
   }

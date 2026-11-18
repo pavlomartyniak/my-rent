@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import type { ConditionReport } from '../condition/condition.rules';
+import type { ConditionState } from '../condition/condition.rules';
 import type { PendingCode } from '../contract/contract.otp';
 import type { Signature } from '../contract/contract.signing';
 import type { ContractTerms } from '../contract/contract.terms';
@@ -124,7 +124,7 @@ export class Deal {
    * Фото лежать у хмарі, час додавання ставить сервер.
    */
   @Prop({ type: MongooseSchema.Types.Mixed })
-  condition?: { handover?: ConditionReport; return?: ConditionReport };
+  condition?: ConditionState;
 
   /** Власник відповів «оренда триває» на підказку звільнити авто після закінчення оренди */
   @Prop({ default: false })

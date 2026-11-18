@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { HeroBar } from '@/components/hero-bar';
 import { HeroButton } from '@/components/hero-button';
 import { Avatar } from '@/components/avatar';
 import { RatingLine } from '@/components/rating-stars';
@@ -56,15 +57,7 @@ export default function MarketCarScreen() {
     <View style={styles.root}>
       {/* Фото йде під прозорий хедер на всю ширину, тож системні відступи й бічні поля Screen скасовуємо; знизу місце під закріплену кнопку */}
       <Screen contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingTop: 0, paddingBottom: 200 + insets.bottom }}>
-        <Stack.Screen
-          options={{
-            title: '',
-            headerTransparent: true,
-            headerBackVisible: false,
-            headerLeft: () => <HeroButton icon="chevron-back" label="Назад" onPress={() => router.back()} />,
-            headerRight: () => (photos.length > 0 ? <HeroButton icon="expand-outline" label="Фото на весь екран" onPress={() => setViewer(true)} /> : null),
-          }}
-        />
+        <Stack.Screen options={{ headerShown: false }} />
 
         <View style={styles.hero}>
           <PhotoGallery photos={photos} bleed />
@@ -168,6 +161,11 @@ export default function MarketCarScreen() {
           </Card>
         ) : null}
       </Screen>
+
+      <HeroBar
+        left={<HeroButton icon="chevron-back" label="Назад" onPress={() => router.back()} />}
+        right={photos.length > 0 ? <HeroButton icon="expand-outline" label="Фото на весь екран" onPress={() => setViewer(true)} /> : undefined}
+      />
 
       <View style={[styles.footer, { backgroundColor: theme.backgroundElement, borderTopColor: theme.border, paddingBottom: Math.max(insets.bottom, Spacing.three) }]}>
         {car.myRequest ? (

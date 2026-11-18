@@ -64,7 +64,18 @@ export class ConditionService {
     return {
       dealStatus: deal.status,
       slots: [...REQUIRED_SLOTS.map((id) => ({ id, label: SLOT_LABELS[id], required: true })), ...SINGLE_SLOTS.filter((s) => !(REQUIRED_SLOTS as readonly string[]).includes(s)).map((id) => ({ id, label: SLOT_LABELS[id], required: false }))],
-      handover: { ...this.view(handover, role), ready: handoverReady(handover), canEdit: p.handoverEdit, canAddDamage: p.handoverEdit || p.handoverLateDamage },
+      role,
+      handover: {
+        ...this.view(handover, role),
+        ready: handoverReady(handover),
+        // Підтвердив орендар: без цього договір не підписати
+        confirmed: !!deal.condition?.renterAck,
+        confirmedAt: deal.condition?.renterAck?.at ?? null,
+        // Обов'язкові фото й одометр передачі фіксує лише власник
+        canEdit: p.handoverEdit && role === 'owner',
+        canAddDamage: p.handoverEdit || p.handoverLateDamage,
+        canConfirm: role === 'renter' && p.handoverEdit && handoverReady(handover) && !deal.condition?.renterAck,
+      },
       return: { ...this.view(this.reportOf(deal, 'return'), role), canEdit: p.returnEdit },
     };
   }
@@ -89,7 +100,8 @@ export class ConditionService {
   async putPhoto(user: AuthUser, dealId: string, phase: Phase, dto: { slot: string; url: string; note?: string }) {
     const { deal, role } = await this.partyDeal(user, dealId);
     if (!PHASES.includes(phase)) throw new BadRequestException('Невідомий етап');
-    if (!canChange(phase, dto.slot, this.perms(deal))) throw new ConflictException(phase === 'handover' ? 'Фото при передачі вже зафіксовані: тепер можна лише додати пошкодження протягом двох діб після початку оренди' : 'Фіксація при поверненні зараз закрита: вона відкривається за добу до кінця оренди');
+    if (phase === 'handover' && role === 'renter' && dto.slot !== 'damage' && this.perms(deal).handoverEdit) throw new ConflictException('Фото стану авто при передачі робить власник. Якщо щось не збігається, додайте пошкодження з описом');
+    if (!canChange(phase, dto.slot, this.perms(deal), role)) throw new ConflictException(phase === 'handover' ? 'Фото при передачі вже зафіксовані: тепер можна лише додати пошкодження протягом двох діб після початку оренди' : 'Фіксація при поверненні зараз закрита: вона відкривається за добу до кінця оренди');
     const ref = cloudRefFromUrl(dto.url, this.config.get<string>('CLOUDINARY_CLOUD_NAME'));
     if (!ref || ref.type !== 'image' || !ref.publicId.startsWith(`${MEDIA_PREFIX}${user.id}/cond/${dealId}/`)) throw new BadRequestException('Невірне фото');
     const damage = dto.slot === 'damage';
@@ -110,7 +122,7 @@ export class ConditionService {
       const photo: ConditionPhoto = { id: dto.slot, slot: dto.slot, url: dto.url, by: role, at: new Date(), ...(dto.note?.trim() ? { note: dto.note.trim() } : {}) };
       report.photos.push(photo);
     }
-    await this.save(deal, phase, report);
+    await this.save(deal, phase, report, role);
     if (replaced) void this.media.release([replaced]);
     return this.get(user, dealId);
   }
@@ -121,25 +133,45 @@ export class ConditionService {
     const photo = report.photos.find((p) => p.id === photoId);
     if (!photo) throw new NotFoundException('Фото не знайдено');
     if (photo.by !== role) throw new ConflictException('Видалити можна лише своє фото');
-    if (!canChange(phase, photo.slot, this.perms(deal))) throw new ConflictException('Зараз фото змінювати не можна');
+    if (!canChange(phase, photo.slot, this.perms(deal), role)) throw new ConflictException('Зараз фото змінювати не можна');
     report.photos = report.photos.filter((p) => p.id !== photoId);
-    await this.save(deal, phase, report);
+    await this.save(deal, phase, report, role);
     void this.media.release([photo.url]);
     return this.get(user, dealId);
   }
 
   async setOdometer(user: AuthUser, dealId: string, phase: Phase, km: number) {
     const { deal, role } = await this.partyDeal(user, dealId);
-    if (!canChange(phase, 'dashboard', this.perms(deal))) throw new ConflictException('Зараз показник одометра змінювати не можна');
+    if (phase === 'handover' && role === 'renter' && this.perms(deal).handoverEdit) throw new ConflictException('Показник одометра при передачі вказує власник');
+    if (!canChange(phase, 'dashboard', this.perms(deal), role)) throw new ConflictException('Зараз показник одометра змінювати не можна');
     const report = this.reportOf(deal, phase);
     if (report.odometer && report.odometer.by !== role) throw new ConflictException('Показник одометра вже вказала друга сторона');
     report.odometer = { km, by: role, at: new Date() };
-    await this.save(deal, phase, report);
+    await this.save(deal, phase, report, role);
     return this.get(user, dealId);
   }
 
-  private async save(deal: DealDocument, phase: Phase, report: ConditionReport) {
-    deal.condition = { ...(deal.condition ?? {}), [phase]: report };
+  /**
+   * Орендар підтверджує, що переглянув фото власника й погоджується зі станом авто при передачі. Лише для орендаря, поки
+   * угоду не активовано й коли власник уже зафіксував усе обов'язкове.
+   */
+  async confirm(user: AuthUser, dealId: string) {
+    const { deal, role } = await this.partyDeal(user, dealId);
+    if (role !== 'renter') throw new ConflictException('Стан авто підтверджує орендар');
+    if (!this.perms(deal).handoverEdit) throw new ConflictException('Стан авто вже не підтвердити: угоду активовано або скасовано');
+    if (!handoverReady(this.reportOf(deal, 'handover'))) throw new ConflictException('Власник ще не зафіксував усі обов’язкові фото й одометр');
+    if (deal.condition?.renterAck) return this.get(user, dealId);
+    deal.condition = { ...(deal.condition ?? {}), renterAck: { at: new Date() } };
+    deal.markModified('condition');
+    await deal.save();
+    return this.get(user, dealId);
+  }
+
+  /** Зберігає звіт. Зміна власником фото чи одометра при передачі скидає підтвердження орендаря: він погоджувався з іншим станом */
+  private async save(deal: DealDocument, phase: Phase, report: ConditionReport, role?: 'owner' | 'renter') {
+    const keep = { ...(deal.condition ?? {}) };
+    if (phase === 'handover' && role === 'owner') delete keep.renterAck;
+    deal.condition = { ...keep, [phase]: report };
     deal.markModified('condition');
     await deal.save();
   }

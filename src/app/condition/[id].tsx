@@ -19,7 +19,7 @@ import { Radius, Spacing, Type } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError } from '@/lib/api';
-import { type ConditionPhoto, type ConditionView, type Phase, removePhoto, saveOdometer, savePhoto, takePhoto, uploadConditionPhoto } from '@/lib/condition';
+import { confirmCondition, type ConditionPhoto, type ConditionView, type Phase, removePhoto, saveOdometer, savePhoto, takePhoto, uploadConditionPhoto } from '@/lib/condition';
 import { formatDate } from '@/lib/date';
 import { thumbnailUrl } from '@/lib/media';
 import { useFleet } from '@/store/fleet';
@@ -63,6 +63,31 @@ export default function ConditionScreen() {
   const bySlot = new Map(report.photos.filter((p) => p.slot !== 'damage').map((p) => [p.slot, p]));
   const damages = report.photos.filter((p) => p.slot === 'damage');
   const slotsToShow = phase === 'handover' ? data.slots : data.slots.map((s) => ({ ...s, required: false }));
+  const renter = data.role === 'renter';
+  const h = data.handover;
+  // Передачу фіксує власник, орендар переглядає й підтверджує: текст картки залежить від ролі й етапу
+  const handoverTitle = renter
+    ? h.confirmed
+      ? 'Ви погодились зі станом авто'
+      : h.ready
+        ? 'Перегляньте фото й підтвердьте стан авто'
+        : `Власник фіксує стан авто: ${have} з ${required.length}`
+    : h.confirmed
+      ? 'Орендар підтвердив стан авто'
+      : h.ready
+        ? 'Чекаємо підтвердження орендаря'
+        : `Обов’язково: ${have} з ${required.length} фото й показник одометра`;
+  const handoverText = renter
+    ? h.confirmed
+      ? 'Підписання договору відкрите. Якщо власник змінить фото чи одометр, підтвердження доведеться дати знову.'
+      : h.ready
+        ? 'Подивіться всі фото. Якщо авто виглядає інакше, додайте пошкодження з описом, а тоді погодьтесь.'
+        : 'Фото кузова й салону та одометр при передачі робить власник. Коли він закінчить, ви побачите їх тут і зможете підтвердити.'
+    : h.confirmed
+      ? 'Підписання відкрите. Якщо ви змінете фото чи одометр, орендар має підтвердити стан знову.'
+      : h.ready
+        ? 'Орендар має переглянути фото й підтвердити, що погоджується зі станом. Лише тоді відкриється підписання.'
+        : 'Сфотографуйте кузов з чотирьох боків і салон, коли авто передається, та вкажіть пробіг. Фото лише з камери, час ставить сервер.';
 
   async function run(key: string, fn: () => Promise<unknown>) {
     setBusy(key);
@@ -119,9 +144,9 @@ export default function ConditionScreen() {
         <View style={styles.flex}>
           {phase === 'handover' ? (
             <>
-              <ThemedText type="smallBold">{data.handover.ready ? 'Стан авто зафіксовано' : `Обов’язково: ${have} з ${required.length} фото й показник одометра`}</ThemedText>
+              <ThemedText type="smallBold">{handoverTitle}</ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                Сфотографуйте кузов з чотирьох боків і салон, коли авто передається. Фото лише з камери, час ставить сервер, обидві сторони бачать їх. Без цього оренду не почати.
+                {handoverText}
               </ThemedText>
             </>
           ) : (
@@ -152,6 +177,11 @@ export default function ConditionScreen() {
               {!p ? (
                 <View style={styles.empty}>
                   {working ? <ActivityIndicator /> : <Icon name={canEdit ? 'camera-outline' : 'image-outline'} size={26} color="textSecondary" />}
+                  {!canEdit && !working && phase === 'handover' && renter ? (
+                    <ThemedText type="caption" themeColor="textSecondary">
+                      Чекаємо власника
+                    </ThemedText>
+                  ) : null}
                 </View>
               ) : null}
               <View style={[styles.label, { backgroundColor: p ? 'rgba(0,0,0,0.55)' : 'transparent' }]}>
@@ -183,7 +213,7 @@ export default function ConditionScreen() {
           </ThemedText>
         ) : (
           <ThemedText type="small" themeColor="textSecondary">
-            {phase === 'handover' ? 'Вкажіть пробіг з панелі приладів: це обов’язково.' : 'Вкажіть пробіг при поверненні.'}
+            {phase === 'handover' ? (renter ? 'Власник ще не вказав пробіг.' : 'Вкажіть пробіг з панелі приладів: це обов’язково.') : 'Вкажіть пробіг при поверненні.'}
           </ThemedText>
         )}
         {canEdit && (!report.odometer || report.odometer.byMe) ? (
@@ -220,6 +250,16 @@ export default function ConditionScreen() {
         <ThemedText type="small" themeColor="textSecondary">
           Оренда вже почалась: фото при передачі заморожені, а нові пошкодження можна додати ще протягом двох діб після початку.
         </ThemedText>
+      ) : null}
+
+      {phase === 'handover' && h.canConfirm ? (
+        <Card style={styles.confirm}>
+          <ThemedText type="headline">Підтвердьте стан авто</ThemedText>
+          <ThemedText type="callout" themeColor="textSecondary">
+            Ви переглянули фото й одометр власника й погоджуєтесь, що авто в такому стані. Це підтвердження побачить власник, і після нього відкриється підписання.
+          </ThemedText>
+          <Button title="Погоджуюсь зі станом авто" icon="checkmark-circle-outline" loading={busy === 'confirm'} disabled={busy !== null} onPress={() => void run('confirm', () => confirmCondition(String(id)))} />
+        </Card>
       ) : null}
 
       <DamageModal visible={!!damage} note={note} onNote={setNote} onCancel={() => setDamage(null)} onSubmit={() => void submitDamage()} />
@@ -260,6 +300,7 @@ const styles = StyleSheet.create({
   empty: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
   label: { paddingHorizontal: 8, paddingVertical: 6 },
   odo: { gap: Spacing.three },
+  confirm: { gap: Spacing.three },
   damage: { flexDirection: 'row', gap: Spacing.three, alignItems: 'center' },
   damagePhoto: { width: 64, height: 64, borderRadius: Radius.sm },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },

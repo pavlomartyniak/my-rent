@@ -25,7 +25,8 @@ const styles = StyleSheet.create({
   small: { fontSize: 14, lineHeight: 20, fontWeight: 400 },
   smallBold: { fontSize: 14, lineHeight: 20, fontWeight: 600 },
   default: { fontSize: 16, lineHeight: 24, fontWeight: 400 },
-  title: { fontSize: 40, fontWeight: 700, lineHeight: 46, letterSpacing: -0.8 },
+  // Заголовок секції. Більший розмір заголовка екрана — `display`; 40 pt-вого заголовка в застосунку більше немає
+  title: Type.title,
   subtitle: { fontSize: 30, lineHeight: 36, fontWeight: 700, letterSpacing: -0.6 },
   link: { lineHeight: 30, fontSize: 14 },
   linkPrimary: { lineHeight: 30, fontSize: 14 },

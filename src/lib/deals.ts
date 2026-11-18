@@ -23,7 +23,8 @@ export type DealView = {
   /** Дані авто з умов оренди; null — оренда створена до їх появи */
   car: { plate: string | null; color: string | null; year: number; mileage: number; fuel: string | null; vin: string | null } | null;
   /** Скільки обов'язкових фото стану авто вже є; до активації оренди потрібні всі й показник одометра */
-  condition: { ready: boolean; have: number; need: number };
+  /** ready — власник зафіксував усі обов'язкові фото й одометр; confirmed — орендар переглянув і погодився (без цього підписання закрите) */
+  condition: { ready: boolean; confirmed: boolean; have: number; need: number };
   /** Пропозиція розірвати оренду, що чекає відповіді; mine — подав її я */
   terminationRequest: { by: 'owner' | 'renter'; at: string; note: string; mine: boolean } | null;
   /** План оплати й графік платежів із відповідями сторін */

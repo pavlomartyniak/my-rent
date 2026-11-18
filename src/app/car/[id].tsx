@@ -8,6 +8,7 @@ import { EarningsWidget } from '@/components/earnings-widget';
 import { ThemedText } from '@/components/themed-text';
 import { CarPhoto } from '@/components/car-photo';
 import { PhotoGallery } from '@/components/photo-gallery';
+import { HeroBar } from '@/components/hero-bar';
 import { HeroButton } from '@/components/hero-button';
 import { PhotoViewer } from '@/components/photo-viewer';
 import { PaymentsCard } from '@/components/payments-card';
@@ -82,21 +83,9 @@ export default function CarScreen() {
 
   return (
     // Фото йде під прозорий хедер на всю ширину, тож системні відступи й бічні поля Screen скасовуємо
+    <View style={styles.root}>
     <Screen contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingTop: 0 }}>
-      <Stack.Screen
-        options={{
-          title: '',
-          headerTransparent: true,
-          headerBackVisible: false,
-          headerLeft: () => <HeroButton icon="chevron-back" label="Назад" onPress={() => router.back()} />,
-          headerRight: () => (
-            <View style={styles.headerRight}>
-              <HeroButton icon="create-outline" label="Редагувати" onPress={() => router.push({ pathname: '/car/edit', params: { id: car.id } })} />
-              {photos.length > 0 ? <HeroButton icon="expand-outline" label="Фото на весь екран" onPress={() => setViewer(true)} /> : null}
-            </View>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.hero}>
         {photos.length > 0 ? (
@@ -160,6 +149,16 @@ export default function CarScreen() {
       <DeleteCar carId={car.id} name={`${car.brand} ${car.model}`} rented={car.status === 'В оренді' || car.status === 'Заброньоване' || !!deal} />
       {viewer ? <PhotoViewer photos={photos} startIndex={0} onClose={() => setViewer(false)} /> : null}
     </Screen>
+    <HeroBar
+      left={<HeroButton icon="chevron-back" label="Назад" onPress={() => router.back()} />}
+      right={
+        <>
+          <HeroButton icon="create-outline" label="Редагувати" onPress={() => router.push({ pathname: '/car/edit', params: { id: car.id } })} />
+          {photos.length > 0 ? <HeroButton icon="expand-outline" label="Фото на весь екран" onPress={() => setViewer(true)} /> : null}
+        </>
+      }
+    />
+    </View>
   );
 }
 
@@ -184,7 +183,7 @@ function CopyButton({ text }: { text: string }) {
 }
 
 const styles = StyleSheet.create({
-  headerRight: { flexDirection: 'row', gap: Spacing.two },
+  root: { flex: 1 },
   copy: { width: 44, height: 44, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
   // Фото на всю ширину екрана: скасовуємо бічні поля Screen
   hero: { marginHorizontal: -20 },
