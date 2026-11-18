@@ -76,7 +76,7 @@ export function ProfileWizard({ role, name, value, onChange, onFinish }: Props) 
                 {renter ? 'Це бачитимуть власники авто: так їм легше довіритись.' : 'Це бачитимуть орендарі: так їм легше довіритись.'} Відповіді можна змінити пізніше в «Профілі».
               </ThemedText>
               <ProfilePhoto photoUri={value.photoUri} name={name} onChange={(photoUri) => onChange({ photoUri })} />
-              <CityField label="Ваше місто" value={value.city} onChange={(city) => onChange({ city })} />
+              <CityField inline label="Ваше місто" value={value.city} onChange={(city) => onChange({ city })} />
               {renter ? (
                 <NumberField
                   label="З якого року ви водите авто?"

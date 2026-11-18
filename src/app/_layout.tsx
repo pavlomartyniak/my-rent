@@ -1,5 +1,6 @@
 import { DarkTheme, DefaultTheme, type Href, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
 import { useColorScheme, View } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
@@ -27,6 +28,13 @@ const navTheme = (scheme: 'light' | 'dark') => {
 function Routes() {
   const { status, signOut } = useAuth();
   const { ready, onboarded, role, loadError, reload } = useFleet();
+
+  // Нативна заставка тримається, доки застосунок її не зніме (це робить AnimatedSplashOverlay на головному екрані). Екран помилки
+  // завантаження її не рендерить, тож без цього помилка ховалась би за заставкою, і застосунок «зависав» на ній.
+  const failed = status === 'in' && !ready && !!loadError;
+  useEffect(() => {
+    if (failed) void SplashScreen.hideAsync();
+  }, [failed]);
 
   if (status === 'loading') return null;
 
@@ -90,7 +98,6 @@ function Routes() {
           <Stack.Screen name="deposit/[id]" options={{ title: 'Застава', headerBackTitle: 'Назад', presentation: 'modal' }} />
           <Stack.Screen name="contracts/[id]" options={{ title: 'Договір', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="chats/[id]" options={{ headerShown: false }} />
-          <Stack.Screen name="car/pick" options={{ headerShown: false, presentation: 'modal' }} />
           <Stack.Screen name="transaction/new" options={{ title: 'Новий запис', presentation: 'modal' }} />
           <Stack.Screen name="transaction/[id]" options={{ title: 'Запис', presentation: 'modal' }} />
           <Stack.Screen name="profile" options={{ title: 'Особисті дані', presentation: 'modal' }} />
@@ -98,6 +105,7 @@ function Routes() {
           <Stack.Screen name="transactions" options={{ title: 'Записи', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="condition/[id]" options={{ title: 'Стан авто', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="user/[id]" options={{ title: 'Профіль', headerBackTitle: 'Назад' }} />
+          <Stack.Screen name="car/pick" options={{ headerShown: false, presentation: 'modal' }} />
         </Stack.Protected>
       </Stack>
     </>

@@ -127,11 +127,16 @@ export function FleetProvider({ children }: { children: ReactNode }) {
         // Тема з акаунта має пріоритет над кешем на пристрої
         if (isThemePreference(res.user.theme)) setPreference(res.user.theme);
       })
-      .catch((e) => !cancelled && setLoaded({ forToken: token, data: null, error: messageOf(e) }));
+      .catch((e) => {
+        if (cancelled) return;
+        // Користувача вже немає (акаунт видалено чи базу очищено): токен безглуздий, тож повертаємо на вхід, а не лишаємо помилку
+        if (e instanceof ApiError && e.status === 404) return void signOut();
+        setLoaded({ forToken: token, data: null, error: messageOf(e) });
+      });
     return () => {
       cancelled = true;
     };
-  }, [token, attempt, setPreference]);
+  }, [token, attempt, setPreference, signOut]);
 
   // Дані «чужого» токена (після виходу чи входу під іншим акаунтом) ігноруємо
   const current = loaded && loaded.forToken === token ? loaded : null;

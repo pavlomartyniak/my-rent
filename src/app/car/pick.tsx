@@ -28,6 +28,14 @@ export default function PickerScreen() {
   const theme = useTheme();
   const [request] = useState(() => getPickerRequest());
 
+  // Запит на вибір живе лише в пам'яті: після перезавантаження застосунку (чи відновленого маршруту) його немає, і екран нікуди
+  // не веде. Тоді одразу повертаємось, а не лишаємо порожній екран.
+  useEffect(() => {
+    if (request) return;
+    if (router.canGoBack()) router.back();
+    else router.replace('/');
+  }, [request, router]);
+
   if (!request) {
     return (
       <View style={[styles.root, { backgroundColor: theme.background }]}>
@@ -40,14 +48,14 @@ export default function PickerScreen() {
 }
 
 /** Власна шапка модального вікна вибору: системний заголовок у новій версії накладається на вміст і заважає вводити текст */
-function PickerHeader({ title }: { title: string }) {
+function PickerHeader({ title, onClose }: { title: string; /** Без значення — повернення за маршрутом */ onClose?: () => void }) {
   const router = useRouter();
   return (
     <View style={styles.header}>
       <ThemedText type="subtitle" style={styles.headerTitle} numberOfLines={1}>
         {title}
       </ThemedText>
-      <IconButton icon="close" label="Закрити" tone="neutral" onPress={() => router.back()} />
+      <IconButton icon="close" label="Закрити" tone="neutral" onPress={onClose ?? (() => router.back())} />
     </View>
   );
 }
@@ -230,7 +238,8 @@ type PlaceResult = { key: string; regions: Region[]; cities: City[]; total: numb
 /**
  * Вибір місця: області → міста, з пошуком по містах усієї країни. У фільтрах можна обрати і «Уся область».
  */
-function PlaceList({ request }: { request: Extract<PickerRequest, { kind: 'place' }> }) {
+/** Список міст з пошуком. Відкривається маршрутом (`onClose` не задано) або всередині власного вікна, наприклад в онбордингу. */
+export function PlaceList({ request, onClose }: { request: Extract<PickerRequest, { kind: 'place' }>; onClose?: () => void }) {
   const router = useRouter();
   const theme = useTheme();
   const [query, setQuery] = useState('');
@@ -262,7 +271,8 @@ function PlaceList({ request }: { request: Extract<PickerRequest, { kind: 'place
 
   const choose = (place: { city?: string; regionId?: number; label: string }) => {
     request.onSelect(place);
-    router.back();
+    if (onClose) onClose();
+    else router.back();
   };
 
   const current = result?.key === key ? result : null;
@@ -287,7 +297,7 @@ function PlaceList({ request }: { request: Extract<PickerRequest, { kind: 'place
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <PickerHeader title={region ? region.name : request.allowRegion ? 'Місто або область' : 'Оберіть місто'} />
+      <PickerHeader title={region ? region.name : request.allowRegion ? 'Місто або область' : 'Оберіть місто'} onClose={onClose} />
 
       <View style={styles.search}>
         <SearchInput value={query} onChangeText={setQuery} placeholder={region ? 'Пошук міста в області' : 'Пошук міста'} />
