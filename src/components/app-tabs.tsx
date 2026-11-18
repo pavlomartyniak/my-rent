@@ -3,12 +3,14 @@ import { useColorScheme } from 'react-native';
 
 import { Colors, Type } from '@/constants/theme';
 import { useAttention } from '@/hooks/use-attention';
+import { useChat } from '@/store/chat';
 
 export default function AppTabs() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
   // Число на «Головній» збігається з числом у блоці «Потрібна ваша увага», на «Запитах» — нові запити чи пропозиції
   const { urgent: home, requests } = useAttention('owner');
+  const { unread } = useChat();
 
   return (
     <NativeTabs
@@ -28,6 +30,12 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Icon sf={{ default: 'key', selected: 'key.fill' }} md="key" />
         {/* Без запитів бейдж не рендериться взагалі: порожній текст або hidden на частині платформ лишає кружечок */}
         {requests > 0 ? <NativeTabs.Trigger.Badge>{requests > 99 ? '99+' : String(requests)}</NativeTabs.Trigger.Badge> : null}
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="messages">
+        <NativeTabs.Trigger.Label>Чати</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'ellipsis.message', selected: 'ellipsis.message.fill' }} md="forum" />
+        {unread > 0 ? <NativeTabs.Trigger.Badge>{unread > 99 ? '99+' : String(unread)}</NativeTabs.Trigger.Badge> : null}
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="analytics">

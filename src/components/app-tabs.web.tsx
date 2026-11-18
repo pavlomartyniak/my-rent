@@ -27,6 +27,9 @@ export default function AppTabs() {
           <TabTrigger name="requests" href="/requests" asChild>
             <TabButton>Оренди</TabButton>
           </TabTrigger>
+          <TabTrigger name="messages" href="/messages" asChild>
+            <TabButton>Чати</TabButton>
+          </TabTrigger>
           <TabTrigger name="analytics" href="/analytics" asChild>
             <TabButton>Доходи</TabButton>
           </TabTrigger>

@@ -101,7 +101,8 @@ export default function UserProfileScreen() {
   }
 
   const owner = data.role === 'owner';
-  const years = data.drivingSince ? new Date().getFullYear() - data.drivingSince : null;
+  // Стаж водіння — лише для орендаря: від власника авто його не чекають
+  const years = data.role !== 'owner' && data.drivingSince ? new Date().getFullYear() - data.drivingSince : null;
   const call = (phone: string) => Linking.openURL(`tel:${phone.replace(/[^\d+]/g, '')}`).catch(() => Alert.alert('Не вдалося відкрити набір номера', `Номер: ${phone}`));
   const mail = (email: string) => Linking.openURL(`mailto:${email}`).catch(() => Alert.alert('Не вдалося відкрити пошту', email));
   const hasDetails = !!data.city || years !== null || hasAnswers(data as never, data.role);
@@ -186,7 +187,7 @@ export default function UserProfileScreen() {
               const raw = data[q.key] as string | string[] | null;
               const values = Array.isArray(raw) ? raw : raw ? [raw] : [];
               if (values.length === 0) return null;
-              const label = (v: string) => q.options.find((o) => o.value === v)?.label ?? v;
+              const label = (v: string) => q.format?.(v, data as never) ?? q.options.find((o) => o.value === v)?.label ?? v;
               return (
                 <Detail key={q.key} icon={q.icon as IconName} label={q.shown}>
                   {q.multi ? (

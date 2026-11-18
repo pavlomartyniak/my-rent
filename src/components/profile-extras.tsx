@@ -77,23 +77,38 @@ export function ProfileExtrasForm({ value, onChange, name, renter, submitted }: 
       <ThemedText type="small" themeColor="textSecondary" style={styles.counter}>
         {value.about.length} / 300
       </ThemedText>
-      <NumberField
-        label="З якого року ви водите авто? (необов’язково)"
-        value={value.drivingSince === null ? '' : String(value.drivingSince)}
-        onChangeValue={(d) => onChange({ drivingSince: d ? Number(d) : null })}
-        maxDigits={4}
-        placeholder="Наприклад, 2015"
-        plain
-        error={submitted ? drivingYearError(value.drivingSince) || undefined : undefined}
-      />
+      {/* Стаж водіння потрібен лише орендарю: власнику його питати немає сенсу */}
+      {renter ? (
+        <NumberField
+          label="З якого року ви водите авто? (необов’язково)"
+          value={value.drivingSince === null ? '' : String(value.drivingSince)}
+          onChangeValue={(d) => onChange({ drivingSince: d ? Number(d) : null })}
+          maxDigits={4}
+          placeholder="Наприклад, 2015"
+          plain
+          error={submitted ? drivingYearError(value.drivingSince) || undefined : undefined}
+        />
+      ) : null}
 
-      {questionsFor(renter ? 'renter' : 'owner').map((q) =>
-        q.multi ? (
-          <ChoiceChips key={q.key} multi label={q.label} hint={q.hint} options={q.options} value={value[q.key] as string[]} onChange={(v) => onChange({ [q.key]: v })} />
-        ) : (
-          <ChoiceChips key={q.key} label={q.label} hint={q.hint} options={q.options} value={value[q.key] as string} onChange={(v) => onChange({ [q.key]: v })} />
-        ),
-      )}
+      {questionsFor(renter ? 'renter' : 'owner').map((q) => (
+        <View key={q.key} style={styles.question}>
+          {q.multi ? (
+            <ChoiceChips multi label={q.label} hint={q.hint} options={q.options} value={value[q.key] as string[]} onChange={(v) => onChange({ [q.key]: v })} />
+          ) : (
+            <ChoiceChips label={q.label} hint={q.hint} options={q.options} value={value[q.key] as string} onChange={(v) => onChange({ [q.key]: v })} />
+          )}
+          {q.key === 'mileageLimit' && value.mileageLimit === 'limited' ? (
+            <NumberField
+              label="Скільки км на добу входить в оренду"
+              value={value.mileageKm === null ? '' : String(value.mileageKm)}
+              onChangeValue={(d) => onChange({ mileageKm: d ? Math.min(Number(d), 2000) : null })}
+              maxDigits={4}
+              placeholder="Наприклад, 300"
+              plain
+            />
+          ) : null}
+        </View>
+      ))}
       <ThemedText type="callout" themeColor="textSecondary">
         {renter
           ? 'Ці відповіді власник авто побачить у вашому профілі в розділі «Відомості» з позначкою «зі слів користувача». Чим більше відповідей, тим охочіше власники приймають запити.'
@@ -105,6 +120,7 @@ export function ProfileExtrasForm({ value, onChange, name, renter, submitted }: 
 
 const styles = StyleSheet.create({
   wrap: { gap: Spacing.three },
+  question: { gap: Spacing.three },
   photo: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   photoText: { flex: 1, gap: 2 },
   camera: { position: 'absolute', right: 0, bottom: 0, width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 2 },

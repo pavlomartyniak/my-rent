@@ -81,8 +81,10 @@ export class UpdateMeDto {
   rentExperience?: string;
 
   @IsOptional()
-  @IsIn([...OCCUPATIONS, ''])
-  occupation?: string;
+  @IsArray()
+  @ArrayMaxSize(7)
+  @IsIn(OCCUPATIONS, { each: true })
+  occupations?: string[];
 
   @IsOptional()
   @IsIn([...RENT_TERMS, ''])
@@ -101,8 +103,10 @@ export class UpdateMeDto {
   replyTime?: string;
 
   @IsOptional()
-  @IsIn([...HANDOVERS, ''])
-  handover?: string;
+  @IsArray()
+  @ArrayMaxSize(2)
+  @IsIn(HANDOVERS, { each: true })
+  handovers?: string[];
 
   @IsOptional()
   @IsIn([...HOSTING_EXPERIENCES, ''])
@@ -121,6 +125,13 @@ export class UpdateMeDto {
   @IsOptional()
   @IsIn([...MILEAGE_LIMITS, ''])
   mileageLimit?: string;
+
+  /** Км на добу; null прибирає */
+  @IsOptional()
+  @IsInt({ message: 'Вкажіть кілометри цифрами' })
+  @Min(1, { message: 'Ліміт не менше 1 км' })
+  @Max(2000, { message: 'Ліміт не більше 2000 км на добу' })
+  mileageKm?: number | null;
 
   @IsOptional()
   @IsIn([...ABROAD_POLICIES, ''])

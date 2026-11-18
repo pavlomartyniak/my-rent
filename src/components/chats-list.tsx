@@ -1,9 +1,10 @@
-import { useRouter, Stack } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { ReportStatus } from '@/components/report-status';
+import { ScreenTitle } from '@/components/screen-title';
 import { StatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
@@ -22,7 +23,7 @@ import { useChatEvents } from '@/store/chat';
 const TABS = ['Активні', 'Архів'] as const;
 
 /** Мої розмови: останнє повідомлення, час і кількість непрочитаних. Розмови без активної домовленості лежать в «Архіві». */
-export default function ChatsScreen() {
+export function ChatsList() {
   const router = useRouter();
   const theme = useTheme();
   const [tab, setTab] = useState<(typeof TABS)[number]>('Активні');
@@ -49,8 +50,8 @@ export default function ChatsScreen() {
     ]);
 
   return (
-    <Screen>
-      <Stack.Screen options={{ title: 'Повідомлення', headerBackTitle: 'Назад' }} />
+    <Screen tabs>
+      <ScreenTitle>Повідомлення</ScreenTitle>
       {!data ? (
         <ReportStatus shape="list" loading={loading} error={error} onRetry={retry} />
       ) : data.length === 0 ? (

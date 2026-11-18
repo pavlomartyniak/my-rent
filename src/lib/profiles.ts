@@ -24,16 +24,17 @@ export type ProfileView = {
   licenseCategories: string[];
   accidents: string | null;
   rentExperience: string | null;
-  occupation: string | null;
+  occupations: string[];
   rentTerm: string | null;
   depositReady: string | null;
   transmission: string | null;
   replyTime: string | null;
-  handover: string | null;
+  handovers: string[];
   hostingExperience: string | null;
   insurances: string[];
   serviceCare: string | null;
   mileageLimit: string | null;
+  mileageKm: number | null;
   abroad: string | null;
   /** Позначки, виведені з фактів: новий, досвідчений, високий рейтинг */
   badges: { key: 'new' | 'experienced' | 'top'; title: string }[];

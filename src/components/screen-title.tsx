@@ -1,6 +1,5 @@
 import { StyleSheet, View } from 'react-native';
 
-import { ChatButton } from './chat-button';
 import { ThemedText } from './themed-text';
 
 /** Заголовок головного екрана: назва ліворуч, кнопка повідомлень праворуч */
@@ -12,7 +11,6 @@ export function ScreenTitle({ children, actions }: { children: string; /** До�
       </ThemedText>
       <View style={styles.actions}>
         {actions}
-        <ChatButton />
       </View>
     </View>
   );

@@ -77,9 +77,9 @@ export class User {
   @Prop({ type: String, enum: [...RENT_EXPERIENCES, ''], default: '' })
   rentExperience: string;
 
-  /** Чим займається */
-  @Prop({ type: String, enum: [...OCCUPATIONS, ''], default: '' })
-  occupation: string;
+  /** Чим займається (можна кілька) */
+  @Prop({ type: [String], enum: OCCUPATIONS, default: [] })
+  occupations: string[];
 
   /** На який строк зазвичай бере авто */
   @Prop({ type: String, enum: [...RENT_TERMS, ''], default: '' })
@@ -97,9 +97,9 @@ export class User {
   @Prop({ type: String, enum: [...REPLY_TIMES, ''], default: '' })
   replyTime: string;
 
-  /** Як передає авто (власник) */
-  @Prop({ type: String, enum: [...HANDOVERS, ''], default: '' })
-  handover: string;
+  /** Як передає авто (власник): можна обидва способи */
+  @Prop({ type: [String], enum: HANDOVERS, default: [] })
+  handovers: string[];
 
   /** Як давно здає авто (власник) */
   @Prop({ type: String, enum: [...HOSTING_EXPERIENCES, ''], default: '' })
@@ -116,6 +116,10 @@ export class User {
   /** Ліміт пробігу (власник) */
   @Prop({ type: String, enum: [...MILEAGE_LIMITS, ''], default: '' })
   mileageLimit: string;
+
+  /** Скільки км на добу входить в оренду, якщо ліміт є */
+  @Prop({ type: Number })
+  mileageKm?: number | null;
 
   /** Виїзд за кордон (власник) */
   @Prop({ type: String, enum: [...ABROAD_POLICIES, ''], default: '' })

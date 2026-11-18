@@ -89,7 +89,6 @@ function Routes() {
           <Stack.Screen name="payments/[id]" options={{ title: 'Платіж', headerBackTitle: 'Назад', presentation: 'modal' }} />
           <Stack.Screen name="deposit/[id]" options={{ title: 'Застава', headerBackTitle: 'Назад', presentation: 'modal' }} />
           <Stack.Screen name="contracts/[id]" options={{ title: 'Договір', headerBackTitle: 'Назад' }} />
-          <Stack.Screen name="chats/index" options={{ title: 'Повідомлення', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="chats/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="car/pick" options={{ headerShown: false, presentation: 'modal' }} />
           <Stack.Screen name="transaction/new" options={{ title: 'Новий запис', presentation: 'modal' }} />

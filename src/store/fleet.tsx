@@ -30,7 +30,7 @@ type ServerData = {
   reminders: Reminder[];
 };
 
-const EMPTY: Data = { id: '', email: '', role: 'owner', firstName: '', lastName: '', middleName: '', phone: '', city: '', photoUri: '', about: '', drivingSince: null, purposes: [], licenseCategories: [], accidents: '', rentExperience: '', occupation: '', rentTerm: '', depositReady: '', transmission: '', replyTime: '', handover: '', hostingExperience: '', insurances: [], serviceCare: '', mileageLimit: '', abroad: '', cars: [], reminders: [], onboarded: false, dismissedHints: [], theme: 'system' };
+const EMPTY: Data = { id: '', email: '', role: 'owner', firstName: '', lastName: '', middleName: '', phone: '', city: '', photoUri: '', about: '', drivingSince: null, purposes: [], licenseCategories: [], accidents: '', rentExperience: '', occupations: [], rentTerm: '', depositReady: '', transmission: '', replyTime: '', handovers: [], hostingExperience: '', insurances: [], serviceCare: '', mileageLimit: '', mileageKm: null, abroad: '', cars: [], reminders: [], onboarded: false, dismissedHints: [], theme: 'system' };
 
 const fromServer = ({ user, cars, reminders }: ServerData): Data => ({
   id: user.id ?? '',
@@ -48,16 +48,17 @@ const fromServer = ({ user, cars, reminders }: ServerData): Data => ({
   licenseCategories: user.licenseCategories ?? [],
   accidents: user.accidents ?? '',
   rentExperience: user.rentExperience ?? '',
-  occupation: user.occupation ?? '',
+  occupations: user.occupations ?? [],
   rentTerm: user.rentTerm ?? '',
   depositReady: user.depositReady ?? '',
   transmission: user.transmission ?? '',
   replyTime: user.replyTime ?? '',
-  handover: user.handover ?? '',
+  handovers: user.handovers ?? [],
   hostingExperience: user.hostingExperience ?? '',
   insurances: user.insurances ?? [],
   serviceCare: user.serviceCare ?? '',
   mileageLimit: user.mileageLimit ?? '',
+  mileageKm: user.mileageKm ?? null,
   abroad: user.abroad ?? '',
   cars,
   reminders,
@@ -271,7 +272,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
   );
 
   const updateMe = useCallback(
-    (changes: Partial<Pick<Data, 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'middleName' | 'phone' | 'city' | 'photoUri' | 'about' | 'drivingSince' | 'purposes' | 'licenseCategories' | 'accidents' | 'rentExperience' | 'occupation' | 'rentTerm' | 'depositReady' | 'transmission' | 'replyTime' | 'handover' | 'hostingExperience' | 'insurances' | 'serviceCare' | 'mileageLimit' | 'abroad'>>, onFields?: FieldsHandler) =>
+    (changes: Partial<Pick<Data, 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'middleName' | 'phone' | 'city' | 'photoUri' | 'about' | 'drivingSince' | 'purposes' | 'licenseCategories' | 'accidents' | 'rentExperience' | 'occupations' | 'rentTerm' | 'depositReady' | 'transmission' | 'replyTime' | 'handovers' | 'hostingExperience' | 'insurances' | 'serviceCare' | 'mileageLimit' | 'mileageKm' | 'abroad'>>, onFields?: FieldsHandler) =>
       run(async () => {
         await api('PATCH', '/me', changes);
         patch((d) => ({ ...d, ...changes }));

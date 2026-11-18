@@ -7,7 +7,7 @@ export type RenterAnswers = {
   licenseCategories: string[];
   accidents: string;
   rentExperience: string;
-  occupation: string;
+  occupations: string[];
   rentTerm: string;
   depositReady: string;
   transmission: string;
@@ -16,25 +16,27 @@ export type RenterAnswers = {
 /** Відповіді власника «зі слів»: те, що орендар хоче знати про нього до запиту */
 export type OwnerAnswers = {
   replyTime: string;
-  handover: string;
+  handovers: string[];
   hostingExperience: string;
   insurances: string[];
   serviceCare: string;
   mileageLimit: string;
   abroad: string;
+  /** Км на добу, якщо є ліміт; null — не вказано */
+  mileageKm: number | null;
 };
 
 export type Answers = RenterAnswers & OwnerAnswers;
 
 /** Питання анкети (орендаря чи власника): з них будується і форма, і блок «Відомості» в профілі, тому текст в одному місці */
-export type Question = { key: keyof Answers; label: string; /** Підпис у профілі */ shown: string; icon: string; multi?: boolean; hint?: string; options: { value: string; label: string }[] };
+export type Question = { key: keyof Answers; /** Як показати значення в профілі, якщо підпис варіанта для цього не підходить */ format?: (value: string, answers: Partial<Answers>) => string; label: string; /** Підпис у профілі */ shown: string; icon: string; multi?: boolean; hint?: string; options: { value: string; label: string }[] };
 
 export const RENTER_QUESTIONS: Question[] = [
   { key: 'purposes', label: 'Для чого потрібне авто', shown: 'Орендує для', icon: 'car-sport-outline', multi: true, hint: 'Можна вибрати кілька', options: Object.entries(PURPOSE_LABELS).map(([value, label]) => ({ value, label })) },
   { key: 'licenseCategories', label: 'Категорії водійських прав', shown: 'Категорії прав', icon: 'card-outline', multi: true, options: [{ value: 'B', label: 'B (легкові)' }, { value: 'C', label: 'C (вантажні)' }, { value: 'D', label: 'D (автобуси)' }] },
   { key: 'accidents', label: 'Чи були ДТП за останні 3 роки', shown: 'ДТП за 3 роки', icon: 'shield-checkmark-outline', options: [{ value: 'none', label: 'Не було' }, { value: 'one', label: 'Одне' }, { value: 'several', label: 'Кілька' }] },
   { key: 'rentExperience', label: 'Чи орендували авто раніше', shown: 'Досвід оренди', icon: 'key-outline', options: [{ value: 'none', label: 'Ще ні' }, { value: 'few', label: 'Кілька разів' }, { value: 'regular', label: 'Регулярно' }] },
-  { key: 'occupation', label: 'Чим займаєтесь', shown: 'Зайнятість', icon: 'briefcase-outline', options: [{ value: 'employee', label: 'Працюю за наймом' }, { value: 'fop', label: 'ФОП' }, { value: 'business', label: 'Власний бізнес' }, { value: 'driver', label: 'Водій (таксі, доставка)' }, { value: 'student', label: 'Навчаюсь' }, { value: 'other', label: 'Інше' }] },
+  { key: 'occupations', label: 'Чим займаєтесь', shown: 'Зайнятість', icon: 'briefcase-outline', multi: true, hint: 'Можна вибрати кілька', options: [{ value: 'employee', label: 'Працюю за наймом' }, { value: 'fop', label: 'ФОП' }, { value: 'business', label: 'Власний бізнес' }, { value: 'driver', label: 'Водій (таксі, доставка)' }, { value: 'student', label: 'Навчаюсь' }, { value: 'other', label: 'Інше' }] },
   { key: 'rentTerm', label: 'На який строк зазвичай берете авто', shown: 'Звичайний строк', icon: 'calendar-outline', options: [{ value: 'week', label: 'До тижня' }, { value: 'month', label: '1–4 тижні' }, { value: 'long', label: 'Місяць і більше' }] },
   { key: 'depositReady', label: 'Чи готові внести заставу', shown: 'Застава', icon: 'wallet-outline', options: [{ value: 'yes', label: 'Так, готовий(а)' }, { value: 'discuss', label: 'Залежить від суми' }] },
   { key: 'transmission', label: 'Яка коробка передач підходить', shown: 'Коробка передач', icon: 'settings-outline', options: [{ value: 'auto', label: 'Автомат' }, { value: 'manual', label: 'Механіка' }, { value: 'both', label: 'Будь-яка' }] },
@@ -42,11 +44,19 @@ export const RENTER_QUESTIONS: Question[] = [
 
 export const OWNER_QUESTIONS: Question[] = [
   { key: 'replyTime', label: 'Як швидко відповідаєте на запити', shown: 'Відповідає', icon: 'chatbubble-ellipses-outline', options: [{ value: 'instant', label: 'Одразу' }, { value: 'hour', label: 'Протягом години' }, { value: 'day', label: 'Протягом дня' }] },
-  { key: 'handover', label: 'Як передаєте авто', shown: 'Передача авто', icon: 'key-outline', options: [{ value: 'onsite', label: 'Зустріч на місці' }, { value: 'delivery', label: 'Привожу авто' }, { value: 'both', label: 'Обидва варіанти' }] },
+  { key: 'handovers', label: 'Як передаєте авто', shown: 'Передача авто', icon: 'key-outline', multi: true, hint: 'Можна вибрати обидва способи', options: [{ value: 'onsite', label: 'Зустріч на місці' }, { value: 'delivery', label: 'Привожу авто до орендаря' }] },
+  { key: 'occupations', label: 'Чим займаєтесь', shown: 'Зайнятість', icon: 'briefcase-outline', multi: true, hint: 'Можна вибрати кілька', options: [{ value: 'rental', label: 'Здаю авто' }, { value: 'employee', label: 'Працюю за наймом' }, { value: 'fop', label: 'ФОП' }, { value: 'business', label: 'Власний бізнес' }, { value: 'other', label: 'Інше' }] },
   { key: 'hostingExperience', label: 'Як давно здаєте авто', shown: 'Досвід здачі', icon: 'ribbon-outline', options: [{ value: 'new', label: 'Тільки починаю' }, { value: 'year', label: 'До року' }, { value: 'years', label: '1–3 роки' }, { value: 'long', label: 'Понад 3 роки' }] },
   { key: 'insurances', label: 'Страхування авто', shown: 'Страхування', icon: 'shield-checkmark-outline', multi: true, hint: 'Можна вибрати обидва', options: [{ value: 'osago', label: 'ОСЦПВ' }, { value: 'kasko', label: 'КАСКО' }] },
-  { key: 'serviceCare', label: 'Хто обслуговує авто', shown: 'Обслуговування', icon: 'construct-outline', options: [{ value: 'official', label: 'Офіційний сервіс' }, { value: 'trusted', label: 'Перевірений сервіс' }, { value: 'asneeded', label: 'За потреби' }] },
-  { key: 'mileageLimit', label: 'Ліміт пробігу за добу', shown: 'Пробіг', icon: 'speedometer-outline', options: [{ value: 'unlimited', label: 'Без обмежень' }, { value: 'limited', label: 'Є ліміт' }] },
+  { key: 'serviceCare', label: 'Де обслуговуєте авто', shown: 'Обслуговування', icon: 'construct-outline', options: [{ value: 'official', label: 'Офіційний сервіс' }, { value: 'trusted', label: 'Перевірений сервіс' }] },
+  {
+    key: 'mileageLimit',
+    label: 'Чи є ліміт пробігу за добу',
+    shown: 'Ліміт пробігу за добу',
+    icon: 'speedometer-outline',
+    options: [{ value: 'unlimited', label: 'Без ліміту' }, { value: 'limited', label: 'Є ліміт' }],
+    format: (v, a) => (v === 'unlimited' ? 'Без ліміту' : a.mileageKm ? `${a.mileageKm} км на добу` : 'Є ліміт'),
+  },
   { key: 'abroad', label: 'Виїзд за кордон', shown: 'Виїзд за кордон', icon: 'airplane-outline', options: [{ value: 'allowed', label: 'Дозволено' }, { value: 'agreement', label: 'За домовленістю' }, { value: 'forbidden', label: 'Заборонено' }] },
 ];
 
@@ -57,7 +67,7 @@ export const questionsFor = (role: string): Question[] => (role === 'owner' ? OW
 export type ProfileExtras = Answers & { city: string; photoUri: string; about: string; /** Рік, з якого водить; null — не вказано */ drivingSince: number | null };
 
 /** Порожні відповіді: початковий стан форми */
-export const EMPTY_EXTRAS: ProfileExtras = { city: '', photoUri: '', about: '', drivingSince: null, purposes: [], licenseCategories: [], accidents: '', rentExperience: '', occupation: '', rentTerm: '', depositReady: '', transmission: '', replyTime: '', handover: '', hostingExperience: '', insurances: [], serviceCare: '', mileageLimit: '', abroad: '' };
+export const EMPTY_EXTRAS: ProfileExtras = { city: '', photoUri: '', about: '', drivingSince: null, purposes: [], licenseCategories: [], accidents: '', rentExperience: '', occupations: [], rentTerm: '', depositReady: '', transmission: '', replyTime: '', handovers: [], hostingExperience: '', insurances: [], serviceCare: '', mileageLimit: '', abroad: '', mileageKm: null };
 
 /** Чи є хоч одна відповідь анкети для цієї ролі */
 export const hasAnswers = (a: Partial<Answers>, role: string) => questionsFor(role).some((q) => (Array.isArray(a[q.key]) ? (a[q.key] as unknown[]).length > 0 : !!a[q.key]));
