@@ -51,13 +51,17 @@ export async function downloadPolicy(carId: string, mime: string) {
   const target = new File(dir, `Страховий поліс.${EXT[mime] ?? 'pdf'}`);
   // Стара копія не заважає: завантажуємо наново
   if (target.exists) target.delete();
-  const file = await File.downloadFileAsync(`${BASE_URL}/insurance/cars/${carId}/file`, target, { headers: { Authorization: `Bearer ${getApiToken() ?? ''}` } });
-  // Якщо сервер відповів помилкою, у файл потрапив би JSON: перевіряємо початок і не віддаємо такий файл
-  const head = new TextDecoder('latin1').decode((await file.bytes()).slice(0, 1024));
-  if (mime === 'application/pdf' ? !head.includes('%PDF-') : head.trimStart().startsWith('{')) {
-    file.delete();
-    throw new Error('Сервер не віддав файл. Спробуйте ще раз пізніше');
+  // Звичайний запит, а не завантажувач: так видно справжню відповідь сервера (наприклад, «Власник ще не додав поліс»), а не битий файл
+  const res = await fetch(`${BASE_URL}/insurance/cars/${carId}/file`, { headers: { Authorization: `Bearer ${getApiToken() ?? ''}` } });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { message?: string | string[] } | null;
+    throw new Error(Array.isArray(body?.message) ? String(body?.message[0]) : (body?.message ?? `Помилка сервера (${res.status})`));
   }
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  if (!bytes.length) throw new Error('Файл порожній');
+  target.create({ overwrite: true });
+  target.write(bytes);
+  const file = target;
   if (!(await Sharing.isAvailableAsync())) throw new Error('На цьому пристрої не можна поділитись файлом');
   await Sharing.shareAsync(file.uri, { mimeType: mime, UTI: UTI[mime], dialogTitle: 'Страховий поліс' });
 }

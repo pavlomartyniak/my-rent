@@ -6,6 +6,8 @@ export type PolicyMime = 'application/pdf' | 'image/jpeg' | 'image/png' | 'image
 /** Вид файлу за його початком (а не за тим, що заявив клієнт): так під видом PDF не підсунути щось інше */
 export function sniffPolicy(buf: Buffer): PolicyMime | null {
   if (buf.length < 12) return null;
+  // Підписаний контейнер (КЕП, .p7s) не є PDF, навіть коли містить його всередині: його обробляє extractSignedPdf
+  if (buf[0] === 0x30) return null;
   // Специфікація PDF дозволяє заголовок %PDF- не лише з першого байта, а будь-де в перших 1024 байтах (так роблять деякі генератори й експорти)
   if (buf.subarray(0, 1024).toString('latin1').includes('%PDF-')) return 'application/pdf';
   if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'image/jpeg';
@@ -13,6 +15,34 @@ export function sniffPolicy(buf: Buffer): PolicyMime | null {
   if (buf.subarray(0, 4).toString('latin1') === 'RIFF' && buf.subarray(8, 12).toString('latin1') === 'WEBP') return 'image/webp';
   if (buf.subarray(4, 8).toString('latin1') === 'ftyp' && /^(heic|heix|hevc|mif1|msf1)/.test(buf.subarray(8, 12).toString('latin1'))) return 'image/heic';
   return null;
+}
+
+/**
+ * Деякі страхові й сервіси (з електронним підписом, КЕП) віддають поліс як підписаний контейнер PKCS#7/CMS з розширенням .pdf:
+ * PDF лежить усередині, але сам файл не відкривається як PDF. Якщо всередині цілий неушкоджений PDF, дістаємо його.
+ * Перевіряємо, що це справжній суцільний PDF: покажчик `startxref` веде на таблицю xref чи об'єкт. Інакше (вміст розбитий
+ * на шматки чи зашифрований) повертаємо null.
+ */
+export function extractSignedPdf(buf: Buffer): Buffer | null {
+  if (buf[0] !== 0x30) return null;
+  const text = buf.toString('latin1');
+  const start = text.indexOf('%PDF-');
+  const eof = text.lastIndexOf('%%EOF');
+  if (start < 0 || eof < start) return null;
+  const pdf = buf.subarray(start, eof + 5);
+  const body = pdf.toString('latin1');
+  const sx = body.lastIndexOf('startxref');
+  const offset = sx < 0 ? NaN : Number(/^\s*(\d+)/.exec(body.slice(sx + 9))?.[1]);
+  if (!Number.isFinite(offset) || offset <= 0 || offset >= pdf.length) return null;
+  return /^(xref|\d+\s+\d+\s+obj)/.test(body.slice(offset, offset + 40)) ? pdf : null;
+}
+
+/** Файл полісу, готовий до збереження: вид і вміст (з підписаного контейнера діставляється PDF); null — не підтримується */
+export function normalizePolicy(buf: Buffer): { mime: PolicyMime; data: Buffer } | null {
+  const mime = sniffPolicy(buf);
+  if (mime) return { mime, data: buf };
+  const pdf = extractSignedPdf(buf);
+  return pdf ? { mime: 'application/pdf', data: pdf } : null;
 }
 
 /**

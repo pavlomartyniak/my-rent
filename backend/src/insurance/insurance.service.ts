@@ -8,7 +8,15 @@ import { todayUtc } from '../rentals/rentals.math';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
 import { InsuranceFile } from '../schemas/insurance-file.schema';
-import { cleanFileName, fixMulterName, MAX_POLICY_BYTES, policyExpired, sniffPolicy } from './insurance.files';
+import { cleanFileName, fixMulterName, MAX_POLICY_BYTES, normalizePolicy, policyExpired } from './insurance.files';
+
+/** Після `.lean()` двійкове поле приходить як BSON Binary, а не Buffer: `Buffer.from` на ньому дає порожній буфер, тому беремо його вміст явно */
+function binaryToBuffer(data: unknown): Buffer {
+  if (Buffer.isBuffer(data)) return data;
+  const raw = (data as { buffer?: Uint8Array } | null)?.buffer;
+  if (raw) return Buffer.from(raw);
+  return Buffer.from((data ?? []) as Uint8Array);
+}
 
 export type UploadedFile = { originalname: string; size: number; buffer: Buffer };
 
@@ -46,14 +54,17 @@ export class InsuranceService {
     await this.ownerOnly(user, carId);
     if (!file?.buffer?.length) throw new BadRequestException('Додайте файл полісу');
     if (file.size > MAX_POLICY_BYTES) throw new PayloadTooLargeException(`Файл завеликий (до ${MAX_POLICY_BYTES / 1024 / 1024} МБ)`);
-    const mime = sniffPolicy(file.buffer);
-    if (!mime) throw new BadRequestException(`Підтримуються PDF і фото (JPEG, PNG, WebP, HEIC). Отримано файл ${file.buffer.length} Б, початок: ${file.buffer.subarray(0, 6).toString('hex') || 'порожньо'}`);
+    const policy = normalizePolicy(file.buffer);
+    if (!policy) {
+      const signed = file.buffer[0] === 0x30 && file.buffer.toString('latin1').includes('%PDF-');
+      throw new BadRequestException(signed ? 'Це підписаний контейнер (електронний підпис), а не звичайний PDF, і дістати з нього PDF не вдалося. Збережіть поліс як звичайний PDF чи фото' : 'Підтримуються PDF і фото (JPEG, PNG, WebP, HEIC)');
+    }
     if (validUntil && !isIsoDay(validUntil)) throw new BadRequestException('Дата має бути у форматі РРРР-ММ-ДД');
     const ownerId = (await this.cars.findById(carId, 'userId').lean().exec())!.userId;
     const saved = await this.files
       .findOneAndUpdate(
         { carId },
-        { $set: { carId, ownerId, name: cleanFileName(fixMulterName(file.originalname)), mime, size: file.buffer.length, data: file.buffer, validUntil: validUntil || undefined, uploadedAt: new Date() }, ...(validUntil ? {} : { $unset: { validUntil: 1 } }) },
+        { $set: { carId, ownerId, name: cleanFileName(fixMulterName(file.originalname)), mime: policy.mime, size: policy.data.length, data: policy.data, validUntil: validUntil || undefined, uploadedAt: new Date() }, ...(validUntil ? {} : { $unset: { validUntil: 1 } }) },
         { upsert: true, returnDocument: 'after', projection: '-data' },
       )
       .lean()
@@ -80,7 +91,7 @@ export class InsuranceService {
     await this.access(user, carId);
     const f = await this.files.findOne({ carId }).lean().exec();
     if (!f) throw new NotFoundException('Власник ще не додав страховий поліс');
-    return { data: Buffer.from(f.data as unknown as Buffer), mime: f.mime, name: f.name };
+    return { data: binaryToBuffer(f.data), mime: f.mime, name: f.name };
   }
 
   /** Прибрати поліс разом з авто чи акаунтом власника */
