@@ -1,4 +1,5 @@
 import { useRouter, Stack } from 'expo-router';
+import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { CarPhoto } from '@/components/car-photo';
@@ -9,18 +10,25 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
+import { Segmented } from '@/components/ui/segmented';
 import { Radius, Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
+import { chatArchived } from '@/lib/archive';
 import { listTime, type ChatSummary } from '@/lib/chat';
 import { useChatEvents } from '@/store/chat';
 
-/** Усі мої розмови: останнє повідомлення, час і кількість непрочитаних */
+const TABS = ['Активні', 'Архів'] as const;
+
+/** Мої розмови: останнє повідомлення, час і кількість непрочитаних. Розмови без активної домовленості лежать в «Архіві». */
 export default function ChatsScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const [tab, setTab] = useState<(typeof TABS)[number]>('Активні');
   const { data, loading, error, retry } = useReport<ChatSummary[]>('/chats', { refetchOnFocus: true, keepPrevious: true });
+
+  const shown = (data ?? []).filter((c) => chatArchived(c) === (tab === 'Архів'));
 
   // Нове повідомлення чи «прочитано» оновлюють список одразу
   useChatEvents((e) => {
@@ -52,8 +60,22 @@ export default function ChatsScreen() {
           text="Написати можна власнику чи орендарю, з яким у вас є запит, пропозиція або оренда: натисніть «Написати» на їхній картці."
         />
       ) : (
+        <>
+          <Segmented
+            options={TABS}
+            value={tab}
+            onChange={setTab}
+            badges={{ Активні: data.filter((c) => !chatArchived(c)).reduce((n, c) => n + c.unread, 0), Архів: data.filter(chatArchived).reduce((n, c) => n + c.unread, 0) }}
+          />
+          {shown.length === 0 ? (
+            tab === 'Архів' ? (
+              <EmptyState icon="archive-outline" title="Архів порожній" text="Сюди потрапляють розмови, за якими вже немає активної домовленості: запит відхилено чи скасовано, оренду завершено." />
+            ) : (
+              <EmptyState icon="chatbubbles-outline" title="Активних розмов немає" text="Старі розмови, за якими вже немає домовленості, лежать в «Архіві»." />
+            )
+          ) : (
         <Card style={styles.list}>
-          {data.map((c, i) => (
+          {shown.map((c, i) => (
             <Pressable key={c.id} accessibilityRole="button" onLongPress={() => confirmDelete(c)} onPress={() => router.push({ pathname: '/chats/[id]', params: { id: c.id } })}>
               <View style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }]}>
                 <CarPhoto uri={c.context?.photoUri ?? undefined} style={styles.avatar} iconSize={22} />
@@ -92,6 +114,8 @@ export default function ChatsScreen() {
             </Pressable>
           ))}
         </Card>
+          )}
+        </>
       )}
     </Screen>
   );

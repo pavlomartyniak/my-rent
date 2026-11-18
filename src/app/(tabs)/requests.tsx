@@ -1,6 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
+import { OwnerArchive } from '@/components/requests/owner-archive';
 import { OwnerBoard } from '@/components/requests/owner-board';
 import { OwnerOffers } from '@/components/requests/owner-offers';
 import { OwnerRentals } from '@/components/requests/owner-rentals';
@@ -8,7 +9,7 @@ import { ScreenTitle } from '@/components/screen-title';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 
-const SECTIONS = ['Запити', 'Шукають авто', 'Мої пропозиції'] as const;
+const SECTIONS = ['Запити', 'Шукають авто', 'Мої пропозиції', 'Архів'] as const;
 
 /** Усе, що стосується орендарів: запити на мої авто, їхні заявки «шукаю авто» й мої пропозиції */
 export default function RequestsScreen() {
@@ -23,7 +24,7 @@ export default function RequestsScreen() {
       <ScreenTitle>Запити</ScreenTitle>
       <Segmented scroll options={SECTIONS} value={section} onChange={setSection} />
 
-      {section === 'Запити' ? <OwnerRentals /> : section === 'Шукають авто' ? <OwnerBoard /> : <OwnerOffers />}
+      {section === 'Запити' ? <OwnerRentals /> : section === 'Шукають авто' ? <OwnerBoard /> : section === 'Мої пропозиції' ? <OwnerOffers /> : <OwnerArchive />}
     </Screen>
   );
 }

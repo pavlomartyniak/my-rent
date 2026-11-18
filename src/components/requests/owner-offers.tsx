@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
-import { RemoveFinished } from '@/components/remove-finished';
 import { OfferCard } from '@/components/offer-card';
 import { ReportStatus } from '@/components/report-status';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { api, ApiError } from '@/lib/api';
+import { offerArchived } from '@/lib/archive';
 import type { OfferView } from '@/lib/wanted';
 import { useFleet } from '@/store/fleet';
 
@@ -40,8 +40,8 @@ export function OwnerOffers() {
 
   if (!data) return <ReportStatus loading={loading} error={error} onRetry={retry} />;
 
-  // Прийнята пропозиція вже оренда: вона на екрані авто («Зараз в оренді»)
-  const open = data.filter((o) => !(o.dealId && o.status === 'accepted'));
+  // Прийнята пропозиція вже оренда: вона на екрані авто («Зараз в оренді»), відхилені й завершені — в «Архіві»
+  const open = data.filter((o) => !(o.dealId && o.status === 'accepted') && !offerArchived(o));
 
   return (
     <>
@@ -52,7 +52,6 @@ export function OwnerOffers() {
           {open.map((o) => (
             <OfferCard key={o.id} offer={o} viewer="owner">
               {o.status === 'pending' ? <Button title="Відкликати пропозицію" variant="danger" disabled={busy === o.id} onPress={() => confirmWithdraw(o)} /> : null}
-              {o.status === 'declined' || o.status === 'withdrawn' || o.status === 'ended' ? <RemoveFinished path={`/offers/${o.id}`} what="пропозицію" onDone={retry} /> : null}
             </OfferCard>
           ))}
         </View>

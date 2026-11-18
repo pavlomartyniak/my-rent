@@ -2,7 +2,6 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
-import { RemoveFinished } from '@/components/remove-finished';
 import { RentalCard } from '@/components/rental-card';
 import { ReportStatus } from '@/components/report-status';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { api, ApiError } from '@/lib/api';
+import { rentalArchived } from '@/lib/archive';
 import type { RentalView } from '@/lib/rentals';
 import { useFleet } from '@/store/fleet';
 
@@ -41,8 +41,8 @@ export function RenterRentals() {
 
   if (!data) return <ReportStatus loading={loading} error={error} onRetry={retry} />;
 
-  // Прийнятий запит уже оренда: вона на «Головній», а тут лише те, що ще вирішується
-  const open = data.filter((r) => !(r.dealId && r.status === 'accepted'));
+  // Прийнятий запит уже оренда: вона на «Головній», завершені й відхилені — в «Архіві», а тут лише те, що ще вирішується
+  const open = data.filter((r) => !(r.dealId && r.status === 'accepted') && !rentalArchived(r));
 
   return (
     <>
@@ -59,7 +59,6 @@ export function RenterRentals() {
           {open.map((r) => (
             <RentalCard key={r.id} rental={r} viewer="renter">
               {r.status === 'pending' ? <Button title="Скасувати запит" variant="danger" disabled={busy === r.id} onPress={() => confirmCancel(r)} /> : null}
-              {r.status === 'declined' || r.status === 'cancelled' || r.status === 'ended' ? <RemoveFinished path={`/rentals/${r.id}`} what="запит" onDone={retry} /> : null}
             </RentalCard>
           ))}
         </View>

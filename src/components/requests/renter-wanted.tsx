@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { WantedCard } from '@/components/wanted-card';
 import { Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
+import { wantedArchived } from '@/lib/archive';
 import type { WantedView } from '@/lib/wanted';
 
 /** Мої заявки «шукаю авто»: тап відкриває пропозиції власників */
@@ -16,9 +17,8 @@ export function RenterWanted() {
 
   if (!data) return <ReportStatus loading={loading} error={error} onRetry={retry} />;
 
-  // Виконана заявка з чинною орендою вже на «Головній»; тут лишаються відкриті, скасовані й завершені
-  const live = (w: WantedView) => w.status === 'fulfilled' && (w.dealStage === 'signing' || w.dealStage === 'upcoming' || w.dealStage === 'active');
-  const list = data.filter((w) => !live(w));
+  // Виконана заявка з чинною орендою вже на «Головній», скасовані й завершені — в «Архіві»; тут лише відкриті
+  const list = data.filter((w: WantedView) => w.status === 'open' && !wantedArchived(w));
 
   return (
     <>

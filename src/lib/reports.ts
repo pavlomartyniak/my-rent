@@ -50,7 +50,7 @@ export type CarReport = {
 export type MonthEntry = Transaction & { car: string };
 
 /** Відповідь /transactions/period: записи (до 300 найновіших) і скільки їх є всього */
-export type PeriodEntries = { items: MonthEntry[]; total: number; totals: Totals; categories: (CategoryShare & { count: number })[] };
+export type PeriodEntries = { items: MonthEntry[]; total: number; totals: Totals; categories: (CategoryShare & { count: number })[]; breakdown: { income: (CategoryShare & { count: number })[]; expense: (CategoryShare & { count: number })[] } };
 
 /** Один місяць історії: підсумок рахує сервер */
 export type HistoryGroup = Totals & { month: string; items: Transaction[] };

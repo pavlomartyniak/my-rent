@@ -107,15 +107,18 @@ export class TransactionsService {
     const sum = (type: 'income' | 'expense') => groups.filter((g) => g._id.type === type).reduce((n, g) => n + g.sum, 0);
     const income = round2(sum('income'));
     const expense = round2(sum('expense'));
-    // Розподіл за категоріями має сенс для одного типу: або доходи, або витрати
-    const kindTotal = target.type === 'income' ? income : expense;
-    const categories = target.type
-      ? groups
-          .filter((g) => g._id.type === target.type)
-          .map((g) => ({ category: g._id.category, amount: round2(g.sum), count: g.count, share: kindTotal ? Math.round((g.sum / kindTotal) * 1000) / 10 : 0 }))
-          .sort((x, y) => y.amount - x.amount)
-      : [];
-    return { total, totals: { income, expense, profit: round2(income - expense) }, categories, items: items.map((t) => ({ ...t.toJSON(), car: titles.get(String(t.carId)) ?? '' })) };
+    // Розподіл за категоріями рахуємо окремо для доходів і для витрат (частки в межах свого типу)
+    const breakdown = (type: 'income' | 'expense') => {
+      const kindTotal = type === 'income' ? income : expense;
+      return groups
+        .filter((g) => g._id.type === type)
+        .map((g) => ({ category: g._id.category, amount: round2(g.sum), count: g.count, share: kindTotal ? Math.round((g.sum / kindTotal) * 1000) / 10 : 0 }))
+        .sort((x, y) => y.amount - x.amount);
+    };
+    const byType = { income: breakdown('income'), expense: breakdown('expense') };
+    // `categories` — розподіл обраного типу (порожній, якщо тип не обрано); `breakdown` — обидва розподіли
+    const categories = target.type ? byType[target.type] : [];
+    return { total, totals: { income, expense, profit: round2(income - expense) }, categories, breakdown: byType, items: items.map((t) => ({ ...t.toJSON(), car: titles.get(String(t.carId)) ?? '' })) };
   }
 
   async create(user: AuthUser, dto: CreateTransactionDto) {

@@ -2,6 +2,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { RefreshControl } from 'react-native';
 
+import { RenterArchive } from '@/components/requests/renter-archive';
 import { RenterRentals } from '@/components/requests/renter-rentals';
 import { RenterWanted } from '@/components/requests/renter-wanted';
 import { ScreenTitle } from '@/components/screen-title';
@@ -10,7 +11,7 @@ import { Segmented } from '@/components/ui/segmented';
 import { usePendingOffers } from '@/hooks/use-pending-requests';
 import { useFleet } from '@/store/fleet';
 
-const SECTIONS = ['Запити на авто', 'Шукаю авто'] as const;
+const SECTIONS = ['Запити на авто', 'Шукаю авто', 'Архів'] as const;
 type Section = (typeof SECTIONS)[number];
 
 /** Мої запити на оголошення й мої заявки «шукаю авто» з пропозиціями власників */
@@ -27,7 +28,7 @@ export default function MyRequestsScreen() {
       <ScreenTitle>Мої запити</ScreenTitle>
       <Segmented scroll options={SECTIONS} value={section} onChange={(s) => setPick({ param: params.tab, section: s })} badges={{ 'Шукаю авто': offers }} />
 
-      {section === 'Запити на авто' ? <RenterRentals /> : <RenterWanted />}
+      {section === 'Запити на авто' ? <RenterRentals /> : section === 'Шукаю авто' ? <RenterWanted /> : <RenterArchive />}
     </Screen>
   );
 }

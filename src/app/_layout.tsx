@@ -79,7 +79,7 @@ function Routes() {
           <Stack.Screen name="market/request" options={{ title: 'Запит на оренду', presentation: 'modal' }} />
           <Stack.Screen name="wanted/new" options={{ title: 'Шукаю авто', presentation: 'modal' }} />
           <Stack.Screen name="wanted/[id]" options={{ title: 'Шукаю авто', headerBackTitle: 'Назад' }} />
-          <Stack.Screen name="rentals/archive" options={{ title: 'Усі оренди', headerBackTitle: 'Назад' }} />
+          <Stack.Screen name="rentals/archive" options={{ title: 'Архів оренд', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="deals/[id]" options={{ title: 'Оренда', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="deals/analytics" options={{ title: 'Аналітика', headerBackTitle: 'Назад' }} />
         </Stack.Protected>

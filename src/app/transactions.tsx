@@ -22,8 +22,7 @@ import type { PeriodEntries } from '@/lib/reports';
 
 const MODES = ['Місяць', 'Рік', 'Весь час', 'Діапазон'] as const;
 type Mode = (typeof MODES)[number];
-const KINDS = ['Усі', 'Доходи', 'Витрати'] as const;
-type Kind = (typeof KINDS)[number];
+type Kind = 'Усі' | 'Доходи' | 'Витрати';
 const VIEWS = ['Список', 'Діаграма'] as const;
 type View_ = (typeof VIEWS)[number];
 
@@ -46,7 +45,8 @@ export default function TransactionsScreen() {
   const [month, setMonth] = useState(period && /^\d{4}-\d{2}$/.test(period) ? period : period && /^\d{4}$/.test(period) ? `${period}-01` : current);
   const [from, setFrom] = useState(`${current}-01`);
   const [to, setTo] = useState(today);
-  const [kind, setKind] = useState<Kind>(type === 'income' ? 'Доходи' : type === 'expense' ? 'Витрати' : 'Усі');
+  // Тип записів визначає плашка, з якої відкрили екран («Дохід», «Витрати» чи місячний підсумок), і на екрані не змінюється
+  const kind: Kind =type === 'income' ? 'Доходи' : type === 'expense' ? 'Витрати' : 'Усі';
   const [view, setView] = useState<View_>('Список');
   const [category, setCategory] = useState<string | undefined>();
 
@@ -75,15 +75,12 @@ export default function TransactionsScreen() {
   // Назву авто показуємо лише там, де записи охоплюють кілька авто
   const showCar = !carId && !dealId;
   const complete = !!data && data.total <= data.items.length;
-  const tone = apiType === 'expense' ? 'negative' : apiType === 'income' ? 'positive' : (data?.totals.profit ?? 0) >= 0 ? 'positive' : 'negative';
-  // Сума: за обраним типом без звуження категорією; з категорією беремо її власну суму з розподілу
-  const shown = !data ? 0 : apiType === 'expense' ? data.totals.expense : apiType === 'income' ? data.totals.income : data.totals.profit;
-  const categorySum = category && data ? data.categories.find((c) => c.category === category)?.amount : undefined;
-
-  function changeKind(next: Kind) {
-    setKind(next);
-    setCategory(undefined);
-  }
+  // Тип для суми: обраний плашкою, а в підсумку без типу — тип категорії, яку вибрали на діаграмі
+  const effType = apiType ?? (category && data ? (data.breakdown.income.some((c) => c.category === category) ? 'income' : 'expense') : undefined);
+  const tone = effType === 'expense' ? 'negative' : effType === 'income' ? 'positive' : (data?.totals.profit ?? 0) >= 0 ? 'positive' : 'negative';
+  // Сума: за типом; з категорією беремо її власну суму з розподілу
+  const categorySum = category && data && effType ? data.breakdown[effType].find((c) => c.category === category)?.amount : undefined;
+  const shown = !data ? 0 : effType === 'expense' ? data.totals.expense : effType === 'income' ? data.totals.income : data.totals.profit;
 
   return (
     <Screen>
@@ -122,8 +119,6 @@ export default function TransactionsScreen() {
         </ThemedText>
       ) : null}
 
-      <SwitchTabs options={KINDS} value={kind} onChange={changeKind} />
-
       {rangeInvalid ? null : !data ? (
         <ReportStatus loading={loading} error={error} onRetry={retry} />
       ) : (
@@ -133,16 +128,17 @@ export default function TransactionsScreen() {
               {periodText} · {data.total}
             </ThemedText>
             <ThemedText style={styles.total} themeColor={tone} numberOfLines={1} adjustsFontSizeToFit>
-              {apiType === 'expense' ? '−' : apiType === 'income' ? '+' : shown >= 0 ? '' : '−'}
+              {effType === 'expense' ? '−' : effType === 'income' ? '+' : shown >= 0 ? '' : '−'}
               {formatMoney(Math.abs(category && categorySum !== undefined ? categorySum : shown))}
             </ThemedText>
-            {!apiType ? (
+            {!effType ? (
               <ThemedText type="small" themeColor="textSecondary">
                 Дохід {formatMoney(data.totals.income)} · Витрати {formatMoney(data.totals.expense)}
               </ThemedText>
             ) : null}
           </View>
 
+          {/* Для одного типу — одна діаграма; для підсумку (доходи разом із витратами) — окремо доходи й окремо витрати */}
           <SwitchTabs options={VIEWS} value={view} onChange={setView} />
 
           {category ? (
@@ -155,26 +151,31 @@ export default function TransactionsScreen() {
           ) : null}
 
           {view === 'Діаграма' ? (
-            !apiType ? (
-              <EmptyState icon="pie-chart-outline" title="Оберіть тип записів" text="Діаграма показує розподіл за категоріями окремо для доходів або витрат: оберіть «Доходи» чи «Витрати»." />
-            ) : (
-              <>
-                <CategoryBreakdown
-                  items={data.categories}
-                  label={apiType === 'income' ? 'доходи' : 'витрати'}
-                  emptyText={apiType === 'income' ? 'Доходів за цей період немає.' : 'Витрат за цей період немає.'}
-                  onSelect={(c) => {
-                    setCategory(c);
-                    setView('Список');
-                  }}
-                />
-                {data.categories.length ? (
-                  <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
-                    Натисніть на категорію, щоб побачити її записи.
-                  </ThemedText>
-                ) : null}
-              </>
-            )
+            <>
+              {(apiType ? [apiType] : (['income', 'expense'] as const)).map((t) => (
+                <View key={t} style={styles.chart}>
+                  {!apiType ? (
+                    <ThemedText type="default" style={styles.bold}>
+                      {t === 'income' ? 'Доходи' : 'Витрати'}
+                    </ThemedText>
+                  ) : null}
+                  <CategoryBreakdown
+                    items={data.breakdown[t]}
+                    label={t === 'income' ? 'доходи' : 'витрати'}
+                    emptyText={t === 'income' ? 'Доходів за цей період немає.' : 'Витрат за цей період немає.'}
+                    onSelect={(c) => {
+                      setCategory(c);
+                      setView('Список');
+                    }}
+                  />
+                </View>
+              ))}
+              {data.breakdown.income.length || data.breakdown.expense.length ? (
+                <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
+                  Натисніть на категорію, щоб побачити її записи.
+                </ThemedText>
+              ) : null}
+            </>
           ) : data.items.length === 0 ? (
             <EmptyState icon="receipt-outline" title="Записів немає" text="За цей період тут нічого не було." />
           ) : (
@@ -210,5 +211,6 @@ const styles = StyleSheet.create({
   filter: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
   card: { paddingVertical: 0, gap: 0 },
   divider: { height: StyleSheet.hairlineWidth, marginLeft: 48 + Spacing.three },
+  chart: { gap: Spacing.three },
   note: { textAlign: 'center' },
 });

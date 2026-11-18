@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
-import { RemoveFinished } from '@/components/remove-finished';
 import { RentalCard } from '@/components/rental-card';
 import { ReportStatus } from '@/components/report-status';
 import { ThemedText } from '@/components/themed-text';
@@ -12,6 +11,7 @@ import { useReport } from '@/hooks/use-report';
 import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/date';
 import { promptContract } from '@/lib/contract-prompt';
+import { rentalArchived } from '@/lib/archive';
 import type { RentalView } from '@/lib/rentals';
 import { useFleet } from '@/store/fleet';
 
@@ -23,8 +23,8 @@ export function OwnerRentals() {
   const { data, loading, error, retry } = useReport<RentalView[]>('/rentals/incoming', { refetchOnFocus: true });
   const [busy, setBusy] = useState<string | null>(null);
 
-  // Прийнятий запит уже оренда: вона на екрані авто («Зараз в оренді»), а тут лише те, що ще вирішується
-  const sorted = [...(data ?? [])].filter((r) => !(r.dealId && r.status === 'accepted')).sort((a, b) => ORDER[a.status] - ORDER[b.status] || b.createdAt.localeCompare(a.createdAt));
+  // Прийнятий запит уже оренда: вона на екрані авто («Зараз в оренді»), завершені й відхилені — в «Архіві», а тут лише те, що ще вирішується
+  const sorted = [...(data ?? [])].filter((r) => !(r.dealId && r.status === 'accepted') && !rentalArchived(r)).sort((a, b) => ORDER[a.status] - ORDER[b.status] || b.createdAt.localeCompare(a.createdAt));
   const pending = sorted.filter((r) => r.status === 'pending').length;
 
   async function respond(r: RentalView, action: 'accept' | 'decline') {
@@ -86,7 +86,6 @@ export function OwnerRentals() {
                     <Button title="Відхилити" icon="close" variant="danger" style={{ flex: 1 }} disabled={busy === r.id} onPress={() => confirmDecline(r)} />
                   </View>
                 ) : null}
-                {r.status === 'declined' || r.status === 'cancelled' || r.status === 'ended' ? <RemoveFinished path={`/rentals/${r.id}`} what="запит" onDone={retry} /> : null}
               </RentalCard>
             ))}
           </View>
