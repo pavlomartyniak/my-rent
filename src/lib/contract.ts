@@ -49,7 +49,7 @@ export const RENTER_GROUNDS = [
 ] as const;
 export type WithdrawGround = (typeof OWNER_GROUNDS)[number]['value'] | (typeof RENTER_GROUNDS)[number]['value'];
 
-export const METHOD_LABEL = (method: string) => (method === 'email_otp' ? 'підтвердження кодом з e-mail' : method === 'demo' ? 'підтвердження в застосунку' : method);
+export const METHOD_LABEL = (method: string) => (method === 'button' ? 'підтвердження в застосунку' : method === 'email_otp' ? 'підтвердження кодом з e-mail' : method === 'demo' ? 'підтвердження в застосунку' : method);
 
 /** Завантажує PDF із сервера (з токеном) у кеш пристрою й відкриває системне вікно «Поділитись»: звідти його можна переглянути, зберегти чи надіслати */
 async function downloadPdf(urlPath: string, fileName: string, dialogTitle: string) {

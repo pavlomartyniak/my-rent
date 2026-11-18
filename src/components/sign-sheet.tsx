@@ -1,152 +1,79 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing, Type } from '@/constants/theme';
+import { Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
+import { haptic } from '@/lib/haptics';
 
 import { ThemedText } from './themed-text';
 import { BottomSheet } from './ui/bottom-sheet';
 import { Button } from './ui/button';
-import { Field } from './ui/field';
 import { Icon } from './ui/icon';
 
-type CodeSent = { email: string; expiresInMinutes: number; resendInSeconds: number };
-
 /**
- * Підписання договору кодом з пошти: спершу згода з умовами й надсилання коду, потім введення шести цифр.
- * Це простий електронний підпис; докази (час, пошта, пристрій) сервер зберігає разом із підписом.
+ * Підписання договору: згода з умовами й одна кнопка «Підписати договір». Без коду з пошти. Це простий електронний підпис:
+ * підтвердження в застосунку, а докази (час, пошта, пристрій) сервер зберігає разом із підписом.
  */
 export function SignSheet({ visible, dealId, number, onClose, onSigned }: { visible: boolean; dealId: string; number: string; onClose: () => void; onSigned: () => void }) {
   const theme = useTheme();
   const [agreed, setAgreed] = useState(false);
-  const [sent, setSent] = useState<CodeSent | null>(null);
-  const [code, setCode] = useState('');
-  const [wait, setWait] = useState(0);
-  const [busy, setBusy] = useState<'send' | 'sign' | null>(null);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-
-  // Лічильник до можливості надіслати код ще раз
-  useEffect(() => {
-    if (wait <= 0) return;
-    const timer = setTimeout(() => setWait((w) => w - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [wait]);
 
   function close() {
     if (busy) return;
     setAgreed(false);
-    setSent(null);
-    setCode('');
     setError('');
-    setWait(0);
     onClose();
   }
 
-  async function send() {
-    setBusy('send');
-    setError('');
-    try {
-      const res = await api<CodeSent>('POST', `/deals/${dealId}/sign/code`, {});
-      setSent(res);
-      setWait(res.resendInSeconds);
-      setCode('');
-    } catch (e) {
-      // «Код уже надіслано» не помилка для користувача: показуємо поле введення, а таймер піде з відповіді сервера
-      const message = e instanceof ApiError ? e.message : 'Спробуйте ще раз';
-      setError(message);
-    } finally {
-      setBusy(null);
-    }
-  }
-
   async function sign() {
-    setBusy('sign');
+    setBusy(true);
     setError('');
     try {
-      await api('POST', `/deals/${dealId}/sign`, { code });
+      await api('POST', `/deals/${dealId}/sign`, {});
+      haptic.success();
       setAgreed(false);
-      setSent(null);
-      setCode('');
       onSigned();
     } catch (e) {
+      haptic.error();
       setError(e instanceof ApiError ? e.message : 'Не вдалося підписати. Спробуйте ще раз');
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   }
 
   return (
-    <BottomSheet visible={visible} onClose={close}>
-            <ThemedText type="default" style={styles.heading}>
-              Підписання договору № {number}
-            </ThemedText>
-
-            {!sent ? (
-              <>
-                <ThemedText type="small" themeColor="textSecondary">
-                  Ви підписуєте договір простим електронним підписом: підтверджуєте його кодом, який ми надішлемо на вашу електронну пошту. Підписуйте під час зустрічі, коли власник передає авто й ключі, а орендар — гроші.
-                </ThemedText>
-                <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: agreed }} onPress={() => setAgreed(!agreed)} style={styles.agree}>
-                  <View style={[styles.box, { borderColor: agreed ? theme.accent : theme.borderStrong, backgroundColor: agreed ? theme.accent : 'transparent' }]}>
-                    {agreed ? <Icon name="checkmark" size={16} color={theme.onAccent} /> : null}
-                  </View>
-                  <ThemedText type="small" style={styles.flex}>
-                    Я прочитав(ла) договір, погоджуюсь з його умовами й визнаю підпис кодом з пошти.
-                  </ThemedText>
-                </Pressable>
-                {error ? (
-                  <ThemedText type="small" themeColor="negative">
-                    {error}
-                  </ThemedText>
-                ) : null}
-                <Button title={busy === 'send' ? 'Надсилаємо…' : 'Надіслати код на пошту'} icon="mail-outline" disabled={!agreed || busy !== null} onPress={() => void send()} />
-              </>
-            ) : (
-              <>
-                <ThemedText type="small" themeColor="textSecondary">
-                  Код надіслано на {sent.email}. Він дійсний {sent.expiresInMinutes} хв. Перевірте також «Спам».
-                </ThemedText>
-                <Field
-                  label="Код з листа"
-                  value={code}
-                  onChangeText={(t) => setCode(t.replace(/\D/g, '').slice(0, 6))}
-                  keyboardType="number-pad"
-                  textContentType="oneTimeCode"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  placeholder="000000"
-                  autoFocus
-                  error={error || undefined}
-                  style={styles.codeInput}
-                />
-                <Button title={busy === 'sign' ? 'Підписуємо…' : 'Підписати договір'} icon="create-outline" disabled={code.length !== 6 || busy !== null} onPress={() => void sign()} />
-                <Button
-                  title={wait > 0 ? `Надіслати код ще раз (${wait} с)` : 'Надіслати код ще раз'}
-                  variant="soft"
-                  disabled={wait > 0 || busy !== null}
-                  onPress={() => void send()}
-                />
-              </>
-            )}
-
-            <Pressable accessibilityRole="button" onPress={close} style={styles.cancel}>
-              <ThemedText type="default" themeColor="textSecondary">
-                Скасувати
-              </ThemedText>
-</Pressable>
+    <BottomSheet visible={visible} onClose={close} locked={busy}>
+      <ThemedText style={styles.heading} accessibilityRole="header">
+        Підписання договору № {number}
+      </ThemedText>
+      <ThemedText type="callout" themeColor="textSecondary">
+        Ви підписуєте договір простим електронним підписом: підтверджуєте його в застосунку. Час підпису, адресу пошти й пристрій ми збережемо як підтвердження.
+      </ThemedText>
+      <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: agreed }} onPress={() => setAgreed(!agreed)} style={styles.agree}>
+        <View style={[styles.box, { borderColor: agreed ? theme.accent : theme.borderStrong, backgroundColor: agreed ? theme.accent : 'transparent' }]}>
+          {agreed ? <Icon name="checkmark" size={16} color={theme.onAccent} /> : null}
+        </View>
+        <ThemedText type="callout" style={styles.flex}>
+          Я прочитав(ла) договір, погоджуюсь з його умовами й визнаю підпис у застосунку.
+        </ThemedText>
+      </Pressable>
+      {error ? (
+        <ThemedText type="callout" themeColor="negative">
+          {error}
+        </ThemedText>
+      ) : null}
+      <Button title="Підписати договір" icon="create-outline" loading={busy} disabled={!agreed} disabledReason={!agreed ? 'Спершу підтвердьте, що прочитали договір' : undefined} onPress={() => void sign()} />
+      <Button title="Скасувати" variant="tertiary" disabled={busy} onPress={close} />
     </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  sheet: { borderTopLeftRadius: Radius.lg, borderTopRightRadius: Radius.lg, paddingHorizontal: Spacing.three, paddingTop: Spacing.three, gap: Spacing.three },
   heading: { ...Type.headline },
   agree: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.three },
   box: { width: 24, height: 24, borderRadius: 7, borderWidth: 2, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   flex: { flex: 1 },
-  codeInput: { ...Type.figure, letterSpacing: 8, textAlign: 'center' },
-  cancel: { alignItems: 'center', paddingVertical: Spacing.two },
 });

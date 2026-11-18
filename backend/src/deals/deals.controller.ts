@@ -6,7 +6,6 @@ import { type AuthUser, CurrentUser, Roles } from '../common/current-user';
 import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
 import { ConfirmPaymentDto, TerminateDealDto, WithdrawDealDto } from './deals.dto';
 import { DealsService } from './deals.service';
-import { SignDto } from './sign.dto';
 
 /** Оренди орендаря: авто, які він взяв в оренду. Облік по них ведеться через /transactions і /reports/renter */
 @Controller('deals')
@@ -101,25 +100,17 @@ export class DealsController {
     return new StreamableFile(pdf, { type: 'application/pdf', disposition: `attachment; filename="${filename}"` });
   }
 
-  /** Надіслати на пошту код для підписання договору */
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  @HttpCode(200)
-  @Post(':id/sign/code')
-  signCode(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
-    return this.deals.requestSignCode(user, id);
-  }
-
-  /** Підписати договір кодом з пошти (простий електронний підпис) */
+  /** Підписати договір кнопкою в застосунку (простий електронний підпис) */
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(200)
   @Post(':id/sign')
-  sign(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Body() dto: SignDto, @Req() req: Request) {
+  sign(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Req() req: Request) {
     // За проксі (Render) справжня адреса клієнта йде першою в X-Forwarded-For
     const forwarded = String(req.headers['x-forwarded-for'] ?? '').split(',')[0]?.trim();
-    return this.deals.sign(user, id, dto.code, { ip: forwarded || req.ip, userAgent: String(req.headers['user-agent'] ?? '') });
+    return this.deals.sign(user, id, { ip: forwarded || req.ip, userAgent: String(req.headers['user-agent'] ?? '') });
   }
 
-  /** Підтвердити умови оренди без договору (без коду з пошти) */
+  /** Підтвердити умови оренди без договору  */
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(200)
   @Post(':id/acknowledge')

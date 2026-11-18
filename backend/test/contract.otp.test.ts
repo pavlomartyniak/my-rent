@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { checkCode, generateCode, hashCode, maskEmail, OTP_MAX_ATTEMPTS, OTP_MINUTES, OTP_RESEND_SECONDS, resendWait, type PendingCode } from '../src/contract/contract.otp';
-import { methodLabel, SIGNING_METHOD_EMAIL_OTP, signContract } from '../src/contract/contract.signing';
+import { methodLabel, SIGNING_METHOD_BUTTON, SIGNING_METHOD_EMAIL_OTP, signContract } from '../src/contract/contract.signing';
 import { buildSections, buildTerms, contractHash, TEMPLATE_VERSION } from '../src/contract/contract.terms';
 
 const ctx = { dealId: 'deal1', role: 'renter', contractHash: 'abc' };
@@ -37,8 +37,9 @@ describe('maskEmail', () => {
 
 describe('підпис за кодом', () => {
   const at = new Date('2026-11-10T12:00:00Z');
-  it('за замовчуванням метод — код з e-mail', () => assert.equal(signContract({ contractHash: 'h', userId: 'u1', role: 'owner', at }).method, SIGNING_METHOD_EMAIL_OTP));
+  it('за замовчуванням метод — підтвердження кнопкою в застосунку', () => assert.equal(signContract({ contractHash: 'h', userId: 'u1', role: 'owner', at }).method, SIGNING_METHOD_BUTTON));
   it('підписи мають людські назви, у тому числі старі', () => {
+    assert.equal(methodLabel(SIGNING_METHOD_BUTTON), 'підтвердження в застосунку');
     assert.equal(methodLabel(SIGNING_METHOD_EMAIL_OTP), 'підтвердження кодом з e-mail');
     assert.equal(methodLabel('demo'), 'підтвердження в застосунку');
   });
@@ -62,7 +63,8 @@ describe('шаблон договору', () => {
     const t = buildTerms(input);
     assert.equal(t.templateVersion, TEMPLATE_VERSION);
     assert.match(text(t), /простим електронним підписом/);
-    assert.match(text(t), /одноразовим кодом/);
+    assert.match(text(t), /натиснувши кнопку «Підписати»/);
+    assert.doesNotMatch(text(t), /одноразовим кодом/);
     assert.match(text(t), /паперову копію/);
   });
   it('договір версії 3 (як і 2) показує лише імена сторін: особисті дані застосунок не збирає', () => {
