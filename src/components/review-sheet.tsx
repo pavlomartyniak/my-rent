@@ -1,20 +1,19 @@
 import { useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
 import type { ReviewState } from '@/lib/profiles';
 
 import { ThemedText } from './themed-text';
+import { BottomSheet } from './ui/bottom-sheet';
 import { Button } from './ui/button';
 import { Icon } from './ui/icon';
 
 /** Нижній лист оцінки: зірки й теги з фіксованого списку (вільного тексту немає). Оцінку не можна змінити. */
 export function ReviewSheet({ dealId, state, visible, onClose, onDone }: { dealId: string; state: ReviewState; visible: boolean; onClose: () => void; onDone: () => void }) {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const [rating, setRating] = useState(0);
   const [tags, setTags] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -37,9 +36,7 @@ export function ReviewSheet({ dealId, state, visible, onClose, onDone }: { dealI
   }
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={busy ? undefined : onClose}>
-        <Pressable style={[styles.sheet, { backgroundColor: theme.backgroundElement, paddingBottom: Math.max(insets.bottom, Spacing.three) }]} onPress={() => {}}>
+    <BottomSheet visible={visible} onClose={onClose} locked>
           <ThemedText type="default" style={styles.heading}>
             Оцінка: {state.target.name}
           </ThemedText>
@@ -81,17 +78,15 @@ export function ReviewSheet({ dealId, state, visible, onClose, onDone }: { dealI
             <ThemedText type="default" themeColor="textSecondary">
               Скасувати
             </ThemedText>
-          </Pressable>
-        </Pressable>
-      </Pressable>
-    </Modal>
+</Pressable>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: Spacing.four, gap: Spacing.three },
-  heading: { fontWeight: 700, fontSize: 18 },
+  heading: { ...Type.headline },
   stars: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.two, paddingVertical: Spacing.two },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   tag: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: Radius.pill, borderWidth: 1 },

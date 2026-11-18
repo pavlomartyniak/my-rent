@@ -1,7 +1,7 @@
 import { Children, Fragment, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Spacing } from '@/constants/theme';
+import { Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 import { ThemedText } from '../themed-text';
@@ -76,6 +76,6 @@ const grid = StyleSheet.create({
   tile: { borderRadius: 14, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center' },
   half: { width: '48.5%', flexGrow: 1 },
   wide: { width: '100%' },
-  label: { fontSize: 12, lineHeight: 16 },
+  label: { ...Type.caption },
   value: { fontWeight: 700 },
 });

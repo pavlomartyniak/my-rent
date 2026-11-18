@@ -1,5 +1,5 @@
-import { Link, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -13,7 +13,7 @@ import { ThemedText } from './themed-text';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 
-/** Стан авто: колір плашки */
+/** Стан авто: колір плашки (колір + підпис, не лише колір) */
 const STATUS_TONE: Record<string, 'positive' | 'accent' | 'warning' | 'neutral'> = {
   'В оренді': 'positive',
   Вільне: 'accent',
@@ -22,7 +22,8 @@ const STATUS_TONE: Record<string, 'positive' | 'accent' | 'warning' | 'neutral'>
 };
 
 /**
- * Авто в списку: компактний рядок із мініатюрою ліворуч, назвою, роком і водієм, станом плашкою та ціною за добу праворуч.
+ * Авто в списку: велике фото зі станом на ньому, нижче назва, рік, водій, номер і ціна за добу.
+ * Уся картка відкриває авто; окрема дія — лише «Опублікувати», коли оголошення ще немає.
  * Ціна — з оренди, що триває, а для вільного авто з оголошення.
  */
 export function CarCard({ car, pricePerDay }: { car: Car; pricePerDay?: number }) {
@@ -38,59 +39,64 @@ export function CarCard({ car, pricePerDay }: { car: Car; pricePerDay?: number }
     neutral: [theme.backgroundSelected, theme.textSecondary],
   }[tone];
   const price = pricePerDay ?? car.listing?.pricePerDay;
+  const title = `${car.brand} ${car.model}`;
 
   return (
-    <Card style={styles.card}>
-      <Link href={{ pathname: '/car/[id]', params: { id: car.id } }} asChild>
-        <Pressable accessibilityRole="button">
-          <View style={styles.row}>
-          <CarPhoto uri={car.photoUri} style={styles.photo} iconSize={30} />
-          <View style={styles.flex}>
-            <ThemedText type="default" style={styles.name} numberOfLines={1}>
-              {car.brand} {car.model}
+    <Card
+      onPress={() => router.push({ pathname: '/car/[id]', params: { id: car.id } })}
+      label={`${title}, ${car.year}, ${car.status}${price ? `, ${formatMoney(price)} за добу` : ''}`}
+      style={styles.card}>
+      <View>
+        <CarPhoto uri={car.photoUri} style={styles.photo} iconSize={40} />
+        <View style={[styles.badge, { backgroundColor: bg }]}>
+          <View style={[styles.dot, { backgroundColor: fg }]} />
+          <ThemedText type="caption" style={{ color: fg }}>
+            {car.status}
+          </ThemedText>
+        </View>
+      </View>
+
+      <View style={styles.body}>
+        <View style={styles.titleRow}>
+          <ThemedText type="headline" style={styles.flex} numberOfLines={1}>
+            {title}
+          </ThemedText>
+          {price ? (
+            <ThemedText type="headline" themeColor="positive" numberOfLines={1}>
+              {formatMoney(price)}
+              <ThemedText type="callout" themeColor="textSecondary"> /доб</ThemedText>
             </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-              {car.year}
-              {car.driver ? ` · ${car.driver}` : ' · без водія'}
-            </ThemedText>
-            {car.plate || car.color ? (
-              <View style={styles.facts}>
-                {car.plate ? <PlateBadge plate={car.plate} small /> : null}
-                <ColorDot color={car.color} />
-              </View>
-            ) : null}
-            <View style={styles.meta}>
-              <View style={[styles.badge, { backgroundColor: bg }]}>
-                <ThemedText type="small" style={[styles.badgeText, { color: fg }]}>
-                  {car.status}
-                </ThemedText>
-              </View>
-              {price ? (
-                <ThemedText type="smallBold" themeColor="positive" numberOfLines={1}>
-                  {formatMoney(price)} <ThemedText type="small" themeColor="textSecondary">/доб</ThemedText>
-                </ThemedText>
-              ) : null}
-            </View>
+          ) : null}
+        </View>
+        <ThemedText type="callout" themeColor="textSecondary" numberOfLines={1}>
+          {car.year}
+          {car.driver ? ` · ${car.driver}` : ' · без водія'}
+        </ThemedText>
+        {car.plate || car.color ? (
+          <View style={styles.facts}>
+            {car.plate ? <PlateBadge plate={car.plate} small /> : null}
+            <ColorDot color={car.color} />
           </View>
-          </View>
-        </Pressable>
-      </Link>
+        ) : null}
+      </View>
+
       {unpublished ? (
-        <Button title="Опублікувати для орендарів" icon="megaphone-outline" variant="soft" onPress={() => router.push({ pathname: '/car/listing', params: { id: car.id } })} />
+        <View style={styles.action}>
+          <Button title="Опублікувати для орендарів" icon="megaphone-outline" variant="soft" compact onPress={() => router.push({ pathname: '/car/listing', params: { id: car.id } })} />
+        </View>
       ) : null}
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { padding: Spacing.two + 2, gap: Spacing.two },
-  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  pressed: { opacity: 0.85 },
-  photo: { width: 72, height: 72, borderRadius: Radius.md },
-  flex: { flex: 1, gap: 2 },
-  name: { fontWeight: 700 },
-  facts: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, flexWrap: 'wrap', marginTop: 2 },
-  meta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two, marginTop: 4 },
-  badge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.pill },
-  badgeText: { fontSize: 12, lineHeight: 18, fontWeight: 600 },
+  card: { padding: 0, gap: 0 },
+  photo: { width: '100%', height: 156, borderRadius: 0 },
+  badge: { position: 'absolute', top: Spacing.two, left: Spacing.two, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.pill },
+  dot: { width: 7, height: 7, borderRadius: 4 },
+  body: { padding: Spacing.three, gap: 2 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
+  flex: { flex: 1 },
+  facts: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, flexWrap: 'wrap', marginTop: Spacing.one },
+  action: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.three },
 });

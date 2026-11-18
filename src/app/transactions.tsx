@@ -13,7 +13,7 @@ import { Icon } from '@/components/ui/icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { Screen } from '@/components/ui/screen';
 import { SwitchTabs } from '@/components/ui/switch-tabs';
-import { Spacing } from '@/constants/theme';
+import { Spacing, Type } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDate, monthTitle, shiftMonth, todayISO } from '@/lib/date';
@@ -120,7 +120,7 @@ export default function TransactionsScreen() {
       ) : null}
 
       {rangeInvalid ? null : !data ? (
-        <ReportStatus loading={loading} error={error} onRetry={retry} />
+        <ReportStatus shape="list" loading={loading} error={error} onRetry={retry} />
       ) : (
         <>
           <View style={styles.head}>
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   range: { flexDirection: 'row', gap: Spacing.three },
   stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   head: { gap: 2 },
-  total: { fontSize: 36, lineHeight: 44, fontWeight: 700, letterSpacing: -0.5 },
+  total: { ...Type.hero },
   filter: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
   card: { paddingVertical: 0, gap: 0 },
   divider: { height: StyleSheet.hairlineWidth, marginLeft: 48 + Spacing.three },

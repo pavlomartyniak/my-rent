@@ -82,7 +82,7 @@ export default function DepositScreen() {
             {dep.other ? `${otherRole} теж підтвердив: усе збігається.` : `Чекаємо підтвердження від ${counterpart}.`}
           </ThemedText>
         </View>
-        <Button title="Готово" icon="checkmark" onPress={() => router.back()} />
+        <Button title="Закрити" icon="checkmark" onPress={() => router.back()} />
       </Screen>
     );
   }
@@ -106,7 +106,7 @@ export default function DepositScreen() {
         </ThemedText>
       </Card>
 
-      <ThemedText type="default" style={styles.question}>
+      <ThemedText type="title" style={styles.question} accessibilityRole="header">
         {renter ? 'Ви внесли' : 'Ви отримали'} заставу {formatMoney(dep.amount)}?
       </ThemedText>
 
@@ -116,7 +116,7 @@ export default function DepositScreen() {
       </View>
 
       <Button title={renter ? 'Так, вніс заставу' : 'Так, отримав заставу'} icon="checkmark" disabled={busy || dep.mine} onPress={() => void call('confirm')} />
-      <Button title="Ще ні" variant="soft" disabled={busy} onPress={() => void call('later')} />
+      <Button title={renter ? 'Ще не вніс' : 'Ще не отримав'} variant="tertiary" disabled={busy} onPress={() => void call('later')} />
 
       <Card style={styles.notes}>
         {NOTES.map((n) => (
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
   badge: { width: 60, height: 60, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   badgeBig: { width: 88, height: 88 },
   center: { textAlign: 'center' },
-  question: { fontWeight: 700, fontSize: 20, lineHeight: 26 },
+  question: { marginTop: Spacing.two },
   state: { gap: Spacing.one },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   notes: { gap: Spacing.three },

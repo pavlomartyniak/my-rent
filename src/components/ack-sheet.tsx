@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
-import { Spacing } from '@/constants/theme';
+import { Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
 
 import { ThemedText } from './themed-text';
+import { BottomSheet } from './ui/bottom-sheet';
 import { Button } from './ui/button';
 import { Icon } from './ui/icon';
 
@@ -16,7 +16,6 @@ import { Icon } from './ui/icon';
  */
 export function AckSheet({ dealId, visible, onClose, onDone }: { dealId: string; visible: boolean; onClose: () => void; onDone: () => void }) {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -35,9 +34,7 @@ export function AckSheet({ dealId, visible, onClose, onDone }: { dealId: string;
   }
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={busy ? undefined : onClose}>
-        <Pressable style={[styles.sheet, { backgroundColor: theme.backgroundElement, paddingBottom: Math.max(insets.bottom, Spacing.three) }]} onPress={() => {}}>
+    <BottomSheet visible={visible} onClose={onClose} locked>
           <ThemedText type="default" style={styles.heading}>
             Оренда без договору
           </ThemedText>
@@ -46,7 +43,7 @@ export function AckSheet({ dealId, visible, onClose, onDone }: { dealId: string;
           </ThemedText>
           <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: agreed }} onPress={() => setAgreed(!agreed)} style={styles.agree}>
             <View style={[styles.box, { borderColor: agreed ? theme.accent : theme.borderStrong, backgroundColor: agreed ? theme.accent : 'transparent' }]}>
-              {agreed ? <Icon name="checkmark" size={16} color="#FFFFFF" /> : null}
+              {agreed ? <Icon name="checkmark" size={16} color={theme.onAccent} /> : null}
             </View>
             <ThemedText type="small" style={styles.flex}>
               Розумію, що оренда без договору, і погоджуюсь із цим.
@@ -57,17 +54,15 @@ export function AckSheet({ dealId, visible, onClose, onDone }: { dealId: string;
             <ThemedText type="default" themeColor="textSecondary">
               Скасувати
             </ThemedText>
-          </Pressable>
-        </Pressable>
-      </Pressable>
-    </Modal>
+</Pressable>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: Spacing.four, gap: Spacing.three },
-  heading: { fontWeight: 700, fontSize: 18 },
+  heading: { ...Type.headline },
   agree: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   box: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },

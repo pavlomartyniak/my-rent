@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
@@ -91,7 +91,7 @@ export default function ContractScreen() {
             <ThemedText type="small" themeColor="textSecondary">
               Договір оренди транспортного засобу
             </ThemedText>
-            <ThemedText type="subtitle" style={{ fontSize: 22, lineHeight: 28 }}>№ {data.number}</ThemedText>
+            <ThemedText type="subtitle" style={Type.title}>№ {data.number}</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               від {formatDate(data.createdAt.slice(0, 10))}
             </ThemedText>
@@ -253,5 +253,5 @@ const styles = StyleSheet.create({
   bold: { fontWeight: 700 },
   paragraph: { lineHeight: 20 },
   sign: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.md, borderWidth: 1 },
-  hash: { fontSize: 11 },
+  hash: { ...Type.caption },
 });

@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
-import { Radius } from '@/constants/theme';
+import { Radius, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 import { ThemedText } from './themed-text';
@@ -27,5 +27,5 @@ export function DeltaChip({ change, lowerIsBetter }: { change: number | null; lo
 
 const styles = StyleSheet.create({
   chip: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.pill },
-  text: { fontSize: 12, lineHeight: 18 },
+  text: { ...Type.caption },
 });

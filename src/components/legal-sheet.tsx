@@ -1,7 +1,7 @@
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Spacing } from '@/constants/theme';
+import { Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { LEGAL, LEGAL_UPDATED } from '@/lib/legal';
 
@@ -57,5 +57,5 @@ const styles = StyleSheet.create({
   close: { position: 'absolute', right: Spacing.three, top: Spacing.three },
   content: { padding: 20, gap: Spacing.three },
   section: { gap: Spacing.two },
-  sectionTitle: { fontWeight: 700, fontSize: 18 },
+  sectionTitle: { ...Type.headline },
 });

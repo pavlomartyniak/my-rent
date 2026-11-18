@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
+import { haptic } from '@/lib/haptics';
+
 import { ThemedText } from '../themed-text';
 import { Icon, type IconName } from './icon';
 
@@ -15,8 +17,12 @@ export function PillButton({ title, icon, onPress }: Props) {
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={onPress}
-      hitSlop={6}
+      accessibilityLabel={title}
+      onPress={() => {
+        haptic.select();
+        onPress();
+      }}
+      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
       style={({ pressed }) => [
         styles.pill,
         { backgroundColor: theme.backgroundSelected, borderColor: 'transparent' },
@@ -34,7 +40,7 @@ export function PillButton({ title, icon, onPress }: Props) {
 
 const styles = StyleSheet.create({
   pill: {
-    minHeight: 36,
+    minHeight: 40,
     borderRadius: Radius.pill,
     borderWidth: 1,
     paddingHorizontal: Spacing.three,

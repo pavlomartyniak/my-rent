@@ -89,7 +89,7 @@ export default function NewWantedScreen() {
       });
       invalidate();
       router.dismissAll();
-      router.navigate({ pathname: '/renter/requests', params: { tab: 'wanted' } });
+      router.navigate({ pathname: '/renter', params: { section: 'wanted' } });
       Alert.alert('Заявку створено', 'Власники побачать її й запропонують свої авто. Пропозиції з’являться в «Моїх заявках».');
     } catch (e) {
       Alert.alert('Не вдалося створити заявку', e instanceof ApiError ? e.message : 'Спробуйте ще раз');

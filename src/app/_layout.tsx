@@ -5,7 +5,7 @@ import { useColorScheme, View } from 'react-native';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
-import { Colors, Spacing } from '@/constants/theme';
+import { Colors, Spacing, Type } from '@/constants/theme';
 import '@/lib/notifications';
 import { AuthProvider, useAuth } from '@/store/auth';
 import { ChatProvider } from '@/store/chat';
@@ -53,7 +53,7 @@ function Routes() {
   return (
     <>
       <AnimatedSplashOverlay />
-      <Stack screenOptions={{ headerShadowVisible: false, headerTitleStyle: { fontWeight: '600', fontSize: 17 }, headerLargeTitleShadowVisible: false }}>
+      <Stack screenOptions={{ headerShadowVisible: false, headerTitleStyle: { fontWeight: '600', fontSize: Type.headline.fontSize }, headerLargeTitleShadowVisible: false }}>
         <Stack.Protected guard={!authed} redirectTo={authed ? (onboarded ? home : '/onboarding') : undefined}>
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="forgot" options={{ title: 'Відновлення пароля', headerBackTitle: 'Назад' }} />
@@ -65,7 +65,8 @@ function Routes() {
         <Stack.Protected guard={authed && onboarded && role === 'owner'} redirectTo={authed && onboarded ? '/renter' : undefined}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="car/[id]" options={{ title: 'Авто', headerBackTitle: 'Назад' }} />
-          <Stack.Screen name="car/analytics" options={{ title: 'Аналітика', headerBackTitle: 'Назад' }} />
+          <Stack.Screen name="car/analytics" options={{ headerShown: false }} />
+          <Stack.Screen name="reminders" options={{ title: 'Нагадування', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="car/new" options={{ title: 'Нове авто', presentation: 'modal' }} />
           <Stack.Screen name="car/listing" options={{ title: 'Оголошення', presentation: 'modal' }} />
           <Stack.Screen name="car/edit" options={{ title: 'Редагувати авто', presentation: 'modal' }} />
@@ -81,7 +82,7 @@ function Routes() {
           <Stack.Screen name="wanted/[id]" options={{ title: 'Шукаю авто', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="rentals/archive" options={{ title: 'Архів оренд', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="deals/[id]" options={{ title: 'Оренда', headerBackTitle: 'Назад' }} />
-          <Stack.Screen name="deals/analytics" options={{ title: 'Аналітика', headerBackTitle: 'Назад' }} />
+          <Stack.Screen name="deals/analytics" options={{ headerShown: false }} />
         </Stack.Protected>
         {/* Спільне для обох ролей; стоїть останнім, щоб не ставати стартовим екраном */}
         <Stack.Protected guard={authed && onboarded}>
@@ -93,9 +94,10 @@ function Routes() {
           <Stack.Screen name="car/pick" options={{ headerShown: false, presentation: 'modal' }} />
           <Stack.Screen name="transaction/new" options={{ title: 'Новий запис', presentation: 'modal' }} />
           <Stack.Screen name="transaction/[id]" options={{ title: 'Запис', presentation: 'modal' }} />
-          <Stack.Screen name="profile" options={{ title: 'Профіль', presentation: 'modal' }} />
+          <Stack.Screen name="profile" options={{ title: 'Особисті дані', presentation: 'modal' }} />
           <Stack.Screen name="blocked" options={{ title: 'Заблоковані', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="transactions" options={{ title: 'Записи', headerBackTitle: 'Назад' }} />
+          <Stack.Screen name="condition/[id]" options={{ title: 'Стан авто', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="user/[id]" options={{ title: 'Профіль', headerBackTitle: 'Назад' }} />
         </Stack.Protected>
       </Stack>

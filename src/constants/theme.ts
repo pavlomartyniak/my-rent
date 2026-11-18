@@ -18,13 +18,14 @@ export const Colors = {
     borderStrong: '#C9C9C9',
     accent: '#3D39CC',
     accentSoft: '#ECEBFA',
+    onAccent: '#FFFFFF',
     ink: '#222222',
     onInk: '#FFFFFF',
     positive: '#0A7D3B',
     positiveSoft: '#E6F4EB',
-    negative: '#C93B2B',
+    negative: '#B83325',
     negativeSoft: '#FCEBE8',
-    warning: '#B35C00',
+    warning: '#9A4F00',
     warningSoft: '#FFF1DB',
   },
   dark: {
@@ -37,6 +38,8 @@ export const Colors = {
     borderStrong: '#48484A',
     accent: '#8E86FF',
     accentSoft: '#26234A',
+    // Світлий акцент у темній темі: білий текст на ньому має контраст ~3:1, темний — понад 6:1 (WCAG AA)
+    onAccent: '#14123A',
     ink: '#F5F5F5',
     onInk: '#121212',
     positive: '#3DD68C',
@@ -49,6 +52,26 @@ export const Colors = {
 } as const;
 
 export const Radius = { sm: 10, md: 14, lg: 20, pill: 999 } as const;
+
+/** Типографічна шкала: 6 рівнів. Усе, що не вписується, — виняток, який треба обґрунтувати. */
+export const Type = {
+  /** Головна цифра екрана: прибуток, ціна, сума */
+  hero: { fontSize: 40, lineHeight: 48, fontWeight: 700, letterSpacing: -0.8 },
+  /** Велика цифра в картці: підсумок, баланс, відсоток */
+  figure: { fontSize: 28, lineHeight: 34, fontWeight: 700, letterSpacing: -0.3 },
+  display: { fontSize: 32, lineHeight: 38, fontWeight: 700, letterSpacing: -0.6 },
+  title: { fontSize: 22, lineHeight: 28, fontWeight: 700, letterSpacing: -0.3 },
+  headline: { fontSize: 17, lineHeight: 24, fontWeight: 600 },
+  body: { fontSize: 16, lineHeight: 24, fontWeight: 400 },
+  callout: { fontSize: 14, lineHeight: 20, fontWeight: 400 },
+  caption: { fontSize: 12, lineHeight: 16, fontWeight: 500 },
+} as const;
+
+/** Максимальне масштабування шрифту (Dynamic Type): далі за ним верстка ламається */
+export const MaxFontScale = 1.3;
+
+/** Мінімальна зона натискання: 44 pt (iOS) / 48 dp (Android) */
+export const MinHit = Platform.select({ ios: 44, default: 48 });
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Animated, Easing, LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
 
-import { Radius } from '@/constants/theme';
+import { Radius, Type } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/use-theme';
+
+import { haptic } from '@/lib/haptics';
 
 import { ThemedText } from '../themed-text';
 
@@ -39,7 +41,7 @@ export function SwitchTabs<T extends string>({ options, value, onChange, counts 
         <Animated.View
           style={[
             styles.thumb,
-            { width: segment, backgroundColor: dark ? theme.borderStrong : '#FFFFFF', transform: [{ translateX: Animated.multiply(x, segment) }] },
+            { width: segment, backgroundColor: dark ? theme.borderStrong : theme.backgroundElement, transform: [{ translateX: Animated.multiply(x, segment) }] },
             !dark && styles.thumbShadow,
           ]}
         />
@@ -48,13 +50,17 @@ export function SwitchTabs<T extends string>({ options, value, onChange, counts 
         const selected = option === value;
         const count = counts?.[option];
         return (
-          <Pressable key={option} accessibilityRole="tab" accessibilityState={{ selected }} onPress={() => onChange(option)} style={styles.tab}>
+          <Pressable key={option} accessibilityRole="tab" accessibilityState={{ selected }} onPress={() => {
+              if (!selected) haptic.select();
+              onChange(option);
+            }}
+            style={styles.tab}>
             <ThemedText type="smallBold" themeColor={selected ? 'text' : 'textSecondary'} numberOfLines={1}>
               {option}
             </ThemedText>
             {count !== undefined ? (
               <View style={[styles.count, { backgroundColor: selected ? theme.ink : theme.borderStrong }]}>
-                <ThemedText type="smallBold" style={[styles.countText, { color: selected ? theme.onInk : '#FFFFFF' }]}>
+                <ThemedText type="smallBold" style={[styles.countText, { color: selected ? theme.onInk : theme.background }]}>
                   {count}
                 </ThemedText>
               </View>
@@ -74,5 +80,5 @@ const styles = StyleSheet.create({
   thumbShadow: { shadowColor: '#000000', shadowOpacity: 0.12, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
   tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 40 },
   count: { minWidth: 22, height: 20, paddingHorizontal: 6, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  countText: { fontSize: 12, lineHeight: 15 },
+  countText: { ...Type.caption },
 });

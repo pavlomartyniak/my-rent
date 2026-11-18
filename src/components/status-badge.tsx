@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
-import { Radius } from '@/constants/theme';
+import { Radius, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 import { ThemedText } from './themed-text';
@@ -50,5 +50,5 @@ const styles = StyleSheet.create({
   badge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.pill },
   plain: { paddingHorizontal: 0, paddingVertical: 0 },
   dot: { width: 7, height: 7, borderRadius: 4 },
-  text: { fontSize: 12, lineHeight: 18, fontWeight: 600 },
+  text: { ...Type.caption, fontWeight: 600 },
 });

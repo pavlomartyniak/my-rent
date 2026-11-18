@@ -7,7 +7,7 @@ import { ThemedText } from './themed-text';
 export function ScreenTitle({ children, actions }: { children: string; /** Додаткові кнопки перед кнопкою повідомлень, напр. експорт */ actions?: React.ReactNode }) {
   return (
     <View style={styles.row}>
-      <ThemedText type="subtitle" style={styles.title} numberOfLines={1}>
+      <ThemedText type="display" style={styles.title} numberOfLines={1} accessibilityRole="header">
         {children}
       </ThemedText>
       <View style={styles.actions}>

@@ -13,7 +13,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { formatMoney, plural } from '@/lib/format';
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   stats: { flexDirection: 'row', gap: Spacing.two },
   stat: { flex: 1, borderRadius: Radius.md, borderWidth: StyleSheet.hairlineWidth, paddingVertical: Spacing.three, paddingHorizontal: Spacing.two, alignItems: 'center', gap: 2 },
   statValue: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statNumber: { fontSize: 22, lineHeight: 28, fontWeight: 700 },
+  statNumber: { ...Type.title },
   details: { gap: Spacing.three },
   detail: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   detailIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },

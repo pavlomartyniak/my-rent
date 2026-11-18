@@ -1,7 +1,7 @@
 import { Children, Fragment, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 import { ThemedText } from '../themed-text';
@@ -81,7 +81,7 @@ export function SettingsRow({ icon, leading, title, subtitle, onPress, danger, r
 
 const styles = StyleSheet.create({
   group: { gap: Spacing.two },
-  title: { marginLeft: Spacing.one, fontSize: 12, letterSpacing: 0.6 },
+  title: { ...Type.caption, marginLeft: Spacing.one, letterSpacing: 0.6 },
   card: { paddingVertical: Spacing.one, paddingHorizontal: Spacing.three, gap: 0 },
   divider: { height: StyleSheet.hairlineWidth, marginLeft: 52 },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.three },

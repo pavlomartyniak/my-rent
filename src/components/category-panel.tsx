@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
-import { Spacing } from '@/constants/theme';
+import { Spacing, Type } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import type { CategoryShare } from '@/lib/reports';
 
@@ -26,9 +26,9 @@ export function CategoryPanel({ carId, dealId, title }: { carId?: string; dealId
         </ThemedText>
       ) : null}
       <PeriodSwitcher state={p} />
-      {data ? <CategoryBreakdown items={data.categories} /> : <ReportStatus loading={loading} error={error} onRetry={retry} />}
+      {data ? <CategoryBreakdown items={data.categories} /> : <ReportStatus shape="list" loading={loading} error={error} onRetry={retry} />}
     </View>
   );
 }
 
-const styles = StyleSheet.create({ wrap: { gap: Spacing.four }, title: { fontWeight: 700, fontSize: 18 } });
+const styles = StyleSheet.create({ wrap: { gap: Spacing.four }, title: { ...Type.headline } });

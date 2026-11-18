@@ -1,27 +1,29 @@
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 
 import { EmptyState } from './ui/empty-state';
+import { CardSkeleton, ListSkeleton, SummarySkeleton } from './ui/skeleton';
 
-type Props = { loading: boolean; error?: string; onRetry: () => void };
+type Props = {
+  loading: boolean;
+  error?: string;
+  onRetry: () => void;
+  /** Форма каркаса: `summary` — цифра й картка (звіти), `list` — рядки (чати, історія) */
+  shape?: 'summary' | 'list';
+};
 
-/** Замість звіту: індикатор завантаження або помилка з повтором */
-export function ReportStatus({ loading, error, onRetry }: Props) {
-  const theme = useTheme();
-
+/** Замість контенту: skeleton під час завантаження або помилка з поясненням і повтором */
+export function ReportStatus({ loading, error, onRetry, shape = 'summary' }: Props) {
   if (error) {
-    return <EmptyState icon="cloud-offline-outline" title="Не вдалося завантажити звіт" text={error} action="Спробувати ще раз" onAction={onRetry} />;
+    return <EmptyState icon="cloud-offline-outline" title="Не вдалося завантажити дані" text={`${error}. Перевірте інтернет і спробуйте ще раз.`} action="Спробувати ще раз" onAction={onRetry} />;
   }
   if (!loading) return null;
+  if (shape === 'list') return <ListSkeleton />;
   return (
-    <View style={styles.center}>
-      <ActivityIndicator color={theme.accent} />
+    <View style={{ gap: Spacing.three }}>
+      <SummarySkeleton />
+      <CardSkeleton />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  center: { alignItems: 'center', justifyContent: 'center', paddingVertical: Spacing.six },
-});

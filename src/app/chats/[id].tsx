@@ -12,7 +12,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
-import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/date';
@@ -26,6 +26,7 @@ import { type Attachment, clock, dayLabel, differentDays, newClientId, type Chat
 import { type Draft, formatSize, MAX_FILES, pickDocuments, pickFromCamera, pickFromLibrary, uploadDrafts } from '@/lib/chat-files';
 import { useChat, useChatEvents } from '@/store/chat';
 import { useFleet } from '@/store/fleet';
+import { ListSkeleton } from '@/components/ui/skeleton';
 
 const PAGE = 40;
 
@@ -237,9 +238,9 @@ export default function ChatScreen() {
     }
     if (chat.source?.kind === 'offer') {
       if (role === 'renter' && chat.source.wantedId) router.push({ pathname: '/wanted/[id]', params: { id: chat.source.wantedId } });
-      else if (role === 'owner') router.navigate({ pathname: '/requests', params: { section: 'offers' } });
+      else if (role === 'owner') router.navigate({ pathname: '/requests', params: { section: 'wanted' } });
     } else if (chat.source?.kind === 'request') {
-      router.navigate(role === 'renter' ? '/renter/requests' : '/requests');
+      router.navigate(role === 'renter' ? { pathname: '/renter', params: { section: 'requests' } } : { pathname: '/requests', params: { section: 'requests' } });
     }
   }
   const contextTappable = !!chat && (!!chat.dealId || !!chat.source);
@@ -320,7 +321,7 @@ export default function ChatScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {loading ? (
           <View style={styles.center}>
-            <ActivityIndicator color={theme.accent} />
+            <ListSkeleton avatar={false} />
           </View>
         ) : error ? (
           <EmptyState icon="cloud-offline-outline" title="Не вдалося відкрити розмову" text={error} action="Спробувати ще раз" onAction={() => { setLoading(true); load(); }} />
@@ -381,15 +382,15 @@ export default function ChatScreen() {
                       ]}>
                       {item.attachments?.length ? <ChatAttachments items={item.attachments} mine={item.mine} chatId={String(id)} inert={!!item.status} /> : null}
                       {item.text ? (
-                        <ThemedText type="default" style={{ color: item.mine ? '#FFFFFF' : theme.text }} selectable>
+                        <ThemedText type="default" style={{ color: item.mine ? theme.onAccent : theme.text }} selectable>
                           {item.text}
                         </ThemedText>
                       ) : null}
                       <View style={styles.meta}>
-                        <ThemedText type="small" style={[styles.time, { color: item.mine ? 'rgba(255,255,255,0.8)' : theme.textSecondary }]}>
+                        <ThemedText type="small" style={[styles.time, { color: item.mine ? theme.onAccent : theme.textSecondary, opacity: item.mine ? 0.8 : 1 }]}>
                           {clock(item.createdAt)}
                         </ThemedText>
-                        {item.mine && !item.status ? <Icon name={seen ? 'checkmark-done' : 'checkmark'} size={14} color={seen ? '#FFFFFF' : 'rgba(255,255,255,0.8)'} /> : null}
+                        {item.mine && !item.status ? <Icon name={seen ? 'checkmark-done' : 'checkmark'} size={14} color={theme.onAccent} /> : null}
                       </View>
                     </Pressable>
                   </View>
@@ -443,7 +444,7 @@ export default function ChatScreen() {
                       </View>
                     )}
                     <Pressable accessibilityRole="button" accessibilityLabel={`Прибрати ${d.name}`} hitSlop={6} onPress={() => setDrafts((cur) => cur.filter((x) => x.id !== d.id))} style={styles.draftRemove}>
-                      <Icon name="close" size={14} color="#FFFFFF" />
+                      <Icon name="close" size={14} color={theme.onInk} />
                     </Pressable>
                   </View>
                 ))}
@@ -468,7 +469,7 @@ export default function ChatScreen() {
               disabled={!text.trim() && !drafts.length}
               onPress={send}
               style={({ pressed }) => [styles.send, { backgroundColor: text.trim() || drafts.length ? theme.accent : theme.backgroundSelected }, pressed && { opacity: 0.8 }]}>
-              <Icon name="send" size={20} color={text.trim() || drafts.length ? '#FFFFFF' : 'textSecondary'} />
+              <Icon name="send" size={20} color={text.trim() || drafts.length ? theme.onAccent : 'textSecondary'} />
             </Pressable>
           </View>
           </View>
@@ -499,13 +500,13 @@ const styles = StyleSheet.create({
   bubble: { maxWidth: '82%', paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, borderRadius: Radius.lg, gap: 2 },
   sending: { opacity: 0.6 },
   meta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
-  time: { fontSize: 11, lineHeight: 14 },
+  time: { ...Type.caption },
   failed: { textAlign: 'right', marginTop: 2 },
   typing: { flexDirection: 'row', justifyContent: 'flex-start', paddingTop: 2 },
   typingBubble: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, borderRadius: Radius.lg, borderWidth: 1 },
   typingText: { fontStyle: 'italic', fontWeight: 600 },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.two, paddingHorizontal: Spacing.three, paddingTop: Spacing.two, borderTopWidth: StyleSheet.hairlineWidth },
-  input: { flex: 1, minHeight: 44, maxHeight: 130, borderRadius: 22, borderWidth: 1, paddingHorizontal: Spacing.three, paddingTop: 11, paddingBottom: 11, fontSize: 16 },
+  input: { flex: 1, minHeight: 44, maxHeight: 130, borderRadius: 22, borderWidth: 1, paddingHorizontal: Spacing.three, paddingTop: 11, paddingBottom: 11, fontSize: Type.body.fontSize },
   send: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   attach: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
   drafts: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, paddingHorizontal: Spacing.three, paddingTop: Spacing.two },

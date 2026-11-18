@@ -1,9 +1,12 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { BarChart } from '@/components/bar-chart';
 import { CarPhoto } from '@/components/car-photo';
+import { CarReportView } from '@/components/car-report-view';
+import { ScopeFilter } from '@/components/scope-filter';
+import { Button } from '@/components/ui/button';
 import { CategoryPanel } from '@/components/category-panel';
 import { ComparisonCard } from '@/components/comparison-card';
 import { ExportButton, ExportIconButton } from '@/components/export-sheet';
@@ -21,7 +24,7 @@ import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { monthTitle } from '@/lib/date';
 import { formatMoney, formatMonths, formatPercent } from '@/lib/format';
-import type { SummaryReport } from '@/lib/reports';
+import type { CarReport, SummaryReport } from '@/lib/reports';
 import { useFleet } from '@/store/fleet';
 
 const CRITERIA = ['Прибуток', 'ROI', 'Окупність'] as const;
@@ -36,7 +39,13 @@ export default function ReportScreen() {
   const { cars } = useFleet();
   const p = usePeriod();
   const [criterion, setCriterion] = useState<Criterion>('Прибуток');
-  const { data, loading, error, retry } = useReport<SummaryReport>(`/reports/summary?period=${p.key}`);
+  // `?carId=` відкриває розділ уже з вибраним авто (перехід із картки авто); власний вибір діє, доки параметр той самий
+  const params = useLocalSearchParams<{ carId?: string }>();
+  const [pick, setPick] = useState<{ param?: string; id: string | null }>();
+  const carId = pick && pick.param === params.carId ? pick.id : (params.carId ?? null);
+  const car = cars.find((c) => c.id === carId);
+  const { data, loading, error, retry } = useReport<SummaryReport>(car ? null : `/reports/summary?period=${p.key}`);
+  const carReport = useReport<CarReport>(car ? `/reports/cars/${car.id}?period=${p.key}` : null);
 
   const monthly = p.key.length === 7;
 
@@ -56,11 +65,30 @@ export default function ReportScreen() {
 
   return (
     <Screen tabs>
-      <ScreenTitle actions={<ExportIconButton filter={{ period: p.key }} subtitle={`Усі авто · ${p.label}`} />}>Звіт</ScreenTitle>
+      <ScreenTitle actions={<ExportIconButton filter={{ period: p.key, ...(car ? { carId: car.id } : {}) }} subtitle={`${car ? `${car.brand} ${car.model}` : 'Усі авто'} · ${p.label}`} />}>Доходи</ScreenTitle>
+
+      {cars.length > 1 ? (
+        <ScopeFilter
+          label="Авто"
+          allLabel="Усі авто"
+          options={cars.map((c) => ({ id: c.id, label: `${c.brand} ${c.model}` }))}
+          value={car?.id ?? null}
+          onChange={(id) => setPick({ param: params.carId, id })}
+        />
+      ) : null}
 
       <PeriodSwitcher state={p} />
 
-      {!data ? (
+      {car ? (
+        carReport.data ? (
+          <>
+            <Button title="Додати дохід або витрату" icon="add" onPress={() => router.push({ pathname: '/transaction/new', params: { carId: car.id } })} />
+            <CarReportView report={carReport.data} carId={car.id} price={car.price} periodLabel={p.label} periodKey={p.key} exportSubtitle={`${car.brand} ${car.model} · ${p.label}`} />
+          </>
+        ) : (
+          <ReportStatus loading={carReport.loading} error={carReport.error} onRetry={carReport.retry} />
+        )
+      ) : !data ? (
         <ReportStatus loading={loading} error={error} onRetry={retry} />
       ) : (
         <>
@@ -87,6 +115,8 @@ export default function ReportScreen() {
 
           <BarChart key={p.key} data={data.series} card />
 
+          <Button title="Додати дохід або витрату" icon="add" onPress={() => router.push('/transaction/new')} />
+
           <SectionHeader title="Рейтинг авто" />
           <Segmented scroll options={CRITERIA} value={criterion} onChange={setCriterion} />
           <Card style={styles.list}>
@@ -106,7 +136,7 @@ export default function ReportScreen() {
               const sub = criterion === 'ROI' ? `Прибуток за весь час ${formatMoney(all.profit)}` : `ROI ${formatPercent(all.roi)}`;
 
               return (
-                <Pressable key={car.id} accessibilityRole="button" onPress={() => router.push({ pathname: '/car/analytics', params: { id: car.id } })}>
+                <Pressable key={car.id} accessibilityRole="button" onPress={() => setPick({ param: params.carId, id: car.id })}>
                   <View style={[styles.row, i > 0 && styles.rowBorder]}>
                     <View style={[styles.place, { backgroundColor: i === 0 ? theme.ink : theme.backgroundSelected }]}>
                       <ThemedText type="smallBold" style={{ color: i === 0 ? theme.onInk : theme.textSecondary }}>

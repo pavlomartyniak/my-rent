@@ -1,20 +1,19 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError } from '@/lib/api';
 import { EXPORT_FORMATS, exportFile, type ExportFilter, type ExportFormat } from '@/lib/export';
 
 import { ThemedText } from './themed-text';
 import { Button } from './ui/button';
+import { BottomSheet } from './ui/bottom-sheet';
 import { Icon } from './ui/icon';
 
 /** Нижній лист вибору формату експорту (Excel, PDF, CSV) */
 export function ExportSheet({ visible, onClose, filter, subtitle }: { visible: boolean; onClose: () => void; filter?: ExportFilter; subtitle?: string }) {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const [busy, setBusy] = useState<ExportFormat | null>(null);
 
   async function run(format: ExportFormat) {
@@ -30,9 +29,7 @@ export function ExportSheet({ visible, onClose, filter, subtitle }: { visible: b
   }
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={busy ? undefined : onClose}>
-        <View style={[styles.sheet, { backgroundColor: theme.backgroundElement, paddingBottom: Math.max(insets.bottom, Spacing.three) }]}>
+    <BottomSheet visible={visible} onClose={onClose} locked={!!busy}>
           <ThemedText type="default" style={styles.heading}>
             Експорт обліку
           </ThemedText>
@@ -59,9 +56,7 @@ export function ExportSheet({ visible, onClose, filter, subtitle }: { visible: b
               {busy === f.format ? <ActivityIndicator /> : <Icon name="download-outline" size={22} color="accent" />}
             </Pressable>
           ))}
-        </View>
-      </Pressable>
-    </Modal>
+</BottomSheet>
   );
 }
 
@@ -99,7 +94,7 @@ const styles = StyleSheet.create({
   icon: { width: 44, height: 44, borderRadius: Radius.pill, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   sheet: { borderTopLeftRadius: Radius.lg, borderTopRightRadius: Radius.lg, paddingHorizontal: Spacing.three, paddingTop: Spacing.three, gap: 2 },
-  heading: { fontWeight: 700, fontSize: 18 },
+  heading: { ...Type.headline },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.three },
   title: { fontWeight: 600 },
 });

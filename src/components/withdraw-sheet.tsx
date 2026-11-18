@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
 import { OWNER_GROUNDS, RENTER_GROUNDS, type WithdrawGround } from '@/lib/contract';
 
 import { ThemedText } from './themed-text';
+import { BottomSheet } from './ui/bottom-sheet';
 import { Button } from './ui/button';
 import { Icon } from './ui/icon';
 
@@ -18,7 +18,6 @@ import { Icon } from './ui/icon';
 export function WithdrawSheet({ visible, dealId, role, onClose, onDone }: { visible: boolean; dealId: string; role: 'owner' | 'renter'; onClose: () => void; onDone: () => void }) {
   const grounds = role === 'owner' ? OWNER_GROUNDS : RENTER_GROUNDS;
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const [ground, setGround] = useState<WithdrawGround | null>(null);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -53,10 +52,7 @@ export function WithdrawSheet({ visible, dealId, role, onClose, onDone }: { visi
   }
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
-      <Pressable style={styles.backdrop} onPress={close}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <Pressable style={[styles.sheet, { backgroundColor: theme.backgroundElement, paddingBottom: Math.max(insets.bottom, Spacing.three) }]} onPress={() => {}}>
+    <BottomSheet visible={visible} onClose={close}>
             <ThemedText type="default" style={styles.heading}>
               Відмова від договору
             </ThemedText>
@@ -93,20 +89,17 @@ export function WithdrawSheet({ visible, dealId, role, onClose, onDone }: { visi
               style={[styles.note, { color: theme.text, backgroundColor: theme.backgroundSelected }]}
             />
             <Button title={busy ? 'Надсилаємо…' : 'Відмовитись від договору'} icon="close-circle-outline" variant="danger" disabled={!ground || busy} onPress={confirm} />
-          </Pressable>
-        </KeyboardAvoidingView>
-      </Pressable>
-    </Modal>
+</BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   sheet: { borderTopLeftRadius: Radius.lg, borderTopRightRadius: Radius.lg, paddingHorizontal: Spacing.three, paddingTop: Spacing.three, gap: Spacing.two },
-  heading: { fontWeight: 700, fontSize: 18 },
+  heading: { ...Type.headline },
   list: { maxHeight: 320 },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.two + 2 },
   flex: { flex: 1 },
   title: { fontWeight: 600 },
-  note: { minHeight: 64, borderRadius: Radius.md, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, textAlignVertical: 'top', fontSize: 16 },
+  note: { minHeight: 64, borderRadius: Radius.md, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, textAlignVertical: 'top', fontSize: Type.body.fontSize },
 });

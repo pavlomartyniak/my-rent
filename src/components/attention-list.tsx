@@ -1,11 +1,12 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { type AttentionItem, useAttention } from '@/hooks/use-attention';
 import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
+import { haptic } from '@/lib/haptics';
 import { useFleet } from '@/store/fleet';
 
 import { ThemedText } from './themed-text';
@@ -40,6 +41,7 @@ export function AttentionList({ role }: { role: 'owner' | 'renter' }) {
   function open(item: AttentionItem) {
     const t = item.target;
     if (t.kind === 'contract') router.push({ pathname: '/contracts/[id]', params: { id: t.dealId } });
+    else if (t.kind === 'condition') router.push({ pathname: '/condition/[id]', params: { id: t.dealId } });
     else if (t.kind === 'payment') router.push({ pathname: '/payments/[id]', params: { id: t.dealId, n: String(t.n) } });
     else if (t.kind === 'deposit') router.push({ pathname: '/deposit/[id]', params: { id: t.dealId } });
     else if (t.kind === 'deal') router.push({ pathname: '/deals/[id]', params: { id: t.dealId } });
@@ -66,33 +68,43 @@ export function AttentionList({ role }: { role: 'owner' | 'renter' }) {
   return (
     <View style={styles.wrap}>
       <View style={styles.headerRow}>
-        <ThemedText type="default" style={styles.headerTitle}>
+        <ThemedText type="title" accessibilityRole="header">
           Потрібна ваша увага
         </ThemedText>
         {urgent > 0 ? (
-          <View style={[styles.count, { backgroundColor: theme.negative }]}>
-            <ThemedText style={styles.countText}>{urgent}</ThemedText>
+          <View style={[styles.count, { backgroundColor: theme.negative }]} accessibilityLabel={`Потребує дії: ${urgent}`}>
+            <ThemedText style={[styles.countText, { color: theme.onInk }]}>{urgent}</ThemedText>
           </View>
         ) : null}
       </View>
       {items.map((item) => {
         const c = palette(item.tone);
         return (
-          <Pressable key={item.key} accessibilityRole="button" disabled={busy} onPress={() => open(item)} style={({ pressed }) => pressed && { opacity: 0.85 }}>
+          <Pressable
+            key={item.key}
+            accessibilityRole="button"
+            accessibilityLabel={`${item.title}. ${item.text}. ${item.action}`}
+            android_ripple={{ color: c.solid + '33' }}
+            disabled={busy}
+            onPress={() => {
+              haptic.select();
+              open(item);
+            }}
+            style={({ pressed }) => [styles.press, pressed && Platform.OS === 'ios' && { opacity: 0.85 }]}>
             <View style={[styles.row, { backgroundColor: c.soft, borderColor: 'transparent', borderWidth: 0 }]}>
               <View style={[styles.icon, { backgroundColor: c.solid }]}>
-                <Icon name={item.icon} size={22} color="#FFFFFF" />
+                <Icon name={item.icon} size={22} color={theme.onAccent} />
               </View>
               <View style={styles.flex}>
-                <ThemedText type="default" style={styles.title} numberOfLines={2}>
+                <ThemedText type="headline" numberOfLines={2}>
                   {item.title}
                 </ThemedText>
-                <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
+                <ThemedText type="callout" themeColor="textSecondary" numberOfLines={3}>
                   {item.text}
                 </ThemedText>
               </View>
               <View style={[styles.pill, { backgroundColor: c.solid }]}>
-                <ThemedText type="smallBold" style={styles.pillText}>
+                <ThemedText type="callout" style={[styles.pillText, { color: theme.onAccent }]}>
                   {item.action}
                 </ThemedText>
               </View>
@@ -107,13 +119,12 @@ export function AttentionList({ role }: { role: 'owner' | 'renter' }) {
 const styles = StyleSheet.create({
   wrap: { gap: Spacing.two },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  headerTitle: { fontWeight: 700, fontSize: 22, letterSpacing: -0.3 },
+  press: { borderRadius: Radius.lg, overflow: 'hidden' },
   count: { minWidth: 24, height: 24, paddingHorizontal: 7, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  countText: { color: '#FFFFFF', fontSize: 14, lineHeight: 18, fontWeight: 700 },
+  countText: { ...Type.callout, fontWeight: 700 },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.lg },
   icon: { width: 40, height: 40, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },
-  title: { fontWeight: 600 },
-  pill: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.pill },
-  pillText: { color: '#FFFFFF' },
+  pill: { paddingHorizontal: 14, minHeight: 36, justifyContent: 'center', borderRadius: Radius.pill },
+  pillText: { fontWeight: 600 },
 });

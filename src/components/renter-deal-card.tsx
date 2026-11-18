@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { openChat } from '@/lib/chat';
 import { openProfile } from '@/lib/profiles';
@@ -95,14 +95,14 @@ export function RenterDealCard({ deal, overview }: { deal: DealView; overview?: 
 
 const styles = StyleSheet.create({
   card: { gap: Spacing.three },
-  title: { fontWeight: 700, fontSize: 18 },
+  title: { ...Type.headline },
   person: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },
   bold: { fontWeight: 700 },
   panel: { borderRadius: Radius.md, padding: Spacing.three, gap: Spacing.two },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
-  big: { fontSize: 30, lineHeight: 36, fontWeight: 700, letterSpacing: -0.5 },
+  big: { ...Type.figure },
   dates: { alignItems: 'flex-end', gap: 2, flexShrink: 1 },
   track: { height: 6, borderRadius: 3, overflow: 'hidden' },
   fill: { height: 6, borderRadius: 3 },

@@ -1,6 +1,8 @@
 import { useRouter } from 'expo-router';
 import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
+import { CardSkeleton } from '@/components/ui/skeleton';
+
 import { MarketCard } from '@/components/market-card';
 import { ScreenTitle } from '@/components/screen-title';
 import { ThemedText } from '@/components/themed-text';
@@ -83,6 +85,8 @@ export default function SearchScreen() {
 
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel={`Пошук і фільтри. ${place ? place.city || place.label : 'Уся Україна'}. ${summary}`}
+        accessibilityState={{ expanded: open }}
         onPress={() => setOpen(!open)}
         style={[styles.bar, { backgroundColor: theme.backgroundElement, borderColor: theme.border }, !dark && styles.shadow]}>
         <Icon name="search" size={22} color="text" />
@@ -125,7 +129,7 @@ export default function SearchScreen() {
         </Card>
       ) : null}
 
-      <Pressable accessibilityRole="button" onPress={() => router.push('/wanted/new')} style={[styles.ask, { backgroundColor: theme.accentSoft }]}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Не знайшли потрібне авто? Опишіть його, і власники самі запропонують" onPress={() => router.push('/wanted/new')} style={({ pressed }) => [styles.ask, { backgroundColor: theme.accentSoft }, pressed && { opacity: 0.8 }]}>
         <View style={[styles.askIcon, { backgroundColor: theme.backgroundElement }]}>
           <Icon name="create-outline" size={22} color="accent" />
         </View>
@@ -140,7 +144,12 @@ export default function SearchScreen() {
 
       {error ? (
         <EmptyState icon="cloud-offline-outline" title="Не вдалося завантажити" text={error} action="Спробувати ще раз" onAction={refresh} />
-      ) : loading && items.length === 0 ? null : items.length === 0 ? (
+      ) : loading && items.length === 0 ? (
+        <View style={{ gap: Spacing.three }}>
+          <CardSkeleton />
+          <CardSkeleton />
+        </View>
+      ) : items.length === 0 ? (
         <EmptyState
           icon="car-outline"
           title="Нічого не знайдено"
@@ -165,7 +174,7 @@ export default function SearchScreen() {
 
 
 const styles = StyleSheet.create({
-  bar: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, borderRadius: Radius.pill, borderWidth: 1, paddingVertical: 12, paddingHorizontal: Spacing.three },
+  bar: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, borderRadius: Radius.pill, borderWidth: 1, minHeight: 56, paddingHorizontal: Spacing.three },
   shadow: { shadowColor: '#000000', shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   ask: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, borderRadius: Radius.lg, padding: Spacing.three },
   askIcon: { width: 48, height: 48, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },

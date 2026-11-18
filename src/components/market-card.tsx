@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { formatKm, formatMoney } from '@/lib/format';
 import type { MarketCar } from '@/lib/rentals';
@@ -37,7 +37,7 @@ export function MarketCard({ car }: { car: MarketCar }) {
           </View>
           {car.myRequest ? (
             <View style={[styles.badge, { backgroundColor: theme.backgroundElement }]}>
-              <ThemedText type="smallBold" themeColor="positive" style={{ fontSize: 13 }}>
+              <ThemedText type="smallBold" themeColor="positive" style={Type.caption}>
                 ✓ Запит надіслано
               </ThemedText>
             </View>
@@ -85,12 +85,12 @@ const styles = StyleSheet.create({
   // Закруглюємо лише верх фото: overflow: hidden на картці прибрав би її тінь
   photo: { width: '100%', aspectRatio: 1.67, borderTopLeftRadius: 27, borderTopRightRadius: 27, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
   price: { position: 'absolute', left: 14, bottom: 14, paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.pill },
-  priceValue: { fontWeight: 700, fontSize: 18 },
+  priceValue: { ...Type.headline },
   badge: { position: 'absolute', top: 14, left: 14, paddingHorizontal: 12, paddingVertical: 5, borderRadius: Radius.pill },
   body: { padding: Spacing.three, gap: Spacing.three },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   flex: { flex: 1 },
-  title: { fontWeight: 700, fontSize: 22, lineHeight: 28 },
+  title: { ...Type.title },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   divider: { height: StyleSheet.hairlineWidth },
   deposit: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },

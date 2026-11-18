@@ -17,11 +17,11 @@ export function EmptyState({ icon, title, text, action, onAction }: Props) {
       <View style={[styles.badge, { backgroundColor: theme.backgroundSelected }]}>
         <Icon name={icon} size={28} color="text" />
       </View>
-      <ThemedText type="default" style={styles.title}>
+      <ThemedText type="headline" style={styles.center} accessibilityRole="header">
         {title}
       </ThemedText>
       {text ? (
-        <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
+        <ThemedText type="callout" themeColor="textSecondary" style={styles.center}>
           {text}
         </ThemedText>
       ) : null}
@@ -33,7 +33,6 @@ export function EmptyState({ icon, title, text, action, onAction }: Props) {
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.five },
   badge: { width: 72, height: 72, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  title: { fontWeight: 700, fontSize: 18 },
   center: { textAlign: 'center' },
   button: { alignSelf: 'stretch', marginTop: Spacing.two },
 });

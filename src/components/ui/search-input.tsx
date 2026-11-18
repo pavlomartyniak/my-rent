@@ -1,6 +1,6 @@
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 import { Icon } from './icon';
@@ -35,5 +35,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
   },
   // letterSpacing: 0 задано явно, щоб плейсхолдер не малювався з розрідженими літерами
-  input: { flex: 1, fontSize: 16, minHeight: 48, letterSpacing: 0 },
+  input: { flex: 1, fontSize: Type.body.fontSize, minHeight: 48, letterSpacing: 0 },
 });

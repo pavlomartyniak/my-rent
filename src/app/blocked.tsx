@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
@@ -11,6 +11,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/date';
 import type { BlockedUser } from '@/lib/moderation';
+import { ListSkeleton } from '@/components/ui/skeleton';
 
 /** Заблоковані користувачі: тут їх можна розблокувати */
 export default function BlockedScreen() {
@@ -51,7 +52,7 @@ export default function BlockedScreen() {
   if (!items) {
     return (
       <Screen>
-        <ActivityIndicator color={theme.accent} />
+        <ListSkeleton />
       </Screen>
     );
   }

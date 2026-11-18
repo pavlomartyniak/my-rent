@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDate } from '@/lib/date';
 import type { DealView } from '@/lib/deals';
@@ -174,9 +174,9 @@ export function PaymentsCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
 }
 
 const styles = StyleSheet.create({
-  bold: { fontWeight: 700, fontSize: 18 },
+  bold: { ...Type.headline },
   plan: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.pill },
-  planText: { fontSize: 12, lineHeight: 18, fontWeight: 600 },
+  planText: { ...Type.caption, fontWeight: 600 },
   progress: { gap: Spacing.one },
   track: { height: 6, borderRadius: 3, overflow: 'hidden' },
   fill: { height: 6, borderRadius: 3 },

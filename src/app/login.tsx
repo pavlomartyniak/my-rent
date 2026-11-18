@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { isValidPhone } from '@/lib/profile';
 import { useAuth } from '@/store/auth';
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   header: { gap: Spacing.two, marginBottom: Spacing.two },
   hero: { marginTop: Spacing.two },
   brand: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  wordmark: { fontSize: 30, letterSpacing: -1 },
+  wordmark: { ...Type.display, letterSpacing: -1 },
   mark: { width: 52, height: 52 },
   tabs: { flexDirection: 'row', gap: Spacing.four, borderBottomWidth: 1 },
   tab: { paddingVertical: Spacing.two, borderBottomWidth: 2, borderBottomColor: 'transparent', marginBottom: -1 },
@@ -326,5 +326,5 @@ const styles = StyleSheet.create({
   roles: { flexDirection: 'row', gap: Spacing.two },
   roleCard: { flex: 1, borderRadius: Radius.lg, padding: Spacing.three, gap: 4 },
   center: { textAlign: 'center' },
-  codeInput: { fontSize: 28, letterSpacing: 8, textAlign: 'center', fontWeight: '700' },
+  codeInput: { ...Type.figure, letterSpacing: 8, textAlign: 'center' },
 });

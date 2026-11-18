@@ -1,7 +1,7 @@
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { carFacts } from '@/lib/car-info';
 import { contactActions } from '@/lib/contact-actions';
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   badge: { position: 'absolute', left: 6, bottom: 6 },
   info: { flex: 1, gap: 6, justifyContent: 'center' },
   flex: { flex: 1 },
-  name: { fontWeight: 700, fontSize: 18, lineHeight: 24 },
+  name: { ...Type.headline },
   owner: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   facts: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, flexWrap: 'wrap' },
   panel: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.md },
@@ -131,5 +131,5 @@ const styles = StyleSheet.create({
   track: { height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 4 },
   fill: { height: 6, borderRadius: 3 },
   price: { alignItems: 'center', paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, borderRadius: Radius.md },
-  priceValue: { fontSize: 18, lineHeight: 22, fontWeight: 700 },
+  priceValue: { ...Type.headline },
 });

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PanResponder, Pressable, ScrollView, StyleSheet, View, type ScrollViewInstance, type ViewInstance } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { monthLabel, monthTitle } from '@/lib/date';
@@ -287,13 +287,13 @@ const styles = StyleSheet.create({
   inactive: { opacity: 0.55 },
   pair: { height: CHART_HEIGHT, flexDirection: 'row', alignItems: 'flex-end', gap: 2, borderBottomWidth: StyleSheet.hairlineWidth },
   bar: { borderTopLeftRadius: 3, borderTopRightRadius: 3 },
-  label: { fontSize: 13, lineHeight: 18 },
+  label: { ...Type.caption },
   labelCompact: { fontSize: 10, lineHeight: 14 },
   labelActive: { fontWeight: 700 },
-  yearLabel: { fontSize: 11, lineHeight: 14 },
+  yearLabel: { ...Type.caption },
   entries: { gap: 0 },
   entriesHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: Spacing.one },
-  title: { fontWeight: 700, fontSize: 18 },
+  title: { ...Type.headline },
   hint: { alignItems: 'center' },
   more: { paddingTop: Spacing.two },
   divider: { height: StyleSheet.hairlineWidth, marginLeft: 48 + Spacing.three },

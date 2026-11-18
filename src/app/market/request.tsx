@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PaymentPlanPicker } from '@/components/payment-plan-picker';
 import { ReportStatus } from '@/components/report-status';
@@ -10,9 +11,11 @@ import { Card } from '@/components/ui/card';
 import { DateField } from '@/components/ui/date-field';
 import { Field } from '@/components/ui/field';
 import { Screen } from '@/components/ui/screen';
+import { InfoRow, InfoRows } from '@/components/ui/info-rows';
 import { Segmented } from '@/components/ui/segmented';
 import { Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
+import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
 import { fromISODate, toISODate } from '@/lib/date';
 import { formatMoney, plural } from '@/lib/format';
@@ -37,6 +40,8 @@ const PURPOSES = [
 export default function RentalRequestScreen() {
   const { carId } = useLocalSearchParams<{ carId: string }>();
   const router = useRouter();
+  const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const { invalidate } = useFleet();
   const { data: car, loading, error, retry } = useReport<MarketCar>(`/market/cars/${carId}`);
 
@@ -59,6 +64,7 @@ export default function RentalRequestScreen() {
 
   // Орієнтовний розрахунок для підказки; остаточну суму показує сервер після відправки
   const days = Math.max(1, Math.round((fromISODate(end).getTime() - fromISODate(start).getTime()) / 86_400_000));
+  const total = days * car.pricePerDay;
 
   function changeStart(value: string) {
     setStart(value);
@@ -72,10 +78,10 @@ export default function RentalRequestScreen() {
       const res = await api<{ chatId: string | null }>('POST', '/rentals', { carId: car.id, startDate: start, endDate: end, message: message.trim(), paymentPlan: effectivePlan(start, end, plan), purpose });
       invalidate();
       router.dismissAll();
-      router.navigate('/renter/requests');
+      router.navigate({ pathname: '/renter', params: { section: 'requests' } });
       // Запит уже лежить у чаті з власником: відкриваємо його, щоб можна було одразу домовитись
       if (res.chatId) router.push({ pathname: '/chats/[id]', params: { id: res.chatId } });
-      else Alert.alert('Запит надіслано', 'Власник отримає його й відповість. Відповідь з’явиться у «Моїх запитах».');
+      else Alert.alert('Запит надіслано', 'Власник отримає його й відповість. Відповідь з’явиться у вкладці «Оренди».');
     } catch (e) {
       Alert.alert('Не вдалося надіслати', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
     } finally {
@@ -84,9 +90,10 @@ export default function RentalRequestScreen() {
   }
 
   return (
-    <Screen>
+    <View style={styles.root}>
+    <Screen contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}>
       <Card>
-        <ThemedText type="default" style={styles.bold}>
+        <ThemedText type="headline">
           {car.brand} {car.model} · {car.year}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
@@ -97,25 +104,17 @@ export default function RentalRequestScreen() {
       <DateField label="Початок оренди" value={start} onChange={changeStart} minimumDate={new Date()} />
       <DateField label="Завершення оренди" value={end} onChange={setEnd} minimumDate={fromISODate(start)} />
 
-      <View style={styles.summary}>
-        <ThemedText type="small" themeColor="textSecondary">
-          {days} {plural(days, 'доба', 'доби', 'діб')} × {formatMoney(car.pricePerDay)}
+      <Card>
+        <ThemedText type="headline">Розрахунок</ThemedText>
+        <InfoRows>
+          <InfoRow label={`Оренда: ${days} ${plural(days, 'доба', 'доби', 'діб')} × ${formatMoney(car.pricePerDay)}`} value={formatMoney(total)} />
+          {car.deposit > 0 ? <InfoRow label="Застава, повертається після оренди" value={formatMoney(car.deposit)} /> : <InfoRow label="Застава" value="Без застави" />}
+          <InfoRow strong label="Разом" value={`≈ ${formatMoney(total + car.deposit)}`} />
+        </InfoRows>
+        <ThemedText type="caption" themeColor="textSecondary">
+          Орієнтовна сума. Остаточну покаже договір після того, як власник прийме запит. Запит нічого не бронює й не списує.
         </ThemedText>
-        <ThemedText type="default" style={styles.bold}>
-          ≈ {formatMoney(days * car.pricePerDay)}
-        </ThemedText>
-      </View>
-
-      {car.deposit > 0 ? (
-        <View style={styles.summary}>
-          <ThemedText type="small" themeColor="textSecondary" style={{ flex: 1 }}>
-            Застава, разом із першою оплатою (повертається після оренди)
-          </ThemedText>
-          <ThemedText type="default" style={styles.bold}>
-            {formatMoney(car.deposit)}
-          </ThemedText>
-        </View>
-      ) : null}
+      </Card>
 
       <View style={{ gap: Spacing.one }}>
         <ThemedText type="smallBold">Для чого авто</ThemedText>
@@ -137,12 +136,16 @@ export default function RentalRequestScreen() {
         style={{ minHeight: 100, paddingTop: 12, textAlignVertical: 'top' }}
       />
 
-      <Button title={sending ? 'Надсилаємо…' : 'Надіслати запит'} icon="paper-plane-outline" disabled={sending} onPress={send} />
     </Screen>
+
+      <View style={[styles.footer, { backgroundColor: theme.backgroundElement, borderTopColor: theme.border, paddingBottom: Math.max(insets.bottom, Spacing.three) }]}>
+        <Button title={`Надіслати запит · ≈ ${formatMoney(total + car.deposit)}`} icon="paper-plane-outline" loading={sending} onPress={send} />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  bold: { fontWeight: 700 },
-  summary: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.two },
+  root: { flex: 1 },
+  footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: Spacing.three, borderTopWidth: StyleSheet.hairlineWidth },
 });

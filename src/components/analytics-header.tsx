@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 import { CarPhoto } from './car-photo';
@@ -35,5 +35,5 @@ const styles = StyleSheet.create({
   back: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   thumb: { width: 56, height: 56, borderRadius: Radius.md },
   flex: { flex: 1 },
-  title: { fontWeight: 700, fontSize: 22, letterSpacing: -0.3 },
+  title: { ...Type.title },
 });

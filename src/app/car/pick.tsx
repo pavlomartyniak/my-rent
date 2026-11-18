@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -14,6 +14,7 @@ import { fetchBrands, fetchModels } from '@/lib/catalog';
 import { getPickerRequest, type PickerRequest } from '@/lib/catalog-picker';
 import { fetchCities, fetchRegions, type City, type Region } from '@/lib/places';
 import { plural } from '@/lib/format';
+import { ListSkeleton } from '@/components/ui/skeleton';
 
 type Row = { id: number; title: string; subtitle?: string; select: () => void };
 type Result = { q: string; rows: Row[]; total: number; error: string | null };
@@ -188,7 +189,7 @@ function CatalogList({ request }: { request: Exclude<PickerRequest, { kind: 'yea
 
       {!result ? (
         <View style={styles.center}>
-          <ActivityIndicator color={theme.accent} />
+          <ListSkeleton />
         </View>
       ) : result.error ? (
         <EmptyState
@@ -294,7 +295,7 @@ function PlaceList({ request }: { request: Extract<PickerRequest, { kind: 'place
 
       {!current ? (
         <View style={styles.center}>
-          <ActivityIndicator color={theme.accent} />
+          <ListSkeleton />
         </View>
       ) : current.error ? (
         <EmptyState

@@ -5,6 +5,7 @@ import { Alert, Linking, View } from 'react-native';
 import { Avatar } from '@/components/avatar';
 import { ScreenTitle } from '@/components/screen-title';
 import { ThemedText } from '@/components/themed-text';
+import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { SettingsGroup, SettingsRow } from '@/components/ui/settings-group';
@@ -33,10 +34,11 @@ export default function SettingsScreen() {
   const [exportOpen, setExportOpen] = useState(false);
   const [doc, setDoc] = useState<'privacy' | 'terms' | null>(null);
 
-  const confirm = (title: string, message: string, action: () => void) =>
+  // Кнопка підтвердження називає саме дію («Вийти», «Видалити»), а не «Так»
+  const confirm = (title: string, message: string, label: string, action: () => void) =>
     Alert.alert(title, message, [
       { text: 'Скасувати', style: 'cancel' },
-      { text: 'Так', style: 'destructive', onPress: action },
+      { text: label, style: 'destructive', onPress: action },
     ]);
 
   async function enableNotifications() {
@@ -49,7 +51,7 @@ export default function SettingsScreen() {
 
   return (
     <Screen tabs gap={Spacing.four}>
-      <ScreenTitle>Налаштування</ScreenTitle>
+      <ScreenTitle>Профіль</ScreenTitle>
 
       <SettingsGroup title="Акаунт">
         <SettingsRow
@@ -58,19 +60,6 @@ export default function SettingsScreen() {
           title={fullName({ firstName, lastName }) || email}
           subtitle={fullName({ firstName, lastName }) ? [email, phone].filter(Boolean).join(' · ') : 'Додайте ім’я та прізвище'}
           onPress={() => router.push('/profile')}
-        />
-        <SettingsRow
-          icon="log-out-outline"
-          title="Вийти з акаунту"
-          subtitle="Ваші дані залишаться на сервері"
-          onPress={() => confirm('Вийти з акаунту?', 'Щоб повернутись, увійдіть із тим самим email і паролем.', () => void signOut())}
-        />
-        <SettingsRow
-          icon="close-circle-outline"
-          title="Видалити акаунт"
-          subtitle="Акаунт і всі дані буде стерто безповоротно"
-          danger
-          onPress={() => confirm('Видалити акаунт?', 'Акаунт, авто, записи й нагадування буде стерто безповоротно.', () => void deleteAccount())}
         />
       </SettingsGroup>
 
@@ -129,8 +118,10 @@ export default function SettingsScreen() {
         />
       </SettingsGroup>
 
-      {owner ? (
-        <SettingsGroup title="Дані застосунку">
+      <Button title="Вийти з акаунту" icon="log-out-outline" variant="secondary" onPress={() => confirm('Вийти з акаунту?', 'Ваші дані залишаться на сервері. Щоб повернутись, увійдіть із тим самим email і паролем.', 'Вийти', () => void signOut())} />
+
+      <SettingsGroup title="Небезпечна зона">
+        {owner ? (
           <SettingsRow
             icon="trash-outline"
             title="Видалити всі дані"
@@ -139,11 +130,18 @@ export default function SettingsScreen() {
             onPress={() =>
               cars.some((c) => c.status === 'В оренді' || c.status === 'Заброньоване')
                 ? Alert.alert('Є авто в оренді', 'Видалити всі дані не можна, поки хоч одне авто в оренді. Спершу завершіть чи розірвіть оренду або змініть статус авто.')
-                : confirm('Видалити всі дані?', 'Авто, записи й нагадування буде стерто безповоротно.', clearAll)
+                : confirm('Видалити всі дані?', 'Авто, записи й нагадування буде стерто безповоротно.', 'Видалити все', clearAll)
             }
           />
-        </SettingsGroup>
-      ) : null}
+        ) : null}
+        <SettingsRow
+          icon="close-circle-outline"
+          title="Видалити акаунт"
+          subtitle="Акаунт і всі дані буде стерто безповоротно"
+          danger
+          onPress={() => confirm('Видалити акаунт?', 'Акаунт, авто, записи й нагадування буде стерто безповоротно.', 'Видалити акаунт', () => void deleteAccount())}
+        />
+      </SettingsGroup>
     </Screen>
   );
 }

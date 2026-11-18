@@ -10,6 +10,7 @@ import type { IconName } from '@/components/ui/icon';
 /** Куди веде рядок «Потрібна ваша увага» */
 export type AttentionTarget =
   | { kind: 'contract'; dealId: string }
+  | { kind: 'condition'; dealId: string }
   | { kind: 'deal'; dealId: string }
   | { kind: 'car'; carId: string }
   | { kind: 'tab'; href: string; params?: Record<string, string> }
@@ -54,7 +55,10 @@ export function useAttention(role: 'owner' | 'renter' | null) {
 
   const items: AttentionItem[] = [];
 
-  for (const d of signing.filter((x) => x.contract?.signing.state === 'open')) {
+  for (const d of signing.filter((x) => x.contract?.signing.state === 'open' && x.condition && !x.condition.ready)) {
+    items.push({ key: `cond-${d.id}`, tone: 'urgent', icon: 'camera', title: 'Зафіксуйте стан авто', action: 'Зробити фото', text: `${d.title}. Фото кузова й салону (${d.condition.have} з ${d.condition.need}) потрібні, щоб почати оренду`, count: 1, tab: 'home', target: { kind: 'condition', dealId: d.id } });
+  }
+  for (const d of signing.filter((x) => x.contract?.signing.state === 'open' && (!x.condition || x.condition.ready))) {
     const none = d.contract?.mode === 'none';
     items.push({ key: `sign-${d.id}`, tone: 'success', icon: 'create', title: none ? 'Підтвердіть оренду без договору' : 'Час підписати договір', action: none ? 'Підтвердити' : 'Підписати', text: `${d.title}. ${none ? 'Підтверджуйте' : 'Підписуйте'} під час зустрічі, коли передаєте авто, ключі й гроші`, count: 1, tab: 'home', target: { kind: none ? 'deal' : 'contract', dealId: d.id } });
   }
@@ -109,7 +113,7 @@ export function useAttention(role: 'owner' | 'renter' | null) {
       text: 'Орендар чекає вашої відповіді',
       count: requests.length,
       tab: 'requests',
-      target: { kind: 'tab', href: '/requests' },
+      target: { kind: 'tab', href: '/requests', params: { section: 'requests' } },
     });
   }
   const offerCount = offers.reduce((sum, w) => sum + (w.offers?.pending ?? 0), 0);
@@ -123,7 +127,7 @@ export function useAttention(role: 'owner' | 'renter' | null) {
       text: 'Перегляньте й оберіть найкращу',
       count: offerCount,
       tab: 'requests',
-      target: { kind: 'tab', href: '/renter/requests', params: { tab: 'wanted' } },
+      target: { kind: 'tab', href: '/renter', params: { section: 'wanted' } },
     });
   }
   for (const d of release) {

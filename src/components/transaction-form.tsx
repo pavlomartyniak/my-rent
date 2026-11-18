@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
-import { Spacing } from '@/constants/theme';
+import { Spacing, Type } from '@/constants/theme';
 import { todayISO } from '@/lib/date';
 import { useFleet } from '@/store/fleet';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORY, RENTER_EXPENSE_CATEGORIES, RENTER_INCOME_SOURCES, type Transaction, type TransactionType } from '@/types';
@@ -136,6 +136,6 @@ export function TransactionForm({ tx, initialCarId, initialType, dealId: dealPar
 }
 
 const styles = StyleSheet.create({
-  amount: { fontSize: 28, fontWeight: 700, minHeight: 64 },
+  amount: { ...Type.figure, minHeight: 64 },
   group: { gap: Spacing.one },
 });

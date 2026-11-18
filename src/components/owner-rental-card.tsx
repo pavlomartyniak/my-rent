@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { openChat } from '@/lib/chat';
 import { openProfile } from '@/lib/profiles';
@@ -8,6 +8,7 @@ import { daysUntil, formatDate, rentalProgress } from '@/lib/date';
 import { dealStage, type DealView } from '@/lib/deals';
 import { formatMoney, plural } from '@/lib/format';
 
+import { ConditionCard } from './condition-card';
 import { ContractCard } from './contract-card';
 import { TerminateDeal } from './terminate-deal';
 import { Avatar } from './avatar';
@@ -65,6 +66,7 @@ export function OwnerRentalCard({ deal }: { deal: DealView }) {
       </View>
 
       <ContractCard deal={deal} as="owner" />
+      <ConditionCard deal={deal} />
       {awaiting ? null : <TerminateDeal deal={deal} as="owner" />}
     </Card>
   );
@@ -72,7 +74,7 @@ export function OwnerRentalCard({ deal }: { deal: DealView }) {
 
 const styles = StyleSheet.create({
   card: { gap: Spacing.three },
-  title: { fontWeight: 700, fontSize: 18 },
+  title: { ...Type.headline },
   person: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },

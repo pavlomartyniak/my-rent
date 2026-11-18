@@ -1,14 +1,14 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError } from '@/lib/api';
 import { LEGAL_CONTACT } from '@/lib/legal';
 import { REPORT_REASONS, sendReport, type ReportReason, type ReportTarget } from '@/lib/moderation';
 
 import { ThemedText } from './themed-text';
+import { BottomSheet } from './ui/bottom-sheet';
 import { Button } from './ui/button';
 import { Icon } from './ui/icon';
 
@@ -17,7 +17,6 @@ const TITLES = { listing: 'Поскаржитись на оголошення', 
 /** Нижній лист скарги: причина й необов'язковий коментар. Скарги розглядаються протягом 24 годин */
 export function ReportSheet({ target, onClose, onSent }: { target: ReportTarget | null; onClose: () => void; /** Скаргу прийнято */ onSent?: () => void }) {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -47,10 +46,7 @@ export function ReportSheet({ target, onClose, onSent }: { target: ReportTarget 
   }
 
   return (
-    <Modal visible={!!target} transparent animationType="fade" onRequestClose={close}>
-      <Pressable style={styles.backdrop} onPress={close}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <Pressable style={[styles.sheet, { backgroundColor: theme.backgroundElement, paddingBottom: Math.max(insets.bottom, Spacing.three) }]} onPress={() => {}}>
+    <BottomSheet visible={!!target} onClose={close}>
             <ThemedText type="default" style={styles.heading}>
               {target ? TITLES[target.kind] : ''}
             </ThemedText>
@@ -87,20 +83,17 @@ export function ReportSheet({ target, onClose, onSent }: { target: ReportTarget 
               style={[styles.note, { color: theme.text, backgroundColor: theme.backgroundSelected }]}
             />
             <Button title={busy ? 'Надсилаємо…' : 'Надіслати скаргу'} icon="flag-outline" disabled={!reason || busy} onPress={() => void submit()} />
-          </Pressable>
-        </KeyboardAvoidingView>
-      </Pressable>
-    </Modal>
+</BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   sheet: { borderTopLeftRadius: Radius.lg, borderTopRightRadius: Radius.lg, paddingHorizontal: Spacing.three, paddingTop: Spacing.three, gap: Spacing.two },
-  heading: { fontWeight: 700, fontSize: 18 },
+  heading: { ...Type.headline },
   list: { maxHeight: 300 },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.two + 2 },
   flex: { flex: 1 },
   title: { fontWeight: 600 },
-  note: { minHeight: 64, borderRadius: Radius.md, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, textAlignVertical: 'top', fontSize: 16 },
+  note: { minHeight: 64, borderRadius: Radius.md, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, textAlignVertical: 'top', fontSize: Type.body.fontSize },
 });

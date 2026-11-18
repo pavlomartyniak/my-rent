@@ -1,11 +1,10 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { PaybackCard } from '@/components/payback-card';
 import { ReportStatus } from '@/components/report-status';
-import { SummaryCard } from '@/components/summary-card';
+import { EarningsWidget } from '@/components/earnings-widget';
 import { ThemedText } from '@/components/themed-text';
 import { CarPhoto } from '@/components/car-photo';
 import { PhotoGallery } from '@/components/photo-gallery';
@@ -20,19 +19,17 @@ import { InsuranceCard } from '@/components/insurance-card';
 import type { DealView } from '@/lib/deals';
 import { HistoryList } from '@/components/history-list';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { InfoGrid } from '@/components/ui/info-rows';
 import { Icon } from '@/components/ui/icon';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { formatDate } from '@/lib/date';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
-import { api, ApiError } from '@/lib/api';
 import type { CarReport } from '@/lib/reports';
-import { formatKm, formatMoney, formatMonths } from '@/lib/format';
+import { formatKm, formatMoney } from '@/lib/format';
 import { useFleet } from '@/store/fleet';
 
 export default function CarScreen() {
@@ -40,7 +37,7 @@ export default function CarScreen() {
   const router = useRouter();
   const theme = useTheme();
   const [viewer, setViewer] = useState(false);
-  const { cars, reload } = useFleet();
+  const { cars } = useFleet();
   const car = cars.find((c) => c.id === id);
   // Показники за весь час рахує сервер
   const { data: report, loading, error, retry } = useReport<CarReport>(car ? `/reports/cars/${car.id}` : null);
@@ -57,16 +54,6 @@ export default function CarScreen() {
   }
 
   const photos = car.photos?.length ? car.photos : car.photoUri ? [car.photoUri] : [];
-  const listed = !!car.listing?.published && car.status === 'Вільне';
-
-  async function unpublish() {
-    try {
-      await api('DELETE', `/cars/${car!.id}/listing`);
-      reload();
-    } catch (e) {
-      Alert.alert('Не вдалося зняти оголошення', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
-    }
-  }
 
   const add = (type: 'income' | 'expense') => router.push({ pathname: '/transaction/new', params: { carId: car.id, type } });
 
@@ -139,28 +126,18 @@ export default function CarScreen() {
       </View>
 
       {report ? (
-        <SummaryCard title="Прибуток за весь час" profit={report.overview.profit} income={report.overview.income} expense={report.overview.expense} scope={{ period: 'all', label: 'За весь час', carId: car.id }}>
-          <PaybackCard
-            bare
-            profit={report.overview.profit}
-            price={car.price}
-            eta={report.overview.paybackMonths ? `≈ ${formatMonths(report.overview.paybackMonths)}` : undefined}
-          />
-          <Button
-            title="Аналітика й окупність"
-            icon="stats-chart"
-            variant="soft"
-            style={styles.analytics}
-            onPress={() => router.push({ pathname: '/car/analytics', params: { id: car.id } })}
-          />
-        </SummaryCard>
+        <EarningsWidget
+          title="Прибуток за весь час"
+          profit={report.overview.profit}
+          href={{ pathname: '/analytics', params: { carId: car.id } }}
+        />
       ) : (
         <ReportStatus loading={loading} error={error} onRetry={retry} />
       )}
 
       <View style={styles.buttons}>
-        <Button title="Дохід" icon="add" variant="positiveSolid" style={styles.flex} onPress={() => add('income')} />
-        <Button title="Витрата" icon="remove" variant="dangerSolid" style={styles.flex} onPress={() => add('expense')} />
+        <Button title="Дохід" icon="add" variant="positive" style={styles.flex} onPress={() => add('income')} />
+        <Button title="Витрата" icon="remove" variant="danger" style={styles.flex} onPress={() => add('expense')} />
       </View>
 
       <ReleasePrompt carId={car.id} />
@@ -169,51 +146,16 @@ export default function CarScreen() {
 
       {deal ? <PaymentsCard deal={deal} as="owner" /> : null}
 
-      <SectionHeader title="Історія" />
-      <HistoryList carId={car.id} />
-
-      <ArchivedDeals carId={car.id} />
+      <SectionHeader title="Страховий поліс" />
+      <InsuranceCard carId={car.id} />
 
       <SectionHeader title="Про авто" />
       <InfoGrid items={aboutItems} />
 
-      <SectionHeader title="Страховий поліс" />
-      <InsuranceCard carId={car.id} />
+      <SectionHeader title="Історія" />
+      <HistoryList carId={car.id} />
 
-      <SectionHeader title="Оголошення для орендарів" />
-      <Card>
-        {listed ? (
-          <>
-            <ThemedText type="default" style={styles.bold}>
-              Опубліковано · {car.listing!.city}
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              {formatMoney(car.listing!.pricePerDay)} за добу. Орендарі бачать це авто в пошуку й можуть надсилати запити.
-            </ThemedText>
-            <View style={styles.buttons}>
-              <Button title="Редагувати" variant="secondary" style={styles.flex} onPress={() => router.push({ pathname: '/car/listing', params: { id: car.id } })} />
-              <Button title="Зняти" variant="danger" style={styles.flex} onPress={() => void unpublish()} />
-            </View>
-          </>
-        ) : car.status === 'Вільне' ? (
-          <>
-            <ThemedText type="default" style={styles.bold}>
-              Авто ще не опубліковане
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Орендарі його не бачать у пошуку. Опублікуйте авто, щоб воно з’явилось і на нього можна було надсилати запити на оренду.
-            </ThemedText>
-            <Button title="Опублікувати для орендарів" icon="megaphone-outline" onPress={() => router.push({ pathname: '/car/listing', params: { id: car.id } })} />
-          </>
-        ) : (
-          <View style={styles.note}>
-            <Icon name="information-circle-outline" size={20} color="textSecondary" />
-            <ThemedText type="small" themeColor="textSecondary" style={styles.flex}>
-              Оголошення доступне лише для авто зі статусом «Вільне». Змініть статус у редагуванні авто.
-            </ThemedText>
-          </View>
-        )}
-      </Card>
+      <ArchivedDeals carId={car.id} />
 
       <DeleteCar carId={car.id} name={`${car.brand} ${car.model}`} rented={car.status === 'В оренді' || car.status === 'Заброньоване'} />
       {viewer ? <PhotoViewer photos={photos} startIndex={0} onClose={() => setViewer(false)} /> : null}
@@ -229,7 +171,7 @@ function CopyButton({ text }: { text: string }) {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Копіювати"
-      hitSlop={8}
+      hitSlop={6}
       onPress={async () => {
         await Clipboard.setStringAsync(text);
         setDone(true);
@@ -243,7 +185,7 @@ function CopyButton({ text }: { text: string }) {
 
 const styles = StyleSheet.create({
   headerRight: { flexDirection: 'row', gap: Spacing.two },
-  copy: { width: 36, height: 36, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
+  copy: { width: 44, height: 44, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
   // Фото на всю ширину екрана: скасовуємо бічні поля Screen
   hero: { marginHorizontal: -20 },
   noPhoto: { width: '100%', aspectRatio: 1.2 },
@@ -251,11 +193,10 @@ const styles = StyleSheet.create({
   sheet: { marginHorizontal: -20, marginTop: -48, paddingHorizontal: 20, paddingTop: 20, borderTopLeftRadius: 28, borderTopRightRadius: 28, gap: 2 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   status: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: Radius.pill },
-  statusText: { fontSize: 13, lineHeight: 18, fontWeight: 600 },
-  analytics: { marginTop: Spacing.two },
+  statusText: { ...Type.caption, fontWeight: 600 },
   note: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },
   bold: { fontWeight: 600 },
-  carTitle: { fontSize: 28, lineHeight: 34 },
+  carTitle: { ...Type.display },
   buttons: { flexDirection: 'row', gap: Spacing.two },
   flex: { flex: 1 },
 });

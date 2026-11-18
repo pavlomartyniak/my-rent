@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
@@ -52,7 +52,7 @@ export default function ChatsScreen() {
     <Screen>
       <Stack.Screen options={{ title: 'Повідомлення', headerBackTitle: 'Назад' }} />
       {!data ? (
-        <ReportStatus loading={loading} error={error} onRetry={retry} />
+        <ReportStatus shape="list" loading={loading} error={error} onRetry={retry} />
       ) : data.length === 0 ? (
         <EmptyState
           icon="chatbubbles-outline"
@@ -104,7 +104,7 @@ export default function ChatsScreen() {
                     </ThemedText>
                     {c.unread > 0 ? (
                       <View style={[styles.badge, { backgroundColor: theme.accent }]}>
-                        <ThemedText style={styles.badgeText}>{c.unread > 99 ? '99+' : c.unread}</ThemedText>
+                        <ThemedText style={[styles.badgeText, { color: theme.onAccent }]}>{c.unread > 99 ? '99+' : c.unread}</ThemedText>
                       </View>
                     ) : null}
                   </View>
@@ -128,5 +128,5 @@ const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
   bold: { fontWeight: 700 },
   badge: { minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { color: '#FFFFFF', fontSize: 13, lineHeight: 16, fontWeight: 700 },
+  badgeText: { ...Type.caption, fontWeight: 700 },
 });

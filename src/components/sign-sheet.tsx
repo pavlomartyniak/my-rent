@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError } from '@/lib/api';
 
 import { ThemedText } from './themed-text';
+import { BottomSheet } from './ui/bottom-sheet';
 import { Button } from './ui/button';
 import { Field } from './ui/field';
 import { Icon } from './ui/icon';
@@ -19,7 +19,6 @@ type CodeSent = { email: string; expiresInMinutes: number; resendInSeconds: numb
  */
 export function SignSheet({ visible, dealId, number, onClose, onSigned }: { visible: boolean; dealId: string; number: string; onClose: () => void; onSigned: () => void }) {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const [agreed, setAgreed] = useState(false);
   const [sent, setSent] = useState<CodeSent | null>(null);
   const [code, setCode] = useState('');
@@ -78,10 +77,7 @@ export function SignSheet({ visible, dealId, number, onClose, onSigned }: { visi
   }
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.fill}>
-        <Pressable style={styles.backdrop} onPress={close}>
-          <Pressable style={[styles.sheet, { backgroundColor: theme.backgroundElement, paddingBottom: Math.max(insets.bottom, Spacing.three) }]} onPress={() => {}}>
+    <BottomSheet visible={visible} onClose={close}>
             <ThemedText type="default" style={styles.heading}>
               Підписання договору № {number}
             </ThemedText>
@@ -93,7 +89,7 @@ export function SignSheet({ visible, dealId, number, onClose, onSigned }: { visi
                 </ThemedText>
                 <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: agreed }} onPress={() => setAgreed(!agreed)} style={styles.agree}>
                   <View style={[styles.box, { borderColor: agreed ? theme.accent : theme.borderStrong, backgroundColor: agreed ? theme.accent : 'transparent' }]}>
-                    {agreed ? <Icon name="checkmark" size={16} color="#FFFFFF" /> : null}
+                    {agreed ? <Icon name="checkmark" size={16} color={theme.onAccent} /> : null}
                   </View>
                   <ThemedText type="small" style={styles.flex}>
                     Я прочитав(ла) договір, погоджуюсь з його умовами й визнаю підпис кодом з пошти.
@@ -138,11 +134,8 @@ export function SignSheet({ visible, dealId, number, onClose, onSigned }: { visi
               <ThemedText type="default" themeColor="textSecondary">
                 Скасувати
               </ThemedText>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </KeyboardAvoidingView>
-    </Modal>
+</Pressable>
+    </BottomSheet>
   );
 }
 
@@ -150,10 +143,10 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   sheet: { borderTopLeftRadius: Radius.lg, borderTopRightRadius: Radius.lg, paddingHorizontal: Spacing.three, paddingTop: Spacing.three, gap: Spacing.three },
-  heading: { fontWeight: 700, fontSize: 18 },
+  heading: { ...Type.headline },
   agree: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.three },
   box: { width: 24, height: 24, borderRadius: 7, borderWidth: 2, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   flex: { flex: 1 },
-  codeInput: { fontSize: 28, letterSpacing: 8, textAlign: 'center', fontWeight: '700' },
+  codeInput: { ...Type.figure, letterSpacing: 8, textAlign: 'center' },
   cancel: { alignItems: 'center', paddingVertical: Spacing.two },
 });

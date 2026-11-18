@@ -1,8 +1,12 @@
-import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { BarChart } from '@/components/bar-chart';
 import { CarPhoto } from '@/components/car-photo';
+import { DealReportView } from '@/components/deal-report-view';
+import { ScopeFilter } from '@/components/scope-filter';
+import { Button } from '@/components/ui/button';
 import { CategoryPanel } from '@/components/category-panel';
 import { ComparisonCard } from '@/components/comparison-card';
 import { ExportButton, ExportIconButton } from '@/components/export-sheet';
@@ -16,20 +20,35 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { monthTitle } from '@/lib/date';
-import type { DealView, RenterSummary } from '@/lib/deals';
-import { formatMoney } from '@/lib/format';
+import { dealStage, type DealReport, type DealView, type RenterSummary } from '@/lib/deals';
+import { formatMoney, splitTitle } from '@/lib/format';
 
 /** Звіт орендаря: скільки заробив, скільки витратив і платить власникам, прибуток по кожній оренді */
 export default function RenterReportScreen() {
   const router = useRouter();
   const theme = useTheme();
   const p = usePeriod();
-  const { data, loading, error, retry } = useReport<RenterSummary>(`/reports/renter/summary?period=${p.key}`);
   const deals = useReport<DealView[]>('/deals');
+  // `?dealId=` відкриває розділ із вибраною орендою (перехід із картки оренди); власний вибір діє, доки параметр той самий
+  const params = useLocalSearchParams<{ dealId?: string }>();
+  const [pick, setPick] = useState<{ param?: string; id: string | null }>();
+  const dealId = pick && pick.param === params.dealId ? pick.id : (params.dealId ?? null);
+  const deal = deals.data?.find((d) => d.id === dealId);
+  const { data, loading, error, retry } = useReport<RenterSummary>(deal ? null : `/reports/renter/summary?period=${p.key}`);
+  const dealReport = useReport<DealReport>(deal ? `/reports/renter/deals/${deal.id}?period=${p.key}` : null);
+
+  // Запис орендаря прив'язаний до оренди: вибрану відкриваємо одразу, одну чинну теж, з кількох просимо обрати
+  const addRecord = () => {
+    const open = (id: string) => router.push({ pathname: '/transaction/new', params: { dealId: id } });
+    if (deal) return open(deal.id);
+    const current = (deals.data ?? []).filter((d) => dealStage(d) !== 'finished' && dealStage(d) !== 'terminated');
+    if (current.length === 1) return open(current[0].id);
+    Alert.alert('До якої оренди запис?', undefined, [...current.map((d) => ({ text: splitTitle(d.title).name, onPress: () => open(d.id) })), { text: 'Скасувати', style: 'cancel' as const }]);
+  };
 
   const monthly = p.key.length === 7;
   const ranking = (data?.deals ?? [])
@@ -45,11 +64,30 @@ export default function RenterReportScreen() {
 
   return (
     <Screen tabs>
-      <ScreenTitle actions={<ExportIconButton filter={{ period: p.key }} subtitle={`Усі оренди · ${p.label}`} />}>Звіт</ScreenTitle>
+      <ScreenTitle actions={<ExportIconButton filter={{ period: p.key, ...(deal ? { dealId: deal.id } : {}) }} subtitle={`${deal ? splitTitle(deal.title).name : 'Усі оренди'} · ${p.label}`} />}>Доходи</ScreenTitle>
+
+      {(deals.data?.length ?? 0) > 1 ? (
+        <ScopeFilter
+          label="Оренда"
+          allLabel="Усі оренди"
+          options={(deals.data ?? []).map((d) => ({ id: d.id, label: splitTitle(d.title).name }))}
+          value={deal?.id ?? null}
+          onChange={(id) => setPick({ param: params.dealId, id })}
+        />
+      ) : null}
 
       <PeriodSwitcher state={p} />
 
-      {!data ? (
+      {deal ? (
+        dealReport.data ? (
+          <>
+            <Button title="Додати дохід або витрату" icon="add" onPress={addRecord} />
+            <DealReportView id={deal.id} data={dealReport.data} p={p} />
+          </>
+        ) : (
+          <ReportStatus loading={dealReport.loading} error={dealReport.error} onRetry={dealReport.retry} />
+        )
+      ) : !data ? (
         <ReportStatus loading={loading} error={error} onRetry={retry} />
       ) : data.deals.length === 0 ? (
         <EmptyState icon="stats-chart-outline" title="Поки що нічого рахувати" text="Звіт з’явиться, коли у вас буде оренда й перші записи." />
@@ -91,10 +129,12 @@ export default function RenterReportScreen() {
             </View>
           </Card>
 
+          <Button title="Додати дохід або витрату" icon="add" onPress={addRecord} />
+
           <SectionHeader title="Прибуток по орендах" />
           <Card style={styles.list}>
             {ranking.map(({ deal, period }, i) => (
-              <Pressable key={deal.id} accessibilityRole="button" onPress={() => router.push({ pathname: '/deals/[id]', params: { id: deal.id } })}>
+              <Pressable key={deal.id} accessibilityRole="button" onPress={() => setPick({ param: params.dealId, id: deal.id })}>
                 <View style={[styles.row, i > 0 && styles.rowBorder]}>
                   <CarPhoto uri={deal.photoUri} style={styles.thumb} iconSize={22} />
                   <View style={styles.flex}>
@@ -144,5 +184,5 @@ const styles = StyleSheet.create({
   export: { marginTop: Spacing.two },
   paid: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   paidIcon: { width: 48, height: 48, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
-  paidValue: { fontSize: 26, lineHeight: 32, fontWeight: 700 },
+  paidValue: { ...Type.figure },
 });

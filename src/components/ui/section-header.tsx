@@ -10,7 +10,7 @@ type Props = { title: string; action?: string; onAction?: () => void };
 export function SectionHeader({ title, action, onAction }: Props) {
   return (
     <View style={styles.row}>
-      <ThemedText type="default" style={styles.title}>
+      <ThemedText type="title" style={styles.title} accessibilityRole="header">
         {title}
       </ThemedText>
       {action && onAction ? <PillButton title={action} onPress={onAction} /> : null}
@@ -19,6 +19,6 @@ export function SectionHeader({ title, action, onAction }: Props) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.three, marginBottom: -Spacing.one, minHeight: 36 },
-  title: { fontWeight: 700, fontSize: 22, letterSpacing: -0.3 },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.three, marginBottom: -Spacing.one, minHeight: 40, gap: Spacing.two },
+  title: { flexShrink: 1 },
 });

@@ -27,7 +27,7 @@ export function HistoryList({ carId, dealId }: { carId?: string; dealId?: string
   const [months, setMonths] = useState(FIRST_MONTHS);
   const { data, loading, error, retry } = useReport<HistoryPage>(`/transactions/history?${dealId ? `dealId=${dealId}` : `carId=${carId}`}&months=${months}`, { keepPrevious: true });
 
-  if (!data) return <ReportStatus loading={loading} error={error} onRetry={retry} />;
+  if (!data) return <ReportStatus shape="list" loading={loading} error={error} onRetry={retry} />;
   if (!data.groups.length) {
     return <EmptyState icon="receipt-outline" title="Записів ще немає" text="Додайте перший дохід або витрату." />;
   }

@@ -10,6 +10,7 @@ import { dealStage } from '@/lib/deals';
 import { useFleet } from '@/store/fleet';
 
 import { AckSheet } from './ack-sheet';
+import { ConditionCard } from './condition-card';
 import { ThemedText } from './themed-text';
 import { Button } from './ui/button';
 import { Icon } from './ui/icon';
@@ -18,7 +19,7 @@ import { Icon } from './ui/icon';
  * Стан договору в оренді: чекаємо підпису (кнопка «Підписати»), чекаємо другу сторону чи вже підписано.
  * Оренда починається лише після підписів обох сторін.
  */
-export function ContractCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status' | 'contract' | 'startDate' | 'endDate'>; as: 'owner' | 'renter' }) {
+export function ContractCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status' | 'contract' | 'startDate' | 'endDate' | 'condition'>; as: 'owner' | 'renter' }) {
   const router = useRouter();
   const theme = useTheme();
   const { invalidate } = useFleet();
@@ -33,7 +34,7 @@ export function ContractCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
   // Оренда без договору: тексту договору немає, сторони підтверджують умови в застосунку (без коду з пошти)
   if (c.mode === 'none') {
     if (awaiting) {
-      const ready = c.signing.state === 'open' && !c.mySigned;
+      const ready = c.signing.state === 'open' && !c.mySigned && !!deal.condition?.ready;
       return (
         <View style={[styles.box, { backgroundColor: ready ? theme.positiveSoft : theme.accentSoft }]}>
           <ThemedText type="smallBold" themeColor={ready ? 'positive' : 'accent'}>
@@ -46,6 +47,7 @@ export function ContractCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
                 ? 'Підтверджуйте під час зустрічі, коли передаєте авто, ключі й гроші. Договір не складається: Kolo лише веде облік платежів, застави й чату.'
                 : `Договір не складається: Kolo лише веде облік. Підтвердження відкриється ${formatDate(c.signing.opensAt)}, під час зустрічі.`}
           </ThemedText>
+          {c.signing.state === 'open' && !c.mySigned && !deal.condition?.ready ? <ConditionCard deal={deal} /> : null}
           {ready ? <Button title="Підтвердити умови" icon="checkmark-circle-outline" onPress={() => setAcking(true)} /> : null}
           <AckSheet
             dealId={deal.id}
@@ -78,7 +80,7 @@ export function ContractCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
   }
 
   if (awaiting) {
-    const ready = c.signing.state === 'open' && !c.mySigned;
+    const ready = c.signing.state === 'open' && !c.mySigned && !!deal.condition?.ready;
     return (
       <View style={[styles.box, ready ? { backgroundColor: theme.positiveSoft, borderColor: 'transparent' } : { backgroundColor: theme.accentSoft, borderColor: 'transparent' }]}>
         <ThemedText type="smallBold" themeColor={ready ? 'positive' : 'accent'}>
@@ -91,6 +93,7 @@ export function ContractCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
               ? `Договір № ${c.number}. Підписуйте його під час зустрічі, коли передаєте авто, ключі й гроші.`
               : `Договір № ${c.number}. Перегляньте його зараз, а підписуйте під час зустрічі: підписання відкриється ${formatDate(c.signing.opensAt)}.`}
         </ThemedText>
+        {c.signing.state === 'open' && !c.mySigned && !deal.condition?.ready ? <ConditionCard deal={deal} /> : null}
         <Button title={ready ? 'Переглянути й підписати' : 'Переглянути договір'} icon="document-text-outline" variant={ready ? 'primary' : 'secondary'} onPress={open} />
       </View>
     );

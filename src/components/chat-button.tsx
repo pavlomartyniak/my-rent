@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Radius } from '@/constants/theme';
+import { Radius, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { haptic } from '@/lib/haptics';
 import { useChat } from '@/store/chat';
 
 import { ThemedText } from './themed-text';
@@ -18,13 +19,16 @@ export function ChatButton() {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={unread > 0 ? `Повідомлення, непрочитаних: ${unread}` : 'Повідомлення'}
-      hitSlop={8}
-      onPress={() => router.push('/chats')}
+      hitSlop={4}
+      onPress={() => {
+        haptic.select();
+        router.push('/chats');
+      }}
       style={({ pressed }) => [styles.button, { backgroundColor: theme.backgroundElement, borderColor: theme.border }, pressed && styles.pressed]}>
       <Icon name="chatbubble-ellipses-outline" size={22} color="text" />
       {unread > 0 ? (
         <View style={[styles.badge, { backgroundColor: theme.negative }]}>
-          <ThemedText style={styles.badgeText}>{unread > 99 ? '99+' : unread}</ThemedText>
+          <ThemedText style={[styles.badgeText, { color: theme.onInk }]}>{unread > 99 ? '99+' : unread}</ThemedText>
         </View>
       ) : null}
     </Pressable>
@@ -35,5 +39,5 @@ const styles = StyleSheet.create({
   button: { width: 44, height: 44, borderRadius: Radius.pill, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.7 },
   badge: { position: 'absolute', top: -4, right: -4, minWidth: 20, height: 20, paddingHorizontal: 5, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { color: '#FFFFFF', fontSize: 12, lineHeight: 14, fontWeight: 700 },
+  badgeText: { ...Type.caption, fontWeight: 700 },
 });

@@ -1,7 +1,9 @@
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+
+import { haptic } from '@/lib/haptics';
 
 import { ThemedText } from '../themed-text';
 
@@ -28,9 +30,12 @@ export function Segmented<T extends string>({ options, value, onChange, badges, 
         return (
           <Pressable
             key={option}
-            accessibilityRole="button"
-            accessibilityState={{ selected }}
-            onPress={() => onChange(option)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected, checked: selected }}
+            onPress={() => {
+              if (!selected) haptic.select();
+              onChange(option);
+            }}
             style={[
               styles.chip,
               {
@@ -43,7 +48,7 @@ export function Segmented<T extends string>({ options, value, onChange, badges, 
             </ThemedText>
             {badges?.[option] ? (
               <View style={[styles.badge, { backgroundColor: selected ? theme.onInk : theme.accent }]}>
-                <ThemedText type="smallBold" style={[styles.badgeText, { color: selected ? theme.ink : '#ffffff' }]}>
+                <ThemedText type="smallBold" style={[styles.badgeText, { color: selected ? theme.ink : theme.onAccent }]}>
                   {badges[option]}
                 </ThemedText>
               </View>
@@ -70,5 +75,5 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   badge: { minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontSize: 13, lineHeight: 16 },
+  badgeText: { ...Type.caption },
 });

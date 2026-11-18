@@ -22,19 +22,16 @@ export default function AppTabs() {
       <TabList asChild>
         <CustomTabList>
           <TabTrigger name="index" href="/" asChild>
-            <TabButton>Автопарк</TabButton>
-          </TabTrigger>
-          <TabTrigger name="analytics" href="/analytics" asChild>
-            <TabButton>Аналітика</TabButton>
+            <TabButton>Авто</TabButton>
           </TabTrigger>
           <TabTrigger name="requests" href="/requests" asChild>
-            <TabButton>Запити</TabButton>
+            <TabButton>Оренди</TabButton>
           </TabTrigger>
-          <TabTrigger name="reminders" href="/reminders" asChild>
-            <TabButton>Нагадування</TabButton>
+          <TabTrigger name="analytics" href="/analytics" asChild>
+            <TabButton>Доходи</TabButton>
           </TabTrigger>
           <TabTrigger name="settings" href="/settings" asChild>
-            <TabButton>Налаштування</TabButton>
+            <TabButton>Профіль</TabButton>
           </TabTrigger>
         </CustomTabList>
       </TabList>

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDate } from '@/lib/date';
 import { formatMoney, plural } from '@/lib/format';
@@ -73,11 +73,11 @@ export function WantedCard({ wanted: w, viewer, children }: Props) {
 
       {fresh ? (
         <View style={[styles.fresh, { backgroundColor: theme.accent }]}>
-          <Icon name="notifications" size={18} color="#FFFFFF" />
-          <ThemedText type="smallBold" style={styles.freshText}>
+          <Icon name="notifications" size={18} color={theme.onAccent} />
+          <ThemedText type="smallBold" style={[styles.freshText, { color: theme.onAccent }]}>
             {offers!.pending} {plural(offers!.pending, 'нова пропозиція', 'нові пропозиції', 'нових пропозицій')} від власників
           </ThemedText>
-          <Icon name="chevron-forward" size={18} color="#FFFFFF" />
+          <Icon name="chevron-forward" size={18} color={theme.onAccent} />
         </View>
       ) : viewer === 'renter' && offers ? (
         <View style={styles.offers}>
@@ -96,12 +96,12 @@ export function WantedCard({ wanted: w, viewer, children }: Props) {
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   flex: { flex: 1 },
-  bold: { fontWeight: 600, fontSize: 18 },
+  bold: { ...Type.headline },
   rows: { gap: Spacing.one, marginTop: Spacing.one },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.three },
   value: { flexShrink: 1, fontWeight: 600, textAlign: 'right' },
   notes: { fontStyle: 'italic' },
   offers: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
   fresh: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.pill, paddingHorizontal: Spacing.four },
-  freshText: { flex: 1, color: '#FFFFFF' },
+  freshText: { flex: 1 },
 });

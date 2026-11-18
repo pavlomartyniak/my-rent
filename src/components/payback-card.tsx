@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { formatMoney } from '@/lib/format';
 
@@ -96,11 +96,11 @@ export function PaybackCard({ profit, price, eta, bare }: Props) {
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   bold: { fontWeight: 700 },
-  percent: { fontWeight: 700, fontSize: 20 },
+  percent: { ...Type.title },
   bare: { gap: Spacing.two, marginTop: Spacing.three },
   tiles: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.one },
   tile: { flex: 1, borderRadius: Radius.md, padding: Spacing.three, gap: 2 },
-  tileLabel: { fontSize: 12, lineHeight: 16 },
+  tileLabel: { ...Type.caption },
   track: { height: 8, borderRadius: Radius.pill, overflow: 'hidden', marginVertical: Spacing.one },
   fill: { height: 8, borderRadius: Radius.pill },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.two },

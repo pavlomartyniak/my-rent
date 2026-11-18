@@ -6,6 +6,7 @@ import { ReportStatus } from '@/components/report-status';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { NumberField } from '@/components/ui/number-field';
 import { Screen } from '@/components/ui/screen';
 import { Spacing } from '@/constants/theme';
@@ -14,6 +15,7 @@ import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/date';
 import type { DealView } from '@/lib/deals';
 import { formatMoney } from '@/lib/format';
+import { haptic } from '@/lib/haptics';
 import { useFleet } from '@/store/fleet';
 
 /**
@@ -43,9 +45,11 @@ export default function PaymentScreen() {
         {!deal.data ? (
           <ReportStatus loading={deal.loading} error={deal.error} onRetry={deal.retry} />
         ) : (
-          <ThemedText type="default">
-            {!pay || pay.cancelled ? 'Цього платежу немає.' : !pay.available ? `Підтвердження відкриється ${formatDate(pay.dueDate)}.` : 'Цей платіж уже підтверджено.'}
-          </ThemedText>
+          <EmptyState
+            icon="checkmark-circle-outline"
+            title={!pay || pay.cancelled ? 'Цього платежу немає' : !pay.available ? 'Підтвердження ще не відкрите' : 'Платіж уже закрито'}
+            text={!pay || pay.cancelled ? undefined : !pay.available ? `Відкриється ${formatDate(pay.dueDate)}` : 'Вся сума підтверджена'}
+          />
         )}
       </Screen>
     );
@@ -59,8 +63,10 @@ export default function PaymentScreen() {
     try {
       await api('POST', `/deals/${id}/payments/${n}/${path}`, body ?? {});
       invalidate();
+      haptic.success();
       router.back();
     } catch (e) {
+      haptic.error();
       Alert.alert('Не вдалося зберегти', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
     } finally {
       setBusy(false);
@@ -90,29 +96,29 @@ export default function PaymentScreen() {
         ) : null}
       </Card>
 
-      <ThemedText type="default" style={styles.question}>
+      <ThemedText type="title" style={styles.question} accessibilityRole="header">
         Ви {verb} {formatMoney(info.remaining)}?
       </ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
         {renter ? 'Після відповіді сума потрапить у ваші витрати.' : 'Після відповіді сума потрапить у ваші доходи.'} Застосунок не проводить гроші, а лише фіксує ваші відповіді. Друга сторона підтверджує свою частину окремо.
       </ThemedText>
 
-      <Button title={`Так, ${formatMoney(info.remaining)}`} icon="checkmark" variant="primary" disabled={busy} onPress={() => void call('confirm', info.mine > 0 ? { amount: info.amount } : {})} />
+      <Button title={`Так, ${verb} ${formatMoney(info.remaining)}`} icon="checkmark" variant="primary" loading={busy} onPress={() => void call('confirm', info.mine > 0 ? { amount: info.amount } : {})} />
 
       {part ? (
         <View style={{ gap: Spacing.two }}>
           <NumberField label={`Скільки ${verb} разом за цей платіж, ₴`} value={amount} onChangeValue={setAmount} maxDigits={9} placeholder={String(Math.round(info.amount / 2))} error={partError} />
-          <Button title="Підтвердити цю суму" icon="checkmark" disabled={busy || !!partError || !amount} onPress={() => void call('confirm', { amount: partAmount })} />
+          <Button title={amount && !partError ? `Підтвердити ${formatMoney(partAmount)}` : 'Вкажіть суму'} icon="checkmark" loading={busy} disabled={!!partError || !amount} onPress={() => void call('confirm', { amount: partAmount })} />
         </View>
       ) : (
-        <Button title="Частину" icon="remove-circle-outline" variant="soft" disabled={busy} onPress={() => setPart(true)} />
+        <Button title={`${renter ? 'Сплатив(ла)' : 'Отримав(ла)'} лише частину`} icon="remove-circle-outline" variant="soft" disabled={busy} onPress={() => setPart(true)} />
       )}
 
-      <Button title="Ще ні" variant="soft" disabled={busy} onPress={() => void call('later')} />
+      <Button title={renter ? 'Ще не сплатив(ла)' : 'Ще не отримав(ла)'} variant="tertiary" disabled={busy} onPress={() => void call('later')} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  question: { fontWeight: 700, fontSize: 20, lineHeight: 26 },
+  question: { marginTop: Spacing.two },
 });

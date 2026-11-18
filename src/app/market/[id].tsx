@@ -17,7 +17,7 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { formatKm, formatMoney } from '@/lib/format';
@@ -163,7 +163,7 @@ export default function MarketCarScreen() {
               ✓ Запит уже надіслано
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              Власник ще не відповів. Повторно надсилати запит не потрібно. Відповідь і контакти з’являться у вкладці «Запити». Якщо передумали, скасуйте запит там.
+              Власник ще не відповів. Повторно надсилати запит не потрібно. Відповідь і контакти з’являться у вкладці «Оренди». Якщо передумали, скасуйте запит там.
             </ThemedText>
           </Card>
         ) : null}
@@ -171,11 +171,20 @@ export default function MarketCarScreen() {
 
       <View style={[styles.footer, { backgroundColor: theme.backgroundElement, borderTopColor: theme.border, paddingBottom: Math.max(insets.bottom, Spacing.three) }]}>
         {car.myRequest ? (
-          <Button title="Мої запити" icon="file-tray-outline" variant="secondary" onPress={() => router.navigate('/renter/requests')} />
+          <Button title="Відкрити мій запит" icon="file-tray-outline" variant="secondary" onPress={() => router.navigate({ pathname: '/renter', params: { section: 'requests' } })} />
         ) : (
           <>
+            {/* Виняток із «нуль дублювання»: ціна дублюється біля кнопки, бо блок із ціною зникає зі скролом */}
+            <View style={styles.footPrice}>
+              <ThemedText type="headline" themeColor="accent">
+                {formatMoney(car.pricePerDay)} <ThemedText type="callout" themeColor="textSecondary">за добу</ThemedText>
+              </ThemedText>
+              <ThemedText type="callout" themeColor="textSecondary">
+                {hasDeposit ? `Застава ${formatMoney(car.deposit)}` : 'Без застави'}
+              </ThemedText>
+            </View>
             <Button title="Надіслати запит на оренду" icon="paper-plane-outline" onPress={() => router.push({ pathname: '/market/request', params: { carId: car.id } })} />
-            <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
+            <ThemedText type="caption" themeColor="textSecondary" style={styles.note}>
               Запит нічого не бронює: власник прийме його або відхилить. Контакти відкриються після підтвердження.
             </ThemedText>
           </>
@@ -195,21 +204,22 @@ const styles = StyleSheet.create({
   // Лист із назвою заходить на фото закругленим верхом (мінус проміжок між блоками й сам захід)
   sheet: { marginHorizontal: -20, marginTop: -48, paddingHorizontal: 20, paddingTop: 20, borderTopLeftRadius: 28, borderTopRightRadius: 28, gap: Spacing.three },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  title: { fontSize: 30, lineHeight: 36 },
+  title: { ...Type.display },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   safety: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.four, justifyContent: 'center', paddingVertical: Spacing.two },
-  safetyLink: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: Spacing.one },
+  safetyLink: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 },
   card: { gap: Spacing.three, padding: Spacing.four, borderRadius: 28 },
   price: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.two },
-  priceValue: { fontSize: 36, lineHeight: 44, fontWeight: 700, letterSpacing: -0.5 },
+  priceValue: { ...Type.hero },
   deposit: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, borderRadius: Radius.md, padding: Spacing.three },
   depositIcon: { width: 44, height: 44, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
   owner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },
   bold: { fontWeight: 700 },
-  heading: { fontWeight: 700, fontSize: 20 },
+  heading: { ...Type.title },
   // Кнопка закріплена внизу, щоб головна дія завжди була під рукою
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: Spacing.three, gap: Spacing.two, borderTopWidth: StyleSheet.hairlineWidth },
   note: { textAlign: 'center' },
+  footPrice: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
 });
