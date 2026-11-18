@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { drivingYearError, ProfileExtrasForm } from '@/components/profile-extras';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Icon, type IconName } from '@/components/ui/icon';
@@ -25,11 +26,46 @@ const RENTER_STEPS: Step[] = [
 
 export default function OnboardingScreen() {
   const theme = useTheme();
-  const { finishOnboarding, role } = useFleet();
+  const { finishOnboarding, role, updateProfile, firstName, lastName } = useFleet();
   const STEPS = role === 'renter' ? RENTER_STEPS : OWNER_STEPS;
   const [step, setStep] = useState(0);
+  const [extras, setExtras] = useState({ city: '', photoUri: '', about: '', drivingSince: null as number | null, purposes: [] as ('taxi' | 'delivery' | 'personal' | 'business')[] });
+  const [saving, setSaving] = useState(false);
+  // Після слайдів іде необов'язковий крок «Розкажіть про себе»
+  const profileStep = step === STEPS.length;
   const last = step === STEPS.length - 1;
-  const s = STEPS[step];
+  const s = STEPS[Math.min(step, STEPS.length - 1)];
+
+  async function saveAndStart() {
+    if (saving) return;
+    if (drivingYearError(extras.drivingSince)) return;
+    setSaving(true);
+    const filled = extras.city.trim() || extras.photoUri || extras.about.trim() || extras.drivingSince !== null || extras.purposes.length;
+    // Збережене в профілі можна змінити потім у «Профілі»; помилка збереження не має блокувати початок роботи
+    if (filled) await updateProfile({ ...extras, city: extras.city.trim(), about: extras.about.trim() });
+    await finishOnboarding();
+    setSaving(false);
+  }
+
+  if (profileStep) {
+    return (
+      <SafeAreaView style={[styles.root, { backgroundColor: theme.background }]}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={styles.formBody} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <ThemedText type="subtitle">Розкажіть про себе</ThemedText>
+            <ThemedText type="default" themeColor="textSecondary">
+              Це необов’язково й видно іншим у вашому профілі. Заповнити чи змінити можна будь-коли в «Профілі».
+            </ThemedText>
+            <ProfileExtrasForm value={extras} onChange={(patch) => setExtras((e) => ({ ...e, ...patch }))} name={[lastName, firstName].filter(Boolean).join(' ')} renter={role === 'renter'} submitted />
+          </ScrollView>
+          <View style={styles.footer}>
+            <Button title={saving ? 'Зберігаємо…' : 'Зберегти й почати'} disabled={saving} onPress={() => void saveAndStart()} />
+            <Button title="Пропустити" variant="secondary" disabled={saving} onPress={() => void finishOnboarding()} />
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: theme.background }]}>
@@ -44,7 +80,7 @@ export default function OnboardingScreen() {
           {s.text}
         </ThemedText>
         <View style={styles.dots}>
-          {STEPS.map((_, i) => (
+          {[...STEPS, null].map((_, i) => (
             <View key={i} style={[styles.dot, { backgroundColor: i === step ? theme.accent : theme.backgroundSelected }, i === step && styles.dotActive]} />
           ))}
         </View>
@@ -52,7 +88,7 @@ export default function OnboardingScreen() {
 
       <View style={styles.footer}>
         {last ? (
-          <Button title="Почати" onPress={() => void finishOnboarding()} />
+          <Button title="Далі" onPress={() => setStep(step + 1)} />
         ) : (
           <>
             <Button title="Далі" onPress={() => setStep(step + 1)} />
@@ -73,4 +109,5 @@ const styles = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4 },
   dotActive: { width: 24 },
   footer: { gap: Spacing.two, paddingBottom: Spacing.three },
+  formBody: { gap: Spacing.three, paddingTop: Spacing.four, paddingBottom: Spacing.four },
 });

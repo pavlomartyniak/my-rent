@@ -64,6 +64,8 @@ export class DataService {
 
   async deleteAccount(userId: string) {
     const photos = await this.carPhotos(userId);
+    const me = await this.users.findById(userId, 'photoUri').lean().exec();
+    if (me?.photoUri) photos.push(me.photoUri);
     await this.clear(userId);
     await this.rentals.deleteMany({ $or: [{ renterId: userId }, { ownerId: userId }] });
     // Заявки орендаря разом із пропозиціями на них; пропозиції власника

@@ -1,5 +1,7 @@
 import { router } from 'expo-router';
 
+import type { RentPurpose } from './profile';
+
 /** Відповіді ендпоінтів /users/:id/profile та /reviews */
 
 export type RatingSummary = { count: number; avg: number | null; tags: { tag: string; count: number }[] };
@@ -14,6 +16,13 @@ export type ProfileView = {
   /** Повне ім'я для сторони оренди, інакше «Ім'я П.» */
   name: string;
   city: string | null;
+  photoUri: string | null;
+  about: string;
+  /** Рік, з якого водить */
+  drivingSince: number | null;
+  purposes: RentPurpose[];
+  /** Позначки, виведені з фактів: новий, досвідчений, високий рейтинг */
+  badges: { key: 'new' | 'experienced' | 'top'; title: string }[];
   memberSince: string | null;
   rating: RatingSummary;
   stats: { completedDeals: number; activeDeals: number };

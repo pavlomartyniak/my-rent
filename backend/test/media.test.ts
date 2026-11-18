@@ -51,7 +51,7 @@ const fakeModel = (docs: unknown[]) => ({
   }),
 });
 
-function setup(opts: { cars?: unknown[]; deals?: unknown[]; chats?: unknown[]; listing?: { public_id: string; created_at: string }[] } = {}) {
+function setup(opts: { cars?: unknown[]; deals?: unknown[]; chats?: unknown[]; users?: unknown[]; listing?: { public_id: string; created_at: string }[] } = {}) {
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const u = String(input);
     calls.push({ method: init?.method ?? 'GET', url: u });
@@ -62,7 +62,7 @@ function setup(opts: { cars?: unknown[]; deals?: unknown[]; chats?: unknown[]; l
     return new Response(JSON.stringify({ resources: opts.listing ?? [] }), { status: 200 });
   }) as typeof fetch;
   const config = { get: (k: string) => ({ CLOUDINARY_CLOUD_NAME: CLOUD, CLOUDINARY_API_KEY: 'k', CLOUDINARY_API_SECRET: 's' })[k] };
-  return new MediaService(config as never, fakeModel(opts.cars ?? []) as never, fakeModel(opts.deals ?? []) as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel(opts.chats ?? []) as never);
+  return new MediaService(config as never, fakeModel(opts.cars ?? []) as never, fakeModel(opts.deals ?? []) as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel(opts.chats ?? []) as never, fakeModel(opts.users ?? []) as never);
 }
 
 const deletedIds = () => calls.filter((c) => c.method === 'DELETE').flatMap((c) => new URL(c.url).searchParams.getAll('public_ids[]'));
@@ -129,8 +129,17 @@ describe('MediaService.sweep', () => {
 
   it('нічого не робить без налаштованого Cloudinary', async () => {
     setup();
-    const media = new MediaService({ get: () => undefined } as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel([]) as never);
+    const media = new MediaService({ get: () => undefined } as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel([]) as never, fakeModel([]) as never);
     assert.equal(await media.sweep(), 0);
     assert.equal(calls.length, 0);
+  });
+});
+
+describe('MediaService: фото профілю', () => {
+  it('не видаляє фото, яке стоїть аватаром', async () => {
+    const url = `https://res.cloudinary.com/${CLOUD}/image/upload/v1/my-rent/u1/avatar.jpg`;
+    const media = setup({ users: [{ photoUri: url }] });
+    assert.equal(await media.release([url]), 0);
+    assert.deepEqual(deletedIds(), []);
   });
 });

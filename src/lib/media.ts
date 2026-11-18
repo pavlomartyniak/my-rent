@@ -16,9 +16,9 @@ type Signature = {
 /** Помилка, коли на сервері не налаштований Cloudinary (503): тоді фото лишаються лише на пристрої */
 export class UploadUnavailableError extends Error {}
 
-async function getSignature(count: number): Promise<Signature> {
+async function getSignature(count: number, path = '/media/upload-signature'): Promise<Signature> {
   try {
-    return await api<Signature>('POST', '/media/upload-signature', { count });
+    return await api<Signature>('POST', path, { count });
   } catch (e) {
     if (e instanceof ApiError && e.status === 503) throw new UploadUnavailableError();
     throw e;
@@ -51,6 +51,16 @@ async function uploadOne(sig: Signature, index: number, localUri: string): Promi
   const data = (await res.json().catch(() => null)) as { secure_url?: string; error?: { message?: string } } | null;
   if (!res.ok || !data?.secure_url) throw new Error(data?.error?.message ?? 'Не вдалося завантажити фото');
   return data.secure_url;
+}
+
+/** Завантажує фото профілю (доступне обом ролям); повертає https-посилання або null, якщо не вдалось чи хмара не налаштована */
+export async function uploadAvatar(localUri: string): Promise<string | null> {
+  try {
+    const sig = await getSignature(1, '/media/avatar-signature');
+    return await uploadOne(sig, 0, localUri);
+  } catch {
+    return null;
+  }
 }
 
 export type UploadResult = {

@@ -1,6 +1,6 @@
-import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 
-import { THEMES } from '../common/constants';
+import { RENT_PURPOSES, THEMES } from '../common/constants';
 import { PHONE_PATTERN, Trim } from '../common/profile';
 
 export class UpdateMeDto {
@@ -39,6 +39,31 @@ export class UpdateMeDto {
   @IsString()
   @MaxLength(60, { message: 'Назва міста задовга' })
   city?: string;
+
+  /** Фото профілю: посилання на власне фото в хмарі або порожній рядок, щоб прибрати */
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  photoUri?: string;
+
+  @Trim()
+  @IsOptional()
+  @IsString()
+  @MaxLength(300, { message: 'Опис задовгий (до 300 символів)' })
+  about?: string;
+
+  /** Рік, з якого водить; null прибирає */
+  @IsOptional()
+  @IsInt({ message: 'Вкажіть рік цифрами' })
+  @Min(1950, { message: 'Рік не раніше 1950' })
+  @Max(new Date().getFullYear(), { message: 'Рік не може бути в майбутньому' })
+  drivingSince?: number | null;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(4)
+  @IsIn(RENT_PURPOSES, { each: true })
+  purposes?: string[];
 
   @IsOptional()
   @IsBoolean()

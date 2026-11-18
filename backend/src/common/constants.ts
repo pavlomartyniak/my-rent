@@ -44,3 +44,7 @@ export const MAX_PHOTOS = 10;
 
 /** Бета-версія: власник може публікувати оголошення не більше ніж для цієї кількості авто. Облік безкоштовний без ліміту */
 export const MAX_LISTINGS = 5;
+
+/** Для чого орендар бере авто (необов'язково, показується в його профілі) */
+export const RENT_PURPOSES = ['taxi', 'delivery', 'personal', 'business'] as const;
+export type RentPurpose = (typeof RENT_PURPOSES)[number];

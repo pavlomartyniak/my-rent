@@ -28,6 +28,19 @@ export class MediaController {
   @HttpCode(200)
   @Post('upload-signature')
   signature(@CurrentUser() user: AuthUser, @Body() dto: UploadSignatureDto) {
+    return this.sign(user, dto);
+  }
+
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @Header('Cache-Control', 'no-store')
+  @HttpCode(200)
+  @Post('avatar-signature')
+  /** Те саме для фото профілю: доступне й орендарям, які не додають авто */
+  avatarSignature(@CurrentUser() user: AuthUser, @Body() dto: UploadSignatureDto) {
+    return this.sign(user, dto);
+  }
+
+  private sign(user: AuthUser, dto: UploadSignatureDto) {
     const cloudName = this.config.get<string>('CLOUDINARY_CLOUD_NAME');
     const apiKey = this.config.get<string>('CLOUDINARY_API_KEY');
     const apiSecret = this.config.get<string>('CLOUDINARY_API_SECRET');

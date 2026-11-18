@@ -6,6 +6,7 @@ import { Conversation, ConversationSchema } from '../schemas/conversation.schema
 import { Deal, DealSchema } from '../schemas/deal.schema';
 import { Offer, OfferSchema } from '../schemas/offer.schema';
 import { RentalRequest, RentalRequestSchema } from '../schemas/rental-request.schema';
+import { User, UserSchema } from '../schemas/user.schema';
 import { MediaController } from './media.controller';
 import { MediaService } from './media.service';
 
@@ -18,6 +19,7 @@ import { MediaService } from './media.service';
       { name: RentalRequest.name, schema: RentalRequestSchema },
       { name: Offer.name, schema: OfferSchema },
       { name: Conversation.name, schema: ConversationSchema },
+      { name: User.name, schema: UserSchema },
     ]),
   ],
   controllers: [MediaController],

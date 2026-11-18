@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import type { HydratedDocument } from 'mongoose';
 
-import { ROLES, THEMES } from '../common/constants';
+import { RENT_PURPOSES, ROLES, THEMES } from '../common/constants';
 import { jsonOptions } from '../common/json-options';
 
 @Schema(jsonOptions([], ['passwordHash', 'resetCodeHash', 'resetExpires', 'resetAttempts', 'suspended', 'phoneKey']))
@@ -48,6 +48,22 @@ export class User {
   /** Місто користувача: показується в профілі (необов'язково) */
   @Prop({ default: '', trim: true })
   city: string;
+
+  /** Фото профілю (https-посилання Cloudinary з папки користувача) */
+  @Prop({ default: '' })
+  photoUri: string;
+
+  /** Кілька слів про себе, до 300 символів (необов'язково) */
+  @Prop({ default: '', trim: true })
+  about: string;
+
+  /** З якого року водить (необов'язково): у профілі показується стаж */
+  @Prop({ type: Number })
+  drivingSince?: number | null;
+
+  /** Для чого орендує авто (необов'язково) */
+  @Prop({ type: [String], enum: RENT_PURPOSES, default: [] })
+  purposes: string[];
 
   @Prop({ enum: ROLES, default: 'owner' })
   role: string;

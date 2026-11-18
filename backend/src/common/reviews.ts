@@ -21,3 +21,17 @@ export function summarize(rows: { rating: number; tags?: string[] }[]): RatingSu
     tags: [...counts].map(([tag, count]) => ({ tag, count })).sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, 'uk')).slice(0, 3),
   };
 }
+
+export type Badge = { key: 'new' | 'experienced' | 'top'; title: string };
+
+/**
+ * Позначки в профілі виводяться з фактів, а не ставляться вручну: «Новий на Kolo» (менш як 30 днів), «Досвідчений»
+ * (3 і більше завершених оренд), «Високий рейтинг» (від 4,5 за щонайменше трьома оцінками).
+ */
+export function profileBadges(opts: { completed: number; rating: RatingSummary; joinedAt?: Date; now: Date }): Badge[] {
+  const out: Badge[] = [];
+  if (opts.rating.count >= 3 && (opts.rating.avg ?? 0) >= 4.5) out.push({ key: 'top', title: 'Високий рейтинг' });
+  if (opts.completed >= 3) out.push({ key: 'experienced', title: 'Досвідчений' });
+  if (opts.joinedAt && opts.now.getTime() - opts.joinedAt.getTime() < 30 * 86_400_000) out.push({ key: 'new', title: 'Новий на Kolo' });
+  return out;
+}

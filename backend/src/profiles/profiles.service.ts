@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 
-import { type RatingSummary, summarize, tagsFor } from '../common/reviews';
+import { profileBadges, type RatingSummary, summarize, tagsFor } from '../common/reviews';
 import { dealStageOf } from '../deals/deal-stage';
 import { ModerationService } from '../moderation/moderation.service';
 import { fullName, maskedName, todayUtc } from '../rentals/rentals.math';
@@ -61,16 +61,24 @@ export class ProfilesService {
         : Promise.resolve([]),
     ]);
     const stages = deals.map((d) => dealStageOf(d, today));
+    const completed = stages.filter((s) => s === 'finished').length;
+    const since = (target as { createdAt?: Date }).createdAt;
+    const badges = profileBadges({ completed, rating, joinedAt: since, now: new Date() });
 
     return {
       id: targetId,
       role: target.role,
       self,
       name: connected ? legalName(target) : maskedName(target.firstName, target.lastName),
-      city: (target as { city?: string }).city || null,
-      memberSince: (target as { createdAt?: Date }).createdAt ?? null,
+      city: target.city || null,
+      photoUri: target.photoUri || null,
+      about: target.about || '',
+      drivingSince: target.drivingSince ?? null,
+      purposes: target.purposes ?? [],
+      badges,
+      memberSince: since ?? null,
       rating,
-      stats: { completedDeals: stages.filter((s) => s === 'finished').length, activeDeals: stages.filter((s) => s === 'active' || s === 'upcoming').length },
+      stats: { completedDeals: completed, activeDeals: stages.filter((s) => s === 'active' || s === 'upcoming').length },
       // Контакти бачить лише сторона оренди (або сам власник профілю)
       contact: connected ? { phone: target.phone || null, email: target.email } : null,
       cars: cars.map((c) => ({

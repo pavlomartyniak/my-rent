@@ -7,6 +7,7 @@ import type { Car } from '../schemas/car.schema';
 import type { Conversation } from '../schemas/conversation.schema';
 import type { Deal } from '../schemas/deal.schema';
 import type { Offer } from '../schemas/offer.schema';
+import type { User } from '../schemas/user.schema';
 import type { RentalRequest } from '../schemas/rental-request.schema';
 import { chunk, MEDIA_PREFIX, ORPHAN_GRACE_HOURS, publicIdFromUrl } from './cloudinary';
 
@@ -39,6 +40,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     @InjectModel('RentalRequest') private readonly rentals: Model<RentalRequest>,
     @InjectModel('Offer') private readonly offers: Model<Offer>,
     @InjectModel('Conversation') private readonly conversations: Model<Conversation>,
+    @InjectModel('User') private readonly users: Model<User>,
   ) {}
 
   onModuleInit() {
@@ -89,12 +91,13 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
   /** Які з переданих посилань досі використовуються в базі */
   private async referencedAmong(urls: string[]): Promise<Set<string>> {
     const hit = (u: string[]) => ({ $in: u });
-    const [cars, deals, rentals, offers, chats] = await Promise.all([
+    const [cars, deals, rentals, offers, chats, people] = await Promise.all([
       this.cars.find({ $or: [{ photoUri: hit(urls) }, { photos: hit(urls) }] }, 'photoUri photos').lean().exec(),
       this.deals.find({ photoUri: hit(urls) }, 'photoUri').lean().exec(),
       this.rentals.find({ 'car.photoUri': hit(urls) }, 'car.photoUri').lean().exec(),
       this.offers.find({ $or: [{ 'car.photoUri': hit(urls) }, { 'car.photos': hit(urls) }] }, 'car.photoUri car.photos').lean().exec(),
       this.conversations.find({ 'context.photoUri': hit(urls) }, 'context.photoUri').lean().exec(),
+      this.users.find({ photoUri: hit(urls) }, 'photoUri').lean().exec(),
     ]);
     const used = new Set<string>();
     const add = (u?: string | null) => u && used.add(u);
@@ -103,6 +106,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     for (const r of rentals) add(r.car?.photoUri);
     for (const o of offers) [o.car?.photoUri, ...(o.car?.photos ?? [])].forEach(add);
     for (const c of chats) add(c.context?.photoUri);
+    for (const u of people) add(u.photoUri);
     return used;
   }
 
@@ -118,6 +122,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     for await (const r of this.rentals.find({}, 'car.photoUri').lean().cursor()) add(r.car?.photoUri);
     for await (const o of this.offers.find({}, 'car.photoUri car.photos').lean().cursor()) [o.car?.photoUri, ...(o.car?.photos ?? [])].forEach(add);
     for await (const c of this.conversations.find({}, 'context.photoUri').lean().cursor()) add(c.context?.photoUri);
+    for await (const u of this.users.find({ photoUri: { $ne: '' } }, 'photoUri').lean().cursor()) add(u.photoUri);
     return ids;
   }
 
