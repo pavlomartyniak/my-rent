@@ -9,7 +9,7 @@ import { isValidISODate, todayISO } from '@/lib/date';
 import { useFleet } from '@/store/fleet';
 import { CAR_STATUSES, FUEL_TYPES, MANUAL_CAR_STATUSES, type Car, type FuelType } from '@/types';
 
-import { InsuranceCard } from './insurance-card';
+import { DocumentsCard } from './documents-card';
 import { DeleteCar } from './delete-car';
 import { Hint } from './hint';
 import { formatSize } from '@/lib/format';
@@ -188,10 +188,7 @@ export function CarForm({ car }: { car?: Car }) {
       {!car ? <Hint id="car-form">Оберіть марку й модель зі списку, вкажіть рік, вартість і пробіг. VIN і водія можна залишити порожніми, державний номер обов’язковий.</Hint> : null}
       <PhotoPicker value={photos} onChange={setPhotos} error={err('photo')} />
       {car ? (
-        <>
-          <SectionHeader title="Страховий поліс" />
-          <InsuranceCard carId={car.id} />
-        </>
+        <DocumentsCard carId={car.id} as="owner" />
       ) : (
         <>
           <SectionHeader title="Страховий поліс (необов’язково)" />

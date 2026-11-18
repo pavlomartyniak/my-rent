@@ -8,7 +8,6 @@ import { daysUntil, formatDate, rentalProgress } from '@/lib/date';
 import { dealStage, type DealView } from '@/lib/deals';
 import { formatMoney, plural } from '@/lib/format';
 
-import { ConditionCard } from './condition-card';
 import { ContractCard } from './contract-card';
 import { TerminateDeal } from './terminate-deal';
 import { Avatar } from './avatar';
@@ -66,7 +65,6 @@ export function OwnerRentalCard({ deal }: { deal: DealView }) {
       </View>
 
       <ContractCard deal={deal} as="owner" />
-      <ConditionCard deal={deal} as="owner" />
       {awaiting ? null : <TerminateDeal deal={deal} as="owner" />}
     </Card>
   );

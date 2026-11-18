@@ -1,7 +1,7 @@
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { carFacts } from '@/lib/car-info';
 import { contactActions } from '@/lib/contact-actions';
@@ -96,7 +96,8 @@ export function ActiveDealCard({ deal }: { deal: DealView }) {
 
 const styles = StyleSheet.create({
   card: { padding: 0, gap: 0 },
-  photo: { width: '100%', height: 156, borderRadius: 0 },
+  // Фото на всю ширину картки, лише верхні кути закруглені під радіус картки
+  photo: { width: '100%', height: 156, borderTopLeftRadius: Radius.lg - 1, borderTopRightRadius: Radius.lg - 1, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
   status: { position: 'absolute', top: Spacing.three, left: Spacing.three },
   head: { paddingHorizontal: Spacing.three, paddingTop: Spacing.three, gap: Spacing.two },
   plate: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, flexWrap: 'wrap' },

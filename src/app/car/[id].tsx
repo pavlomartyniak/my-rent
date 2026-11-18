@@ -16,7 +16,7 @@ import { OwnerRentalCard } from '@/components/owner-rental-card';
 import { ReleasePrompt } from '@/components/release-prompt';
 import { ArchivedDeals } from '@/components/archived-deals';
 import { DeleteCar } from '@/components/delete-car';
-import { InsuranceCard } from '@/components/insurance-card';
+import { DocumentsCard } from '@/components/documents-card';
 import type { DealView } from '@/lib/deals';
 import { HistoryList } from '@/components/history-list';
 import { Button } from '@/components/ui/button';
@@ -133,10 +133,10 @@ export default function CarScreen() {
 
       {deal ? <OwnerRentalCard deal={deal} /> : null}
 
-      {deal ? <PaymentsCard deal={deal} as="owner" /> : null}
+      {/* Документи одразу під карткою оренди, як у орендаря: стан авто (коли оренду підписано) і страховий поліс */}
+      <DocumentsCard carId={car.id} deal={deal} as="owner" />
 
-      <SectionHeader title="Страховий поліс" />
-      <InsuranceCard carId={car.id} />
+      {deal ? <PaymentsCard deal={deal} as="owner" /> : null}
 
       <SectionHeader title="Про авто" />
       <InfoGrid items={aboutItems} />

@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,7 +19,7 @@ import { Radius, Spacing, Type } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError } from '@/lib/api';
-import { confirmCondition, type ConditionPhoto, type ConditionView, type Phase, removePhoto, saveOdometer, savePhoto, takePhoto, uploadConditionPhoto } from '@/lib/condition';
+import { confirmCondition, type ConditionPhoto, type ConditionView, type Phase, removePhoto, saveOdometer, savePhoto, pickPhoto, uploadConditionPhoto } from '@/lib/condition';
 import { formatDate } from '@/lib/date';
 import { thumbnailUrl } from '@/lib/media';
 import { useFleet } from '@/store/fleet';
@@ -29,12 +29,14 @@ const stamp = (iso: string) => `${formatDate(iso.slice(0, 10))}, ${new Date(iso)
 
 /**
  * Стан авто: спільні фото кузова й салону та показник одометра. При передачі це обов'язковий крок до початку оренди: поки не
- * додано всі фото, договір (чи підтвердження умов) підписати не можна. Фото лише з камери, час ставить сервер, а обидві сторони
+ * додано всі фото, договір (чи підтвердження умов) підписати не можна. Фото можна зробити зараз або вибрати з галереї, час додавання ставить сервер, а обидві сторони
  * бачать усе: так нюанси фіксуються з самого початку, і суперечок потім менше. Поверненню відведено окремий необов'язковий розділ.
  */
 export default function ConditionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { invalidate } = useFleet();
   const { data, loading, error, retry } = useReport<ConditionView>(`/condition/${id}`, { useCache: false, refetchOnFocus: true });
   const [phaseLabel, setPhaseLabel] = useState<(typeof PHASES)[number]>(PHASES[0]);
@@ -87,7 +89,7 @@ export default function ConditionScreen() {
       ? 'Підписання відкрите. Якщо ви змінете фото чи одометр, орендар має підтвердити стан знову.'
       : h.ready
         ? 'Орендар має переглянути фото й підтвердити, що погоджується зі станом. Лише тоді відкриється підписання.'
-        : 'Сфотографуйте кузов з чотирьох боків і салон, коли авто передається, та вкажіть пробіг. Фото лише з камери, час ставить сервер.';
+        : 'Сфотографуйте кузов з чотирьох боків і салон, коли авто передається, та вкажіть пробіг. Фото можна зробити зараз чи вибрати з галереї; час додавання ставить сервер.';
 
   async function run(key: string, fn: () => Promise<unknown>) {
     setBusy(key);
@@ -104,7 +106,7 @@ export default function ConditionScreen() {
   }
 
   async function capture(slot: string) {
-    const uri = await takePhoto();
+    const uri = await pickPhoto();
     if (!uri) return;
     await run(slot, async () => savePhoto(String(id), phase, { slot, url: await uploadConditionPhoto(String(id), uri) }));
   }
@@ -120,7 +122,7 @@ export default function ConditionScreen() {
   }
 
   async function addDamage() {
-    const uri = await takePhoto();
+    const uri = await pickPhoto();
     if (uri) {
       setNote('');
       setDamage({ uri });
@@ -134,8 +136,14 @@ export default function ConditionScreen() {
     await run('damage', async () => savePhoto(String(id), phase, { slot: 'damage', url: await uploadConditionPhoto(String(id), uri), note: note.trim() }));
   }
 
+  // Головна кнопка екрана (внизу, під рукою): за ролею й етапом. Лишилось зробити, підтвердити чи просто завершити перегляд.
+  const mustConfirm = phase === 'handover' && h.canConfirm;
+  const missing = phase === 'handover' && !renter && !h.ready ? [h.missing.length ? `${h.missing.length} фото` : '', !h.odometer ? 'показник одометра' : ''].filter(Boolean).join(' і ') : '';
+  const blocked = !!missing;
+
   return (
-    <Screen>
+    <View style={styles.root}>
+    <Screen contentContainerStyle={{ paddingBottom: 150 + insets.bottom }}>
       <Stack.Screen options={{ title: 'Стан авто', headerBackTitle: 'Назад' }} />
       <Segmented options={PHASES} value={phaseLabel} onChange={setPhaseLabel} />
 
@@ -209,7 +217,7 @@ export default function ConditionScreen() {
       <Card style={styles.odo}>
         {report.odometer ? (
           <ThemedText type="default" style={{ fontWeight: 600 }}>
-            {report.odometer.km.toLocaleString('uk-UA')} км · {report.odometer.by === 'owner' ? 'вказав власник' : 'вказав орендар'}, {stamp(report.odometer.at)}
+            {report.odometer.km.toLocaleString('uk-UA')} км · {report.odometer.by === 'owner' ? 'вказав власник' : 'вказав орендар'}, {formatDate(report.odometer.at.slice(0, 10))}
           </ThemedText>
         ) : (
           <ThemedText type="small" themeColor="textSecondary">
@@ -252,19 +260,29 @@ export default function ConditionScreen() {
         </ThemedText>
       ) : null}
 
-      {phase === 'handover' && h.canConfirm ? (
-        <Card style={styles.confirm}>
-          <ThemedText type="headline">Підтвердьте стан авто</ThemedText>
-          <ThemedText type="callout" themeColor="textSecondary">
-            Ви переглянули фото й одометр власника й погоджуєтесь, що авто в такому стані. Це підтвердження побачить власник, і після нього відкриється підписання.
-          </ThemedText>
-          <Button title="Погоджуюсь зі станом авто" icon="checkmark-circle-outline" loading={busy === 'confirm'} disabled={busy !== null} onPress={() => void run('confirm', () => confirmCondition(String(id)))} />
-        </Card>
-      ) : null}
-
       <DamageModal visible={!!damage} note={note} onNote={setNote} onCancel={() => setDamage(null)} onSubmit={() => void submitDamage()} />
       {viewer ? <PhotoViewer photos={viewer.urls} startIndex={viewer.index} onClose={() => setViewer(null)} /> : null}
     </Screen>
+
+      <View style={[styles.footer, { backgroundColor: theme.backgroundElement, borderTopColor: theme.border, paddingBottom: Math.max(insets.bottom, Spacing.three) }]}>
+        {mustConfirm ? (
+          <>
+            <ThemedText type="caption" themeColor="textSecondary" style={styles.footNote}>
+              Ви переглянули фото й одометр власника й погоджуєтесь, що авто в такому стані. Після цього відкриється підписання.
+            </ThemedText>
+            <Button title="Погоджуюсь зі станом авто" icon="checkmark-circle-outline" loading={busy === 'confirm'} disabled={busy !== null} onPress={() => void run('confirm', () => confirmCondition(String(id)))} />
+          </>
+        ) : (
+          <Button
+            title="Готово"
+            icon="checkmark"
+            disabled={blocked || busy !== null}
+            disabledReason={blocked ? `Ще потрібно: ${missing}` : undefined}
+            onPress={() => router.back()}
+          />
+        )}
+      </View>
+    </View>
   );
 }
 
@@ -300,7 +318,9 @@ const styles = StyleSheet.create({
   empty: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
   label: { paddingHorizontal: 8, paddingVertical: 6 },
   odo: { gap: Spacing.three },
-  confirm: { gap: Spacing.three },
+  root: { flex: 1 },
+  footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: Spacing.three, gap: Spacing.two, borderTopWidth: StyleSheet.hairlineWidth },
+  footNote: { textAlign: 'center' },
   damage: { flexDirection: 'row', gap: Spacing.three, alignItems: 'center' },
   damagePhoto: { width: 64, height: 64, borderRadius: Radius.sm },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },

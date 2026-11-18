@@ -5,8 +5,7 @@ import { CarPhoto } from '@/components/car-photo';
 import { PaymentsCard } from '@/components/payments-card';
 import { HeroBar } from '@/components/hero-bar';
 import { HeroButton } from '@/components/hero-button';
-import { ConditionCard } from '@/components/condition-card';
-import { InsuranceCard } from '@/components/insurance-card';
+import { DocumentsCard } from '@/components/documents-card';
 import { RenterDealCard } from '@/components/renter-deal-card';
 import { ReviewButton } from '@/components/review-button';
 import { HistoryList } from '@/components/history-list';
@@ -124,18 +123,11 @@ export default function DealScreen() {
 
       <RenterDealCard deal={d} overview={o} />
 
+      {d.carId ? <DocumentsCard carId={d.carId} deal={d} as="renter" /> : null}
+
       <PaymentsCard deal={d} as="renter" />
 
-      <ConditionCard deal={d} as="renter" />
-
       {stage === 'finished' || stage === 'terminated' ? <ReviewButton dealId={d.id} /> : null}
-
-      {d.carId && stage !== 'terminated' ? (
-        <>
-          <SectionHeader title="Страховий поліс" />
-          <InsuranceCard carId={d.carId} />
-        </>
-      ) : null}
 
       {d.car ? (
         <>

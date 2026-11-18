@@ -1,6 +1,6 @@
 import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
-import { Alert } from 'react-native';
+import { Alert, Linking } from 'react-native';
 
 import { api } from './api';
 
@@ -19,14 +19,62 @@ export type ConditionView = {
   return: ConditionReportView & { canEdit: boolean };
 };
 
-/** Фото стану авто лише з камери: так фото свіжі, а не з галереї (доказова сила для обох сторін) */
-export async function takePhoto(): Promise<string | null> {
-  const perm = await ImagePicker.requestCameraPermissionsAsync();
-  if (!perm.granted) {
-    Alert.alert('Немає доступу до камери', 'Дозвольте камеру для застосунку в налаштуваннях телефону.');
+type Source = 'camera' | 'library';
+
+/** Звідки взяти фото: зробити зараз чи вибрати з галереї. Скасування повертає null. */
+function askSource(): Promise<Source | null> {
+  return new Promise((resolve) => {
+    Alert.alert(
+      'Додати фото',
+      'Звідки взяти фото?',
+      [
+        { text: 'Зробити фото', onPress: () => resolve('camera') },
+        { text: 'Вибрати з галереї', onPress: () => resolve('library') },
+        { text: 'Скасувати', style: 'cancel', onPress: () => resolve(null) },
+      ],
+      { cancelable: true, onDismiss: () => resolve(null) },
+    );
+  });
+}
+
+/** Доступ відхилено: пояснюємо й одразу ведемо в налаштування, бо системний запит повторно не з'являється */
+function deniedAlert(what: 'камери' | 'фото') {
+  Alert.alert(`Немає доступу до ${what}`, `Щоб додати фото, дозвольте доступ до ${what} для застосунку в налаштуваннях телефону.`, [
+    { text: 'Скасувати', style: 'cancel' },
+    { text: 'Відкрити налаштування', onPress: () => void Linking.openSettings() },
+  ]);
+}
+
+/**
+ * Фото стану авто: користувач обирає «Зробити фото» чи «Вибрати з галереї». Доступ система запитує сама, першого разу
+ * показуючи власне вікно «Дозволити». Якщо його відхилено, ведемо в налаштування. Камери може не бути (симулятор): тоді
+ * радимо галерею.
+ */
+export async function pickPhoto(): Promise<string | null> {
+  const source = await askSource();
+  if (!source) return null;
+
+  if (source === 'camera') {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      deniedAlert('камери');
+      return null;
+    }
+    try {
+      const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7 });
+      return res.canceled || !res.assets[0] ? null : res.assets[0].uri;
+    } catch {
+      Alert.alert('Камера недоступна', 'На цьому пристрої немає камери (наприклад, у симуляторі). Виберіть фото з галереї.');
+      return null;
+    }
+  }
+
+  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!perm.granted && perm.accessPrivileges !== 'limited') {
+    deniedAlert('фото');
     return null;
   }
-  const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7 });
+  const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
   return res.canceled || !res.assets[0] ? null : res.assets[0].uri;
 }
 

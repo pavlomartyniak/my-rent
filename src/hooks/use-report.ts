@@ -74,8 +74,10 @@ export function useReport<T>(
       : undefined
     : (current ? state.data : undefined) ?? (key ? (cache.get(key) as T | undefined) : undefined) ?? (keepPrevious ? state.data : undefined);
 
+  // Повторний запит після дії (фото додано, запит скасовано) не стирає показане: екран лишається на місці, а дані
+  // тихо оновлюються. Стираємо лише тоді, коли показувати нічого, крім помилки, щоб кнопка «Спробувати ще раз» давала відгук.
   const retry = useCallback(() => {
-    setState({ key: null, version: -1 });
+    setState((s) => (s.data !== undefined ? s : { key: null, version: -1 }));
     setAttempt((n) => n + 1);
   }, []);
 
