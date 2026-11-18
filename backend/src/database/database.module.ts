@@ -5,6 +5,7 @@ import { Car, CarSchema } from '../schemas/car.schema';
 import { Conversation, ConversationSchema } from '../schemas/conversation.schema';
 import { Message, MessageSchema } from '../schemas/message.schema';
 import { Deal, DealSchema } from '../schemas/deal.schema';
+import { InsuranceFile, InsuranceFileSchema } from '../schemas/insurance-file.schema';
 import { Reminder, ReminderSchema } from '../schemas/reminder.schema';
 import { RentalRequest, RentalRequestSchema } from '../schemas/rental-request.schema';
 import { Transaction, TransactionSchema } from '../schemas/transaction.schema';
@@ -27,6 +28,7 @@ import { WantedRequest, WantedRequestSchema } from '../schemas/wanted-request.sc
       { name: Deal.name, schema: DealSchema },
       { name: Conversation.name, schema: ConversationSchema },
       { name: Message.name, schema: MessageSchema },
+      { name: InsuranceFile.name, schema: InsuranceFileSchema },
     ]),
   ],
   exports: [MongooseModule],

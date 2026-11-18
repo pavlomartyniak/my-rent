@@ -5,7 +5,7 @@ import { Alert, StyleSheet, View } from 'react-native';
 import { Spacing } from '@/constants/theme';
 import { todayISO } from '@/lib/date';
 import { useFleet } from '@/store/fleet';
-import { EXPENSE_CATEGORIES, INCOME_CATEGORY, RENTER_EXPENSE_CATEGORIES, RENTER_INCOME_CATEGORY, type Transaction, type TransactionType } from '@/types';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORY, RENTER_EXPENSE_CATEGORIES, RENTER_INCOME_SOURCES, type Transaction, type TransactionType } from '@/types';
 
 import { CarPicker } from './car-picker';
 import { Hint } from './hint';
@@ -39,6 +39,8 @@ export function TransactionForm({ tx, initialCarId, initialType, dealId: dealPar
   const expenseCategories: readonly string[] = renter ? RENTER_EXPENSE_CATEGORIES : EXPENSE_CATEGORIES;
   const [kind, setKind] = useState<string>((tx?.type ?? initialType ?? 'income') === 'income' ? types[0] : 'Витрата');
   const [category, setCategory] = useState<string>(expenseCategories.find((c) => c === tx?.category) ?? expenseCategories[0]);
+  // Звідки заробіток (орендар): платформа чи «Інше»; старі записи «Заробіток» показуються як «Інше»
+  const [source, setSource] = useState<string>((RENTER_INCOME_SOURCES as readonly string[]).find((s) => s === tx?.category) ?? (tx ? 'Інше' : RENTER_INCOME_SOURCES[0]));
   const [amount, setAmount] = useState(tx ? String(tx.amount) : '');
   const [date, setDate] = useState(tx?.date ?? todayISO());
   const [note, setNote] = useState(tx?.note ?? '');
@@ -58,7 +60,7 @@ export function TransactionForm({ tx, initialCarId, initialType, dealId: dealPar
       type,
       amount: Number(amount),
       date,
-      category: type === 'income' ? (renter ? RENTER_INCOME_CATEGORY : INCOME_CATEGORY) : category,
+      category: type === 'income' ? (renter ? source : INCOME_CATEGORY) : category,
       driver: !renter && type === 'income' ? (cars.find((c) => c.id === carId)?.driver ?? '') : '',
       note: note.trim(),
     };
@@ -86,7 +88,7 @@ export function TransactionForm({ tx, initialCarId, initialType, dealId: dealPar
     <Screen>
       {!tx ? (
         renter ? (
-          <Hint id="tx-form-renter">«Заробіток» — гроші, які ви отримали з цим авто (таксі, перевезення). «Витрата» — усе, що ви платите: оренда власнику, паливо, мийка. Прибуток порахується сам.</Hint>
+          <Hint id="tx-form-renter">«Заробіток» — гроші, які ви отримали з цим авто. Позначте, звідки вони: Bolt, Uklon, Uber, Glovo чи інше, і в звіті буде видно, що приносить більше. «Витрата» — усе, що ви платите: оренда власнику, паливо, мийка. Прибуток порахується сам.</Hint>
         ) : (
           <Hint id="tx-form">Оберіть «Дохід» (оренда) або «Витрата» і введіть суму. Прибуток і ROI порахуються самі.</Hint>
         )
@@ -105,6 +107,15 @@ export function TransactionForm({ tx, initialCarId, initialType, dealId: dealPar
       />
 
       {!renter && cars.length > 1 ? <CarPicker value={carId} onChange={setCarId} /> : null}
+
+      {renter && type === 'income' ? (
+        <View style={styles.group}>
+          <ThemedText type="small" themeColor="textSecondary">
+            Звідки заробіток
+          </ThemedText>
+          <Segmented scroll options={RENTER_INCOME_SOURCES} value={source} onChange={setSource} />
+        </View>
+      ) : null}
 
       {type === 'expense' ? (
         <View style={styles.group}>

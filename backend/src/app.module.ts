@@ -20,6 +20,7 @@ import { HealthController } from './health.controller';
 import { MarketModule } from './market/market.module';
 import { MediaModule } from './media/media.module';
 import { ModerationModule } from './moderation/moderation.module';
+import { InsuranceModule } from './insurance/insurance.module';
 import { ProfilesModule } from './profiles/profiles.module';
 import { RemindersModule } from './reminders/reminders.module';
 import { RentalsModule } from './rentals/rentals.module';
@@ -71,6 +72,7 @@ import { WantedModule } from './wanted/wanted.module';
     ModerationModule,
     WantedModule,
     ProfilesModule,
+    InsuranceModule,
     DataModule,
   ],
   controllers: [HealthController],

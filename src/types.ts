@@ -48,6 +48,8 @@ export const INCOME_CATEGORY = 'Оренда';
 
 /** Облік орендаря: заробіток на орендованому авто й витрати; «Оренда авто» — платежі власнику */
 export const RENTER_INCOME_CATEGORY = 'Заробіток';
+/** Звідки прийшов заробіток орендаря: платформи таксі й доставки чи щось інше */
+export const RENTER_INCOME_SOURCES = ['Bolt', 'Uklon', 'Uber', 'Glovo', 'Інше'] as const;
 export const RENT_CATEGORY = 'Оренда авто';
 export const RENTER_EXPENSE_CATEGORIES = [RENT_CATEGORY, 'Паливо', 'Мийка', 'Штраф', 'Ремонт', 'Інше'] as const;
 

@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { InjectModel } from '@nestjs/mongoose';
 import { type Model, Types } from 'mongoose';
 
-import { EXPENSE_CATEGORIES, INCOME_CATEGORY, RENTER_EXPENSE_CATEGORIES, RENTER_INCOME_CATEGORY, type Role } from '../common/constants';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORY, RENTER_EXPENSE_CATEGORIES, RENTER_INCOME_CATEGORY, RENTER_INCOME_SOURCES, type Role } from '../common/constants';
 import type { AuthUser } from '../common/current-user';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
@@ -156,11 +156,11 @@ export class TransactionsService {
     if (!res.deletedCount) throw new NotFoundException('Запис не знайдено');
   }
 
-  /** Дохід — одна категорія (власника «Оренда», орендаря «Заробіток»), витрата — з переліку ролі */
+  /** Дохід власника — «Оренда»; дохід орендаря — одне з джерел (Bolt, Uklon…) чи старий «Заробіток»; витрата — з переліку ролі */
   private assertCategory(role: Role, type: string, category: string) {
-    const income = role === 'renter' ? RENTER_INCOME_CATEGORY : INCOME_CATEGORY;
+    const incomes: readonly string[] = role === 'renter' ? [RENTER_INCOME_CATEGORY, ...RENTER_INCOME_SOURCES] : [INCOME_CATEGORY];
     const expenses: readonly string[] = role === 'renter' ? RENTER_EXPENSE_CATEGORIES : EXPENSE_CATEGORIES;
-    const ok = type === 'income' ? category === income : expenses.includes(category);
+    const ok = type === 'income' ? incomes.includes(category) : expenses.includes(category);
     if (!ok) throw new BadRequestException('Категорія не відповідає типу запису');
   }
 

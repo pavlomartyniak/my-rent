@@ -9,6 +9,7 @@ import { normalize } from '../common/normalize';
 import { MediaService } from '../media/media.service';
 import { Car } from '../schemas/car.schema';
 import { Deal } from '../schemas/deal.schema';
+import { InsuranceFile } from '../schemas/insurance-file.schema';
 import { Reminder } from '../schemas/reminder.schema';
 import { Offer } from '../schemas/offer.schema';
 import { RentalRequest } from '../schemas/rental-request.schema';
@@ -45,6 +46,7 @@ export class CarsService {
     @InjectModel(RentalRequest.name) private readonly rentals: Model<RentalRequest>,
     @InjectModel(Offer.name) private readonly offers: Model<Offer>,
     @InjectModel(Deal.name) private readonly deals: Model<Deal>,
+    @InjectModel(InsuranceFile.name) private readonly insurance: Model<InsuranceFile>,
     private readonly media: MediaService,
   ) {}
 
@@ -153,6 +155,7 @@ export class CarsService {
       this.reminders.deleteMany({ userId, carId: id }),
       this.rentals.deleteMany({ carId: id }),
       this.offers.deleteMany({ carId: id }),
+      this.insurance.deleteMany({ carId: id }),
     ]);
     // Фото авто більше нікому не потрібні, якщо на них не лишилось посилань в оренд, запитах і чатах
     void this.media.release([car.photoUri, ...(car.photos ?? [])]);

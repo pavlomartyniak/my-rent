@@ -4,6 +4,7 @@ import { Alert, StyleSheet, View } from 'react-native';
 import { CarPhoto } from '@/components/car-photo';
 import { PaymentsCard } from '@/components/payments-card';
 import { HeroButton } from '@/components/hero-button';
+import { InsuranceCard } from '@/components/insurance-card';
 import { RenterDealCard } from '@/components/renter-deal-card';
 import { ReviewButton } from '@/components/review-button';
 import { HistoryList } from '@/components/history-list';
@@ -175,6 +176,13 @@ export default function DealScreen() {
               ]}
             />
           </Card>
+      ) : null}
+
+      {d.carId && stage !== 'terminated' ? (
+        <>
+          <SectionHeader title="Страховий поліс" />
+          <InsuranceCard carId={d.carId} />
+        </>
       ) : null}
 
       <PaymentsCard deal={d} as="renter" />

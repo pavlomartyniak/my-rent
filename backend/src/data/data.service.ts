@@ -8,6 +8,7 @@ import { Car } from '../schemas/car.schema';
 import { Reminder } from '../schemas/reminder.schema';
 import { Conversation } from '../schemas/conversation.schema';
 import { Deal } from '../schemas/deal.schema';
+import { InsuranceFile } from '../schemas/insurance-file.schema';
 import { Message } from '../schemas/message.schema';
 import { Offer } from '../schemas/offer.schema';
 import { RentalRequest } from '../schemas/rental-request.schema';
@@ -28,6 +29,7 @@ export class DataService {
     @InjectModel(Deal.name) private readonly deals: Model<Deal>,
     @InjectModel(Conversation.name) private readonly conversations: Model<Conversation>,
     @InjectModel(Message.name) private readonly messages: Model<Message>,
+    @InjectModel(InsuranceFile.name) private readonly insurance: Model<InsuranceFile>,
     private readonly media: MediaService,
     private readonly moderation: ModerationService,
   ) {}
@@ -58,6 +60,7 @@ export class DataService {
   async clear(userId: string, session?: ClientSession) {
     const photos = await this.carPhotos(userId);
     await this.cars.deleteMany({ userId }, { session });
+    await this.insurance.deleteMany({ ownerId: userId }, { session });
     await this.transactions.deleteMany({ userId }, { session });
     await this.reminders.deleteMany({ userId }, { session });
     // Запити на оренду авто, які щойно видалили

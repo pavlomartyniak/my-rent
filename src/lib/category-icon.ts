@@ -6,6 +6,10 @@ const ICONS: Record<string, string> = {
   // Дохід
   Оренда: '💵',
   Заробіток: '🚕',
+  Bolt: '⚡',
+  Uklon: '🚖',
+  Uber: '🚘',
+  Glovo: '🛵',
   // Витрати власника й орендаря
   'Оренда авто': '🔑',
   Паливо: '⛽',
@@ -18,4 +22,4 @@ const ICONS: Record<string, string> = {
   Інше: '🧾',
 };
 
-export const categoryIcon = (category: string, income: boolean) => ICONS[category] ?? (income ? '💰' : '🧾');
+export const categoryIcon = (category: string, income: boolean) => (income && category === 'Інше' ? '💰' : (ICONS[category] ?? (income ? '💰' : '🧾')));

@@ -50,3 +50,10 @@ export function splitTitle(title: string) {
   const m = title.match(/^(.*\S)\s+(\d{4})$/);
   return m ? { name: m[1]!, year: m[2]! } : { name: title, year: '' };
 }
+
+/** Розмір файлу в людському вигляді: «2,4 МБ» */
+export function formatSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} Б`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} КБ`;
+  return `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} МБ`;
+}

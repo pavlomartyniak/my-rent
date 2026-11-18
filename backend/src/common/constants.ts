@@ -6,7 +6,10 @@ export const EXPENSE_CATEGORIES = ['Ремонт', 'ТО', 'Страховка',
 export const INCOME_CATEGORY = 'Оренда';
 export const TRANSACTION_TYPES = ['income', 'expense'] as const;
 /** Облік орендаря: заробіток на орендованому авто (таксі тощо) і його витрати */
+/** «Заробіток» — старі записи без джерела; нові записи орендар позначає джерелом доходу */
 export const RENTER_INCOME_CATEGORY = 'Заробіток';
+/** Звідки прийшов заробіток орендаря: платформи таксі й доставки чи щось інше */
+export const RENTER_INCOME_SOURCES = ['Bolt', 'Uklon', 'Uber', 'Glovo', 'Інше'] as const;
 /** Платіж власнику за оренду: за ним рахується, скільки орендар платить за авто */
 export const RENT_CATEGORY = 'Оренда авто';
 export const RENTER_EXPENSE_CATEGORIES = [RENT_CATEGORY, 'Паливо', 'Мийка', 'Штраф', 'Ремонт', 'Інше'] as const;

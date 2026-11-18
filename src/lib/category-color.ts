@@ -15,6 +15,12 @@ const FIXED: Record<string, string> = {
   Страховка: PALETTE[6],
   Шини: PALETTE[7],
   Інше: NEUTRAL,
+  // Джерела заробітку орендаря: кольори, схожі на бренди
+  Bolt: '#2DB87A',
+  Uklon: '#F5C518',
+  Uber: '#3D3D3D',
+  Glovo: '#FFB300',
+  Заробіток: '#2DB87A',
 };
 
 export const categoryColor = (category: string, index: number) => FIXED[category] ?? PALETTE[index % PALETTE.length];
