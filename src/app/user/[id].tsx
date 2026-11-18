@@ -2,6 +2,9 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Children, Fragment, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+
 import { Avatar } from '@/components/avatar';
 import { CarPhoto } from '@/components/car-photo';
 import { HeroBar } from '@/components/hero-bar';
@@ -18,6 +21,7 @@ import { Radius, Spacing, Type } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { formatMoney, plural } from '@/lib/format';
+import { thumbnailUrl } from '@/lib/media';
 import { confirmBlock, type ReportTarget } from '@/lib/moderation';
 import { hasAnswers, questionsFor } from '@/lib/profile';
 import type { ProfileView } from '@/lib/profiles';
@@ -114,37 +118,43 @@ export default function UserProfileScreen() {
     <Screen contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingTop: 0 }}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Шапка на всю ширину: м'який фон, фото, ім'я, позначки й рейтинг */}
-      <View style={[styles.hero, { backgroundColor: theme.accentSoft }]}>
-        <View style={[styles.avatarRing, { borderColor: theme.background }]}>
-          <Avatar uri={data.photoUri} name={data.name} size={104} />
-        </View>
-        <ThemedText style={[styles.name, styles.center]} accessibilityRole="header">
-          {data.name}
-        </ThemedText>
-        <View style={styles.badges}>
-          <View style={[styles.badge, { backgroundColor: theme.backgroundElement }]}>
-            <ThemedText type="smallBold" themeColor="textSecondary">
-              {owner ? 'Власник авто' : 'Орендар'}
-            </ThemedText>
+      {/* Шапка: фото людини на всю ширину й верх екрана (без кружечка), знизу на затемненні ім'я, позначки й місто */}
+      <View style={[styles.hero, { backgroundColor: theme.accent }]}>
+        {data.photoUri ? (
+          <Image source={{ uri: thumbnailUrl(data.photoUri, 1000) }} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel={`Фото: ${data.name}`} />
+        ) : (
+          <View style={styles.noPhoto}>
+            <Avatar uri={null} name={data.name} size={132} />
           </View>
-          {data.badges.map((b) => (
-            <View key={b.key} style={[styles.badge, { backgroundColor: theme.backgroundElement }]}>
-              <Icon name={BADGE_ICON[b.key]} size={14} color="accent" />
-              <ThemedText type="smallBold" themeColor="accent">
-                {b.title}
+        )}
+        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.78)']} style={styles.scrim} pointerEvents="none">
+          <ThemedText style={styles.name} accessibilityRole="header">
+            {data.name}
+          </ThemedText>
+          <View style={styles.badges}>
+            <View style={[styles.badge, { backgroundColor: 'rgba(255,255,255,0.92)' }]}>
+              <ThemedText type="smallBold" style={styles.badgeText}>
+                {owner ? 'Власник авто' : 'Орендар'}
               </ThemedText>
             </View>
-          ))}
-        </View>
-        {data.city ? (
-          <View style={styles.badges}>
-            <Icon name="location-outline" size={16} color="textSecondary" />
-            <ThemedText type="callout" themeColor="textSecondary">
-              {data.city}
-            </ThemedText>
+            {data.badges.map((b) => (
+              <View key={b.key} style={[styles.badge, { backgroundColor: 'rgba(255,255,255,0.92)' }]}>
+                <Icon name={BADGE_ICON[b.key]} size={14} color="#3D39CC" />
+                <ThemedText type="smallBold" style={{ color: '#3D39CC' }}>
+                  {b.title}
+                </ThemedText>
+              </View>
+            ))}
           </View>
-        ) : null}
+          {data.city ? (
+            <View style={styles.cityRow}>
+              <Icon name="location-outline" size={16} color="rgba(255,255,255,0.9)" />
+              <ThemedText type="callout" style={styles.city}>
+                {data.city}
+              </ThemedText>
+            </View>
+          ) : null}
+        </LinearGradient>
       </View>
 
       <View style={styles.stats}>
@@ -341,11 +351,15 @@ export default function UserProfileScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   // Шапка на всю ширину екрана: скасовуємо бічні поля Screen і заходимо під прозорий хедер
-  hero: { marginHorizontal: -20, alignItems: 'center', gap: Spacing.two, paddingTop: 110, paddingBottom: Spacing.four, paddingHorizontal: Spacing.four, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  hero: { marginHorizontal: -20, height: 400, overflow: 'hidden', borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  noPhoto: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', paddingBottom: 60 },
+  scrim: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: Spacing.four, paddingTop: 96, paddingBottom: Spacing.four, gap: Spacing.two },
+  badgeText: { color: '#222222' },
+  cityRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  city: { color: 'rgba(255,255,255,0.9)' },
   center: { textAlign: 'center' },
-  name: { ...Type.figure },
-  avatarRing: { borderWidth: 4, borderRadius: 60, shadowColor: '#000000', shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
-  badges: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 6 },
+  name: { ...Type.figure, color: '#FFFFFF' },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
   badge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 5, borderRadius: Radius.pill },
   stats: { flexDirection: 'row', gap: Spacing.two },
   stat: { flex: 1, borderRadius: Radius.md, borderWidth: 1, paddingVertical: Spacing.three, paddingHorizontal: Spacing.two, alignItems: 'center', gap: 2 },
