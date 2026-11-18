@@ -43,9 +43,11 @@ type RowProps = {
   danger?: boolean;
   /** Власний вміст справа замість шеврона */
   right?: ReactNode;
+  /** Дія зараз недоступна: рядок бляклий, без шеврона; натискання лишається, щоб пояснити чому */
+  unavailable?: boolean;
 };
 
-export function SettingsRow({ icon, leading, title, subtitle, onPress, danger, right }: RowProps) {
+export function SettingsRow({ icon, leading, title, subtitle, onPress, danger, right, unavailable }: RowProps) {
   const theme = useTheme();
   const tone = danger ? 'negative' : 'text';
 
@@ -66,12 +68,12 @@ export function SettingsRow({ icon, leading, title, subtitle, onPress, danger, r
           </ThemedText>
         ) : null}
       </View>
-      {right ?? (onPress ? <Icon name="chevron-forward" size={18} color="textSecondary" /> : null)}
+      {right ?? (onPress && !unavailable ? <Icon name="chevron-forward" size={18} color="textSecondary" /> : null)}
     </View>
   );
 
   return onPress ? (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
+    <Pressable accessibilityRole="button" accessibilityState={{ disabled: !!unavailable }} onPress={onPress} style={({ pressed }) => [unavailable && styles.unavailable, pressed && styles.pressed]}>
       {content}
     </Pressable>
   ) : (
@@ -89,4 +91,5 @@ const styles = StyleSheet.create({
   text: { flex: 1 },
   rowTitle: { fontWeight: 600 },
   pressed: { opacity: 0.6 },
+  unavailable: { opacity: 0.5 },
 });

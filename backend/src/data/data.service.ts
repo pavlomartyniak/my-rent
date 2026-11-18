@@ -59,6 +59,19 @@ export class DataService {
     if (byStatus || byDeal) throw new ConflictException('Є авто в оренді, тому видалити всі дані не можна. Спершу завершіть чи розірвіть оренди або змініть статус авто');
   }
 
+  /**
+   * Акаунт не видаляється, поки є чинна оренда: власника чи орендаря (підписання, майбутня чи та, що триває) або авто, позначене
+   * «В оренді»/«Заброньоване». Спершу оренду треба узгодити й закрити: завершити чи розірвати за згодою сторін.
+   */
+  async assertNoCurrentRentals(userId: string) {
+    const today = new Date().toISOString().slice(0, 10);
+    const [byStatus, byDeal] = await Promise.all([
+      this.cars.exists({ userId, status: { $in: ['В оренді', 'Заброньоване'] } }),
+      this.deals.exists({ $or: [{ ownerId: userId }, { renterId: userId }], status: { $ne: 'terminated' }, endDate: { $gte: today } }),
+    ]);
+    if (byStatus || byDeal) throw new ConflictException('Є чинна оренда, тому видалити акаунт не можна. Спершу узгодьте з другою стороною й завершіть чи розірвіть оренду');
+  }
+
   /** Видаляє авто, записи й нагадування; акаунт залишається */
   async clear(userId: string, session?: ClientSession) {
     const photos = await this.carPhotos(userId);

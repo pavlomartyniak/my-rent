@@ -157,7 +157,7 @@ export default function CarScreen() {
 
       <ArchivedDeals carId={car.id} />
 
-      <DeleteCar carId={car.id} name={`${car.brand} ${car.model}`} rented={car.status === 'В оренді' || car.status === 'Заброньоване'} />
+      <DeleteCar carId={car.id} name={`${car.brand} ${car.model}`} rented={car.status === 'В оренді' || car.status === 'Заброньоване' || !!deal} />
       {viewer ? <PhotoViewer photos={photos} startIndex={0} onClose={() => setViewer(false)} /> : null}
     </Screen>
   );

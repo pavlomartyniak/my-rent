@@ -22,7 +22,8 @@ export class DataController {
 
   @HttpCode(204)
   @Delete('me')
-  deleteAccount(@CurrentUser() user: AuthUser) {
+  async deleteAccount(@CurrentUser() user: AuthUser) {
+    await this.data.assertNoCurrentRentals(user.id);
     return this.data.deleteAccount(user.id);
   }
 }

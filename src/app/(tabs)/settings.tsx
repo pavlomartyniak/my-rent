@@ -15,6 +15,8 @@ import { LegalSheet } from '@/components/legal-sheet';
 import { LEGAL_CONTACT } from '@/lib/legal';
 import { fullName } from '@/lib/profile';
 import { ensureNotificationPermission } from '@/lib/notifications';
+import { useReport } from '@/hooks/use-report';
+import { dealStage, type DealView } from '@/lib/deals';
 import { useAuth } from '@/store/auth';
 import { useFleet } from '@/store/fleet';
 import { useThemePreference, type ThemePreference } from '@/store/theme';
@@ -31,6 +33,15 @@ export default function SettingsScreen() {
   const { signOut } = useAuth();
   const { preference } = useThemePreference();
   const owner = role === 'owner';
+  // Видаляти дані й акаунт можна лише без чинної оренди: спершу її узгоджують із другою стороною й закривають
+  const ownerDeals = useReport<DealView[]>(owner ? '/deals/current' : null, { refetchOnFocus: true });
+  const renterDeals = useReport<DealView[]>(owner ? null : '/deals', { refetchOnFocus: true });
+  const hasRental =
+    cars.some((c) => c.status === 'В оренді' || c.status === 'Заброньоване') ||
+    (ownerDeals.data?.length ?? 0) > 0 ||
+    (renterDeals.data ?? []).some((d) => dealStage(d) !== 'finished' && dealStage(d) !== 'terminated');
+  const rentalNote = 'Недоступно, поки є чинна оренда. Спершу узгодьте з другою стороною й завершіть чи розірвіть її';
+  const explainRental = () => Alert.alert('Є чинна оренда', 'Спершу узгодьте з другою стороною й завершіть чи розірвіть оренду (у вкладці «Оренди»). Після цього дані й акаунт можна буде видалити.');
   const [exportOpen, setExportOpen] = useState(false);
   const [doc, setDoc] = useState<'privacy' | 'terms' | null>(null);
 
@@ -125,21 +136,19 @@ export default function SettingsScreen() {
           <SettingsRow
             icon="trash-outline"
             title="Видалити всі дані"
-            subtitle="Авто, записи й нагадування буде стерто безповоротно"
+            subtitle={hasRental ? rentalNote : 'Авто, записи й нагадування буде стерто безповоротно'}
             danger
-            onPress={() =>
-              cars.some((c) => c.status === 'В оренді' || c.status === 'Заброньоване')
-                ? Alert.alert('Є авто в оренді', 'Видалити всі дані не можна, поки хоч одне авто в оренді. Спершу завершіть чи розірвіть оренду або змініть статус авто.')
-                : confirm('Видалити всі дані?', 'Авто, записи й нагадування буде стерто безповоротно.', 'Видалити все', clearAll)
-            }
+            unavailable={hasRental}
+            onPress={() => (hasRental ? explainRental() : confirm('Видалити всі дані?', 'Авто, записи й нагадування буде стерто безповоротно.', 'Видалити все', clearAll))}
           />
         ) : null}
         <SettingsRow
           icon="close-circle-outline"
           title="Видалити акаунт"
-          subtitle="Акаунт і всі дані буде стерто безповоротно"
+          subtitle={hasRental ? rentalNote : 'Акаунт і всі дані буде стерто безповоротно'}
           danger
-          onPress={() => confirm('Видалити акаунт?', 'Акаунт, авто, записи й нагадування буде стерто безповоротно.', 'Видалити акаунт', () => void deleteAccount())}
+          unavailable={hasRental}
+          onPress={() => (hasRental ? explainRental() : confirm('Видалити акаунт?', 'Акаунт, авто, записи й нагадування буде стерто безповоротно.', 'Видалити акаунт', () => void deleteAccount()))}
         />
       </SettingsGroup>
     </Screen>
