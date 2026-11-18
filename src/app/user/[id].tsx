@@ -17,7 +17,7 @@ import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { formatMoney, plural } from '@/lib/format';
 import { confirmBlock, type ReportTarget } from '@/lib/moderation';
-import { hasAnswers, RENTER_QUESTIONS } from '@/lib/profile';
+import { hasAnswers, questionsFor } from '@/lib/profile';
 import type { ProfileView } from '@/lib/profiles';
 import { useFleet } from '@/store/fleet';
 
@@ -104,7 +104,7 @@ export default function UserProfileScreen() {
   const years = data.drivingSince ? new Date().getFullYear() - data.drivingSince : null;
   const call = (phone: string) => Linking.openURL(`tel:${phone.replace(/[^\d+]/g, '')}`).catch(() => Alert.alert('Не вдалося відкрити набір номера', `Номер: ${phone}`));
   const mail = (email: string) => Linking.openURL(`mailto:${email}`).catch(() => Alert.alert('Не вдалося відкрити пошту', email));
-  const hasDetails = !!data.city || years !== null || hasAnswers(data as never);
+  const hasDetails = !!data.city || years !== null || hasAnswers(data as never, data.role);
 
   return (
     <Screen contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingTop: 0 }}>
@@ -182,7 +182,7 @@ export default function UserProfileScreen() {
                 </ThemedText>
               </Detail>
             ) : null}
-            {RENTER_QUESTIONS.map((q) => {
+            {questionsFor(data.role).map((q) => {
               const raw = data[q.key] as string | string[] | null;
               const values = Array.isArray(raw) ? raw : raw ? [raw] : [];
               if (values.length === 0) return null;
@@ -206,7 +206,7 @@ export default function UserProfileScreen() {
               );
             })}
             </Details>
-            {hasAnswers(data as never) ? (
+            {hasAnswers(data as never, data.role) ? (
               <ThemedText type="caption" themeColor="textSecondary" style={styles.note}>
                 Відповіді вказав сам користувач, Kolo їх не перевіряє.
               </ThemedText>

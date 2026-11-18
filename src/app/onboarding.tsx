@@ -41,7 +41,7 @@ export default function OnboardingScreen() {
     if (saving) return;
     if (drivingYearError(extras.drivingSince)) return;
     setSaving(true);
-    const filled = extras.city.trim() || extras.photoUri || extras.about.trim() || extras.drivingSince !== null || hasAnswers(extras);
+    const filled = extras.city.trim() || extras.photoUri || extras.about.trim() || extras.drivingSince !== null || hasAnswers(extras, role ?? '');
     // Збережене в профілі можна змінити потім у «Профілі»; помилка збереження не має блокувати початок роботи
     if (filled) await updateProfile({ ...extras, city: extras.city.trim(), about: extras.about.trim() });
     await finishOnboarding();

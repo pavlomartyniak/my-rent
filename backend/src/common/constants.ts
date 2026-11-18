@@ -60,3 +60,12 @@ export const OCCUPATIONS = ['employee', 'fop', 'business', 'driver', 'student', 
 export const RENT_TERMS = ['week', 'month', 'long'] as const;
 export const DEPOSIT_READINESS = ['yes', 'discuss'] as const;
 export const TRANSMISSIONS = ['auto', 'manual', 'both'] as const;
+
+/** Відповіді власника «зі слів»: те, що орендар хоче знати про нього до запиту */
+export const REPLY_TIMES = ['instant', 'hour', 'day'] as const;
+export const HANDOVERS = ['onsite', 'delivery', 'both'] as const;
+export const HOSTING_EXPERIENCES = ['new', 'year', 'years', 'long'] as const;
+export const INSURANCES = ['osago', 'kasko'] as const;
+export const SERVICE_CARES = ['official', 'trusted', 'asneeded'] as const;
+export const MILEAGE_LIMITS = ['unlimited', 'limited'] as const;
+export const ABROAD_POLICIES = ['allowed', 'agreement', 'forbidden'] as const;

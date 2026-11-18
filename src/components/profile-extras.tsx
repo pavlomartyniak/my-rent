@@ -5,7 +5,7 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-nat
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { uploadAvatar } from '@/lib/media';
-import { RENTER_QUESTIONS, type ProfileExtras } from '@/lib/profile';
+import { questionsFor, type ProfileExtras } from '@/lib/profile';
 
 import { Avatar } from './avatar';
 import { ThemedText } from './themed-text';
@@ -87,20 +87,18 @@ export function ProfileExtrasForm({ value, onChange, name, renter, submitted }: 
         error={submitted ? drivingYearError(value.drivingSince) || undefined : undefined}
       />
 
-      {renter ? (
-        <>
-          {RENTER_QUESTIONS.map((q) =>
-            q.multi ? (
-              <ChoiceChips key={q.key} multi label={q.label} hint={q.hint} options={q.options} value={value[q.key] as string[]} onChange={(v) => onChange({ [q.key]: v })} />
-            ) : (
-              <ChoiceChips key={q.key} label={q.label} hint={q.hint} options={q.options} value={value[q.key] as string} onChange={(v) => onChange({ [q.key]: v })} />
-            ),
-          )}
-          <ThemedText type="callout" themeColor="textSecondary">
-            Ці відповіді власник авто побачить у вашому профілі в розділі «Відомості» з позначкою «зі слів користувача». Чим більше відповідей, тим охочіше власники приймають запити.
-          </ThemedText>
-        </>
-      ) : null}
+      {questionsFor(renter ? 'renter' : 'owner').map((q) =>
+        q.multi ? (
+          <ChoiceChips key={q.key} multi label={q.label} hint={q.hint} options={q.options} value={value[q.key] as string[]} onChange={(v) => onChange({ [q.key]: v })} />
+        ) : (
+          <ChoiceChips key={q.key} label={q.label} hint={q.hint} options={q.options} value={value[q.key] as string} onChange={(v) => onChange({ [q.key]: v })} />
+        ),
+      )}
+      <ThemedText type="callout" themeColor="textSecondary">
+        {renter
+          ? 'Ці відповіді власник авто побачить у вашому профілі в розділі «Відомості» з позначкою «зі слів користувача». Чим більше відповідей, тим охочіше власники приймають запити.'
+          : 'Ці відповіді орендар побачить у вашому профілі в розділі «Відомості» з позначкою «зі слів користувача». Чим більше відповідей, тим охочіше орендарі надсилають запити.'}
+      </ThemedText>
     </View>
   );
 }

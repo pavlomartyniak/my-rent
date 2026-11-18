@@ -28,6 +28,13 @@ export type ProfileView = {
   rentTerm: string | null;
   depositReady: string | null;
   transmission: string | null;
+  replyTime: string | null;
+  handover: string | null;
+  hostingExperience: string | null;
+  insurances: string[];
+  serviceCare: string | null;
+  mileageLimit: string | null;
+  abroad: string | null;
   /** Позначки, виведені з фактів: новий, досвідчений, високий рейтинг */
   badges: { key: 'new' | 'experienced' | 'top'; title: string }[];
   memberSince: string | null;

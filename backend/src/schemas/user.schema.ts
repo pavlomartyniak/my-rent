@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import type { HydratedDocument } from 'mongoose';
 
-import { ACCIDENTS, DEPOSIT_READINESS, LICENSE_CATEGORIES, OCCUPATIONS, RENT_EXPERIENCES, RENT_PURPOSES, RENT_TERMS, ROLES, THEMES, TRANSMISSIONS } from '../common/constants';
+import { ABROAD_POLICIES, ACCIDENTS, HANDOVERS, HOSTING_EXPERIENCES, INSURANCES, MILEAGE_LIMITS, REPLY_TIMES, SERVICE_CARES, DEPOSIT_READINESS, LICENSE_CATEGORIES, OCCUPATIONS, RENT_EXPERIENCES, RENT_PURPOSES, RENT_TERMS, ROLES, THEMES, TRANSMISSIONS } from '../common/constants';
 import { jsonOptions } from '../common/json-options';
 
 @Schema(jsonOptions([], ['passwordHash', 'resetCodeHash', 'resetExpires', 'resetAttempts', 'suspended', 'phoneKey']))
@@ -92,6 +92,34 @@ export class User {
   /** Яка коробка передач підходить */
   @Prop({ type: String, enum: [...TRANSMISSIONS, ''], default: '' })
   transmission: string;
+
+  /** Як швидко відповідає (власник) */
+  @Prop({ type: String, enum: [...REPLY_TIMES, ''], default: '' })
+  replyTime: string;
+
+  /** Як передає авто (власник) */
+  @Prop({ type: String, enum: [...HANDOVERS, ''], default: '' })
+  handover: string;
+
+  /** Як давно здає авто (власник) */
+  @Prop({ type: String, enum: [...HOSTING_EXPERIENCES, ''], default: '' })
+  hostingExperience: string;
+
+  /** Страхування авто (власник) */
+  @Prop({ type: [String], enum: INSURANCES, default: [] })
+  insurances: string[];
+
+  /** Хто обслуговує авто (власник) */
+  @Prop({ type: String, enum: [...SERVICE_CARES, ''], default: '' })
+  serviceCare: string;
+
+  /** Ліміт пробігу (власник) */
+  @Prop({ type: String, enum: [...MILEAGE_LIMITS, ''], default: '' })
+  mileageLimit: string;
+
+  /** Виїзд за кордон (власник) */
+  @Prop({ type: String, enum: [...ABROAD_POLICIES, ''], default: '' })
+  abroad: string;
 
   @Prop({ enum: ROLES, default: 'owner' })
   role: string;

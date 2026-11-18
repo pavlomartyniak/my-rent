@@ -23,7 +23,7 @@ export default function ProfileScreen() {
   const [lastName, setLastName] = useState(me.lastName);
   const [middleName, setMiddleName] = useState(me.middleName);
   const [phone, setPhone] = useState(me.phone);
-  const [extras, setExtras] = useState<ProfileExtras>({ ...EMPTY_EXTRAS, city: me.city ?? '', photoUri: me.photoUri ?? '', about: me.about ?? '', drivingSince: me.drivingSince ?? null, purposes: me.purposes ?? [], licenseCategories: me.licenseCategories ?? [], accidents: me.accidents ?? '', rentExperience: me.rentExperience ?? '', occupation: me.occupation ?? '', rentTerm: me.rentTerm ?? '', depositReady: me.depositReady ?? '', transmission: me.transmission ?? '' });
+  const [extras, setExtras] = useState<ProfileExtras>({ ...EMPTY_EXTRAS, city: me.city ?? '', photoUri: me.photoUri ?? '', about: me.about ?? '', drivingSince: me.drivingSince ?? null, purposes: me.purposes ?? [], licenseCategories: me.licenseCategories ?? [], accidents: me.accidents ?? '', rentExperience: me.rentExperience ?? '', occupation: me.occupation ?? '', rentTerm: me.rentTerm ?? '', depositReady: me.depositReady ?? '', transmission: me.transmission ?? '', replyTime: me.replyTime ?? '', handover: me.handover ?? '', hostingExperience: me.hostingExperience ?? '', insurances: me.insurances ?? [], serviceCare: me.serviceCare ?? '', mileageLimit: me.mileageLimit ?? '', abroad: me.abroad ?? '' });
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
   // Помилки полів від сервера (наприклад, телефон уже зайнятий): підсвічують поле, поки його не змінять

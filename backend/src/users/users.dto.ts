@@ -1,6 +1,6 @@
 import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 
-import { ACCIDENTS, DEPOSIT_READINESS, LICENSE_CATEGORIES, OCCUPATIONS, RENT_EXPERIENCES, RENT_PURPOSES, RENT_TERMS, THEMES, TRANSMISSIONS } from '../common/constants';
+import { ABROAD_POLICIES, ACCIDENTS, HANDOVERS, HOSTING_EXPERIENCES, INSURANCES, MILEAGE_LIMITS, REPLY_TIMES, SERVICE_CARES, DEPOSIT_READINESS, LICENSE_CATEGORIES, OCCUPATIONS, RENT_EXPERIENCES, RENT_PURPOSES, RENT_TERMS, THEMES, TRANSMISSIONS } from '../common/constants';
 import { PHONE_PATTERN, Trim } from '../common/profile';
 
 export class UpdateMeDto {
@@ -95,6 +95,36 @@ export class UpdateMeDto {
   @IsOptional()
   @IsIn([...TRANSMISSIONS, ''])
   transmission?: string;
+
+  @IsOptional()
+  @IsIn([...REPLY_TIMES, ''])
+  replyTime?: string;
+
+  @IsOptional()
+  @IsIn([...HANDOVERS, ''])
+  handover?: string;
+
+  @IsOptional()
+  @IsIn([...HOSTING_EXPERIENCES, ''])
+  hostingExperience?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(2)
+  @IsIn(INSURANCES, { each: true })
+  insurances?: string[];
+
+  @IsOptional()
+  @IsIn([...SERVICE_CARES, ''])
+  serviceCare?: string;
+
+  @IsOptional()
+  @IsIn([...MILEAGE_LIMITS, ''])
+  mileageLimit?: string;
+
+  @IsOptional()
+  @IsIn([...ABROAD_POLICIES, ''])
+  abroad?: string;
 
   @IsOptional()
   @IsBoolean()
