@@ -13,6 +13,9 @@ import { buildSections } from '../contract/contract.terms';
 import { RealtimeService } from '../realtime/realtime.service';
 import { settledAmount } from './deal-payments';
 import { SIGN_DAYS_AFTER, signingState, signingWindow } from '../contract/contract.window';
+import { ConditionService } from '../condition/condition.service';
+import { handoverReady, missingSlots, REQUIRED_SLOTS } from '../condition/condition.rules';
+import { MediaService } from '../media/media.service';
 import { fullName, todayUtc } from '../rentals/rentals.math';
 import { Car } from '../schemas/car.schema';
 import { Transaction } from '../schemas/transaction.schema';
@@ -40,6 +43,7 @@ export class DealsService {
     private readonly realtime: RealtimeService,
     private readonly mail: MailService,
     private readonly config: ConfigService,
+    private readonly media: MediaService,
   ) {}
 
   /** Усі оренди орендаря, новіші першими */
@@ -83,7 +87,11 @@ export class DealsService {
       throw new NotFoundException('Оренду не знайдено');
     }
     if (user.role === 'renter') await this.transactions.deleteMany({ userId: user.id, dealId: deal._id }).exec();
-    if (deal.hiddenFor.includes('owner') && deal.hiddenFor.includes('renter')) await this.deals.deleteOne({ _id: deal._id }).exec();
+    if (deal.hiddenFor.includes('owner') && deal.hiddenFor.includes('renter')) {
+      await this.deals.deleteOne({ _id: deal._id }).exec();
+      // Фото стану авто більше нікому не потрібні
+      void this.media.release(ConditionService.urlsOf(deal));
+    }
   }
 
   /**
@@ -380,6 +388,8 @@ export class DealsService {
     }
     if (state === 'late') throw new ConflictException('Час на підписання минув. Домовтесь про нову оренду');
     if (c.signatures?.[user.role]) throw new ConflictException(mode === 'none' ? 'Ви вже підтвердили умови' : 'Ви вже підписали цей договір');
+    // Без зафіксованого стану авто (фото кузова й салону, одометр) оренду не починають: це захист обох сторін від суперечок
+    if (!handoverReady(deal.condition?.handover as never)) throw new ConflictException('Спершу зафіксуйте стан авто: додайте всі обов’язкові фото кузова й салону та показник одометра (розділ «Стан авто» на екрані оренди)');
     return { deal, contract: c };
   }
 
@@ -874,6 +884,8 @@ export class DealsService {
       /** План оплати й графік платежів із відповідями сторін (для оренд з договором) */
       paymentPlan: d.contract?.terms.paymentPlan ?? null,
       payments: d.contract ? this.paymentsView(d, as) : [],
+      // Скільки обов'язкових фото стану авто вже є (до активації оренди їх треба додати всі)
+      condition: { ready: handoverReady(d.condition?.handover as never), have: REQUIRED_SLOTS.length - missingSlots(d.condition?.handover as never).length, need: REQUIRED_SLOTS.length },
       deposit: this.depositView(d, as),
       settlement: this.settlementView(d),
       // Пропозиція про розірвання, що чекає відповіді; `mine` — чи її подав автор запиту

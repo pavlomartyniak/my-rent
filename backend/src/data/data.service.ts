@@ -2,6 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { InjectModel } from '@nestjs/mongoose';
 import type { ClientSession, Model } from 'mongoose';
 
+import { ConditionService } from '../condition/condition.service';
 import { MediaService } from '../media/media.service';
 import { ModerationService } from '../moderation/moderation.service';
 import { Car } from '../schemas/car.schema';
@@ -88,6 +89,8 @@ export class DataService {
     await this.offers.deleteMany({ $or: [{ ownerId: userId }, { renterId: userId }, { wantedId: { $in: mine.map((w) => w._id) } }] });
     await this.wanted.deleteMany({ renterId: userId });
     // Оренди орендаря (його записи вже видалено в clear)
+    const myDeals = await this.deals.find({ renterId: userId, condition: { $exists: true } }, 'condition').lean().exec();
+    photos.push(...myDeals.flatMap((d) => ConditionService.urlsOf(d as never)));
     await this.deals.deleteMany({ renterId: userId });
     // Чати з усією перепискою: співрозмовник теж їх більше не побачить
     const chats = await this.conversations.find({ $or: [{ ownerId: userId }, { renterId: userId }] }, '_id').lean().exec();

@@ -102,7 +102,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     const hit = (u: string[]) => ({ $in: u });
     const [cars, deals, rentals, offers, chats, people, withFiles] = await Promise.all([
       this.cars.find({ $or: [{ photoUri: hit(urls) }, { photos: hit(urls) }] }, 'photoUri photos').lean().exec(),
-      this.deals.find({ photoUri: hit(urls) }, 'photoUri').lean().exec(),
+      this.deals.find({ $or: [{ photoUri: hit(urls) }, { 'condition.handover.photos.url': hit(urls) }, { 'condition.return.photos.url': hit(urls) }] }, 'photoUri condition').lean().exec(),
       this.rentals.find({ 'car.photoUri': hit(urls) }, 'car.photoUri').lean().exec(),
       this.offers.find({ $or: [{ 'car.photoUri': hit(urls) }, { 'car.photos': hit(urls) }] }, 'car.photoUri car.photos').lean().exec(),
       this.conversations.find({ 'context.photoUri': hit(urls) }, 'context.photoUri').lean().exec(),
@@ -112,7 +112,10 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     const used = new Set<string>();
     const add = (u?: string | null) => u && used.add(u);
     for (const c of cars) [c.photoUri, ...(c.photos ?? [])].forEach(add);
-    for (const d of deals) add(d.photoUri);
+    for (const d of deals) {
+      add(d.photoUri);
+      for (const p of [...(d.condition?.handover as { photos?: { url: string }[] } | undefined)?.photos ?? [], ...(d.condition?.return as { photos?: { url: string }[] } | undefined)?.photos ?? []]) add(p.url);
+    }
     for (const r of rentals) add(r.car?.photoUri);
     for (const o of offers) [o.car?.photoUri, ...(o.car?.photos ?? [])].forEach(add);
     for (const c of chats) add(c.context?.photoUri);
@@ -129,7 +132,10 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
       if (id) ids.add(id);
     };
     for await (const c of this.cars.find({}, 'photoUri photos').lean().cursor()) [c.photoUri, ...(c.photos ?? [])].forEach(add);
-    for await (const d of this.deals.find({}, 'photoUri').lean().cursor()) add(d.photoUri);
+    for await (const d of this.deals.find({}, 'photoUri condition').lean().cursor()) {
+      add(d.photoUri);
+      for (const p of [...(d.condition?.handover as { photos?: { url: string }[] } | undefined)?.photos ?? [], ...(d.condition?.return as { photos?: { url: string }[] } | undefined)?.photos ?? []]) add(p.url);
+    }
     for await (const r of this.rentals.find({}, 'car.photoUri').lean().cursor()) add(r.car?.photoUri);
     for await (const o of this.offers.find({}, 'car.photoUri car.photos').lean().cursor()) [o.car?.photoUri, ...(o.car?.photos ?? [])].forEach(add);
     for await (const c of this.conversations.find({}, 'context.photoUri').lean().cursor()) add(c.context?.photoUri);
