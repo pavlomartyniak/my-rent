@@ -86,10 +86,7 @@ export class DataService {
     await this.deals.deleteMany({ renterId: userId });
     // Чати з усією перепискою: співрозмовник теж їх більше не побачить
     const chats = await this.conversations.find({ $or: [{ ownerId: userId }, { renterId: userId }] }, '_id').lean().exec();
-    const chatIds = chats.map((c) => c._id);
-    const withFiles = await this.messages.find({ conversationId: { $in: chatIds }, 'attachments.0': { $exists: true } }, 'attachments').lean().exec();
-    photos.push(...withFiles.flatMap((m) => (m.attachments ?? []).map((a) => a.url)));
-    await this.messages.deleteMany({ conversationId: { $in: chatIds } });
+    await this.messages.deleteMany({ conversationId: { $in: chats.map((c) => c._id) } });
     await this.conversations.deleteMany({ _id: { $in: chats.map((c) => c._id) } });
     await this.moderation.purgeUser(userId);
     await this.users.deleteOne({ _id: userId });

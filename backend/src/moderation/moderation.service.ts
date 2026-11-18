@@ -130,7 +130,7 @@ export class ModerationService {
       if (!message || !chat) throw new NotFoundException('Повідомлення не знайдено');
       targetUserId = String(message.senderId);
       messageId = String(message._id);
-      snapshot = makeSnapshot([message.text, ...(message.attachments ?? []).map((a) => `[${a.kind}] ${a.url}`)].filter(Boolean).join(' '));
+      snapshot = makeSnapshot(message.text);
     }
     if (targetUserId === user.id) throw new BadRequestException('Не можна поскаржитись на себе');
 

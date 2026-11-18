@@ -1,6 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActionSheetIOS, ActivityIndicator, Alert, AppState, Linking, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Linking, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CarPhoto } from '@/components/car-photo';
@@ -19,11 +19,8 @@ import { formatDate } from '@/lib/date';
 import { formatMoney } from '@/lib/format';
 import { confirmBlock, type ReportTarget } from '@/lib/moderation';
 import { Avatar } from '@/components/avatar';
-import { ChatAttachments } from '@/components/chat-attachments';
-import { Image } from 'expo-image';
 import { openProfile } from '@/lib/profiles';
-import { type Attachment, clock, dayLabel, differentDays, newClientId, type ChatMessage, type ChatSummary, type MessagesPage } from '@/lib/chat';
-import { type Draft, formatSize, MAX_FILES, pickDocuments, pickFromCamera, pickFromLibrary, uploadDrafts } from '@/lib/chat-files';
+import { clock, dayLabel, differentDays, newClientId, type ChatMessage, type ChatSummary, type MessagesPage } from '@/lib/chat';
 import { useChat, useChatEvents } from '@/store/chat';
 import { useFleet } from '@/store/fleet';
 
@@ -50,10 +47,6 @@ export default function ChatScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [text, setText] = useState('');
-  // Файли, вибрані, але ще не надіслані
-  const [drafts, setDrafts] = useState<Draft[]>([]);
-  // Що саме надсилається в кожному повідомленні (за clientId): для повтору після збою, щоб не завантажувати файли двічі
-  const outbox = useRef(new Map<string, { text: string; drafts: Draft[]; uploaded?: Attachment[] }>());
   const [typing, setTyping] = useState(false);
   const [keyboard, setKeyboard] = useState(false);
   const [reporting, setReporting] = useState<ReportTarget | null>(null);
@@ -145,12 +138,7 @@ export default function ChatScreen() {
 
   async function deliver(clientId: string, body: string) {
     try {
-      const out = outbox.current.get(clientId);
-      // Файли завантажуємо в хмару один раз: після збою відправки повтор використовує вже завантажені
-      if (out?.drafts.length && !out.uploaded) out.uploaded = await uploadDrafts(out.drafts);
-      const attachments = out?.uploaded;
-      const saved = await api<ChatMessage>('POST', `/chats/${id}/messages`, { text: body, clientId, ...(attachments?.length ? { attachments: attachments.map(({ url, name, size }) => ({ url, name, size })) } : {}) });
-      outbox.current.delete(clientId);
+      const saved = await api<ChatMessage>('POST', `/chats/${id}/messages`, { text: body, clientId });
       setMessages((prev) => {
         // Подія сокета могла вже замінити локальну копію
         if (prev.some((m) => m.id === saved.id)) return prev.filter((m) => !(m.status && m.clientId === clientId));
@@ -170,40 +158,17 @@ export default function ChatScreen() {
 
   function send() {
     const body = text.trim();
-    if ((!body && !drafts.length) || !chat?.canSend) return;
+    if (!body || !chat?.canSend) return;
     const clientId = newClientId();
-    const files = drafts;
-    outbox.current.set(clientId, { text: body, drafts: files });
     setText('');
-    setDrafts([]);
-    setMessages((prev) => [
-      { id: `local-${clientId}`, text: body, attachments: files.map((d) => ({ kind: d.kind, url: d.uri, name: d.name, size: d.size })), mine: true, createdAt: new Date().toISOString(), clientId, status: 'sending' },
-      ...prev,
-    ]);
+    setMessages((prev) => [{ id: `local-${clientId}`, text: body, mine: true, createdAt: new Date().toISOString(), clientId, status: 'sending' }, ...prev]);
     void deliver(clientId, body);
-  }
-
-  /** Меню вкладень: фото чи відео з галереї, камера, файл */
-  function attach() {
-    const room = MAX_FILES - drafts.length;
-    if (room <= 0) return Alert.alert('Забагато файлів', `За раз можна додати до ${MAX_FILES} вкладень.`);
-    const add = (p: Promise<Draft[]>) => void p.then((d) => d.length && setDrafts((cur) => [...cur, ...d].slice(0, MAX_FILES))).catch(() => Alert.alert('Не вдалося додати файл', 'Спробуйте ще раз'));
-    const actions = [
-      { title: 'Фото чи відео', run: () => add(pickFromLibrary(room)) },
-      { title: 'Зробити фото чи відео', run: () => add(pickFromCamera(room)) },
-      { title: 'Файл', run: () => add(pickDocuments(room)) },
-    ];
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions({ options: [...actions.map((a) => a.title), 'Скасувати'], cancelButtonIndex: actions.length }, (i) => actions[i]?.run());
-    } else {
-      Alert.alert('Додати вкладення', undefined, [...actions.map((a) => ({ text: a.title, onPress: a.run })), { text: 'Скасувати', style: 'cancel' as const }]);
-    }
   }
 
   function retry(m: ChatMessage) {
     if (!m.clientId) return;
     setMessages((prev) => prev.map((x) => (x.clientId === m.clientId ? { ...x, status: 'sending' } : x)));
-    void deliver(m.clientId, outbox.current.get(m.clientId)?.text ?? m.text);
+    void deliver(m.clientId, m.text);
   }
 
   function onChange(value: string) {
@@ -377,12 +342,9 @@ export default function ChatScreen() {
                         item.mine ? { backgroundColor: failed ? theme.negative : theme.accent } : { backgroundColor: theme.backgroundElement, borderColor: theme.border, borderWidth: 1 },
                         item.status === 'sending' && styles.sending,
                       ]}>
-                      {item.attachments?.length ? <ChatAttachments items={item.attachments} mine={item.mine} /> : null}
-                      {item.text ? (
-                        <ThemedText type="default" style={{ color: item.mine ? '#FFFFFF' : theme.text }} selectable>
-                          {item.text}
-                        </ThemedText>
-                      ) : null}
+                      <ThemedText type="default" style={{ color: item.mine ? '#FFFFFF' : theme.text }} selectable>
+                        {item.text}
+                      </ThemedText>
                       <View style={styles.meta}>
                         <ThemedText type="small" style={[styles.time, { color: item.mine ? 'rgba(255,255,255,0.8)' : theme.textSecondary }]}>
                           {clock(item.createdAt)}
@@ -422,35 +384,7 @@ export default function ChatScreen() {
             </ThemedText>
           </View>
         ) : (
-          <View style={{ backgroundColor: theme.backgroundElement, borderTopColor: theme.border, borderTopWidth: StyleSheet.hairlineWidth }}>
-            {drafts.length ? (
-              <View style={styles.drafts}>
-                {drafts.map((d) => (
-                  <View key={d.id} style={[styles.draft, { backgroundColor: theme.backgroundSelected }]}>
-                    {d.kind === 'image' ? (
-                      <Image source={{ uri: d.uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                    ) : (
-                      <View style={styles.draftFile}>
-                        <Icon name={d.kind === 'video' ? 'videocam' : 'document-text-outline'} size={22} color="textSecondary" />
-                        <ThemedText type="small" themeColor="textSecondary" numberOfLines={1} style={styles.draftName}>
-                          {d.name}
-                        </ThemedText>
-                        <ThemedText type="small" themeColor="textSecondary">
-                          {formatSize(d.size)}
-                        </ThemedText>
-                      </View>
-                    )}
-                    <Pressable accessibilityRole="button" accessibilityLabel={`Прибрати ${d.name}`} hitSlop={6} onPress={() => setDrafts((cur) => cur.filter((x) => x.id !== d.id))} style={styles.draftRemove}>
-                      <Icon name="close" size={14} color="#FFFFFF" />
-                    </Pressable>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-          <View style={[styles.composer, { paddingBottom: keyboard ? Spacing.two : Math.max(insets.bottom, Spacing.two), borderTopWidth: 0 }]}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Додати вкладення" onPress={attach} style={({ pressed }) => [styles.attach, pressed && { opacity: 0.6 }]}>
-              <Icon name="attach" size={24} color="textSecondary" />
-            </Pressable>
+          <View style={[styles.composer, { backgroundColor: theme.backgroundElement, borderTopColor: theme.border, paddingBottom: keyboard ? Spacing.two : Math.max(insets.bottom, Spacing.two) }]}>
             <TextInput
               value={text}
               onChangeText={onChange}
@@ -463,12 +397,11 @@ export default function ChatScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Надіслати"
-              disabled={!text.trim() && !drafts.length}
+              disabled={!text.trim()}
               onPress={send}
-              style={({ pressed }) => [styles.send, { backgroundColor: text.trim() || drafts.length ? theme.accent : theme.backgroundSelected }, pressed && { opacity: 0.8 }]}>
-              <Icon name="send" size={20} color={text.trim() || drafts.length ? '#FFFFFF' : 'textSecondary'} />
+              style={({ pressed }) => [styles.send, { backgroundColor: text.trim() ? theme.accent : theme.backgroundSelected }, pressed && { opacity: 0.8 }]}>
+              <Icon name="send" size={20} color={text.trim() ? '#FFFFFF' : 'textSecondary'} />
             </Pressable>
-          </View>
           </View>
         )}
       </KeyboardAvoidingView>
@@ -505,12 +438,6 @@ const styles = StyleSheet.create({
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.two, paddingHorizontal: Spacing.three, paddingTop: Spacing.two, borderTopWidth: StyleSheet.hairlineWidth },
   input: { flex: 1, minHeight: 44, maxHeight: 130, borderRadius: 22, borderWidth: 1, paddingHorizontal: Spacing.three, paddingTop: 11, paddingBottom: 11, fontSize: 16 },
   send: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  attach: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
-  drafts: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, paddingHorizontal: Spacing.three, paddingTop: Spacing.two },
-  draft: { width: 72, height: 72, borderRadius: Radius.md, overflow: 'hidden' },
-  draftFile: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 4, gap: 1 },
-  draftName: { maxWidth: 64 },
-  draftRemove: { position: 'absolute', top: 3, right: 3, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
   closed: { paddingHorizontal: Spacing.three, paddingTop: Spacing.three, borderTopWidth: StyleSheet.hairlineWidth },
   closedText: { textAlign: 'center' },
 });

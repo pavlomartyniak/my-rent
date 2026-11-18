@@ -1,12 +1,10 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, type OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { type Model, Types } from 'mongoose';
 
 import type { AuthUser } from '../common/current-user';
 import { dealStageOf } from '../deals/deal-stage';
 import { fullName, maskedName, todayUtc } from '../rentals/rentals.math';
-import { MediaService } from '../media/media.service';
 import { ModerationService } from '../moderation/moderation.service';
 import { Conversation, type ChatContext, type ConversationDocument } from '../schemas/conversation.schema';
 import { Deal } from '../schemas/deal.schema';
@@ -17,7 +15,6 @@ import { WantedRequest } from '../schemas/wanted-request.schema';
 import { User } from '../schemas/user.schema';
 import type { OpenChatDto } from './chat.dto';
 import { ChatGateway } from './chat.gateway';
-import { type Attachment, AttachmentError, attachmentsLabel, parseAttachments } from './attachments';
 import { cleanMessage, preview } from './chat.math';
 
 type Side = 'owner' | 'renter';
@@ -42,8 +39,6 @@ export class ChatService implements OnModuleInit {
     @InjectModel(User.name) private readonly users: Model<User>,
     private readonly gateway: ChatGateway,
     private readonly moderation: ModerationService,
-    private readonly config: ConfigService,
-    private readonly media: MediaService,
   ) {
     gateway.chat = this;
   }
@@ -83,13 +78,13 @@ export class ChatService implements OnModuleInit {
     }
     if (!source) {
       // Немає, до чого прив'язати: розмову не відновити
-      await this.dropMessages({ conversationId: c._id });
+      await this.messages.deleteMany({ conversationId: c._id });
       await this.conversations.deleteOne({ _id: c._id });
       return;
     }
     const taken = await this.conversations.exists({ sourceKind: source.kind, sourceId: source.id });
     if (taken) {
-      await this.dropMessages({ conversationId: c._id });
+      await this.messages.deleteMany({ conversationId: c._id });
       await this.conversations.deleteOne({ _id: c._id });
       return;
     }
@@ -211,7 +206,7 @@ export class ChatService implements OnModuleInit {
       .findOneAndUpdate({ _id: c._id }, { $addToSet: { hiddenFor: user.role }, $set: { [`clearedAt.${user.role}`]: new Date(), [`unread.${user.role}`]: 0 } }, { returnDocument: 'after', timestamps: false })
       .exec();
     if (updated?.hiddenFor.includes('owner') && updated.hiddenFor.includes('renter')) {
-      await this.dropMessages({ conversationId: c._id });
+      await this.messages.deleteMany({ conversationId: c._id });
       await this.conversations.deleteOne({ _id: c._id });
     }
     this.gateway.emitTo([user.id], 'removed', { conversationId: String(c._id) });
@@ -219,16 +214,9 @@ export class ChatService implements OnModuleInit {
 
   // ---- надсилання й читання ----
 
-  async send(user: AuthUser, id: string, rawText: string, clientId?: string, rawAttachments?: { url: string; name: string; size: number }[]) {
-    const text = cleanMessage(rawText) ?? '';
-    let attachments: Attachment[];
-    try {
-      attachments = parseAttachments(rawAttachments, this.config.get<string>('CLOUDINARY_CLOUD_NAME'), user.id);
-    } catch (e) {
-      if (e instanceof AttachmentError) throw new BadRequestException(e.message);
-      throw e;
-    }
-    if (!text && !attachments.length) throw new BadRequestException('Напишіть повідомлення або додайте файл');
+  async send(user: AuthUser, id: string, rawText: string, clientId?: string) {
+    const text = cleanMessage(rawText);
+    if (!text) throw new BadRequestException('Напишіть повідомлення');
     const c = await this.mineOrThrow(user, id);
     await this.moderation.assertNotBlocked(String(c.ownerId), String(c.renterId), 'Писати цьому користувачу неможливо: один із вас заблокував іншого');
     if (!(await this.infoFor([c])).get(String(c._id))?.canSend) throw new ForbiddenException('Чат закрито: за цим запитом уже немає активної домовленості');
@@ -241,7 +229,7 @@ export class ChatService implements OnModuleInit {
 
     let message: MessageDocument;
     try {
-      message = await this.messages.create({ conversationId: c._id, senderId: user.id, text, attachments, clientId });
+      message = await this.messages.create({ conversationId: c._id, senderId: user.id, text, clientId });
     } catch (e) {
       // Гонка двох однакових відправок: unique-індекс залишає одну, повертаємо її
       const dup = clientId ? await this.messages.findOne({ conversationId: c._id, senderId: user.id, clientId }).exec() : null;
@@ -254,7 +242,7 @@ export class ChatService implements OnModuleInit {
       .findOneAndUpdate(
         { _id: c._id },
         {
-          $set: { lastMessage: { text: preview(text || attachmentsLabel(attachments), 200), senderId: new Types.ObjectId(user.id), at: message.createdAt }, lastActivityAt: message.createdAt },
+          $set: { lastMessage: { text: preview(text, 200), senderId: new Types.ObjectId(user.id), at: message.createdAt }, lastActivityAt: message.createdAt },
           $inc: { [`unread.${other}`]: 1 },
           // Нове повідомлення повертає розмову співрозмовнику, який її видаляв
           $pull: { hiddenFor: other },
@@ -305,7 +293,7 @@ export class ChatService implements OnModuleInit {
     const dead = idle.filter((c) => !c.lastMessage || !['pending', 'accepted', 'signing', 'upcoming', 'active'].includes(info.get(String(c._id))?.stage ?? 'closed'));
     if (!dead.length) return 0;
     const ids = dead.map((c) => c._id);
-    await this.dropMessages({ conversationId: { $in: ids } });
+    await this.messages.deleteMany({ conversationId: { $in: ids } });
     await this.conversations.deleteMany({ _id: { $in: ids } });
     return dead.length;
   }
@@ -413,22 +401,6 @@ export class ChatService implements OnModuleInit {
   }
 
   private messageView(m: MessageDocument, viewerId: string) {
-    return {
-      id: String(m._id),
-      conversationId: String(m.conversationId),
-      mine: String(m.senderId) === viewerId,
-      text: m.text ?? '',
-      attachments: (m.attachments ?? []).map((a) => ({ kind: a.kind, url: a.url, name: a.name, size: a.size })),
-      createdAt: m.createdAt,
-      clientId: m.clientId ?? null,
-    };
-  }
-
-  /** Видаляє повідомлення за умовою й прибирає їхні вкладення з хмари (якщо на них більше ніхто не посилається) */
-  private async dropMessages(filter: Record<string, unknown>) {
-    const withFiles = await this.messages.find({ ...filter, 'attachments.0': { $exists: true } }, 'attachments').lean().exec();
-    await this.messages.deleteMany(filter);
-    const urls = withFiles.flatMap((m) => (m.attachments ?? []).map((a) => a.url));
-    if (urls.length) void this.media.release(urls);
+    return { id: String(m._id), conversationId: String(m.conversationId), mine: String(m.senderId) === viewerId, text: m.text, createdAt: m.createdAt, clientId: m.clientId ?? null };
   }
 }

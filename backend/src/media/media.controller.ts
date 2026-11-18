@@ -1,12 +1,12 @@
 import { randomBytes } from 'node:crypto';
 
-import { BadRequestException, Body, Controller, Header, HttpCode, Post, ServiceUnavailableException } from '@nestjs/common';
+import { Body, Controller, Header, HttpCode, Post, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 
 import { type AuthUser, CurrentUser, Roles } from '../common/current-user';
 import { MEDIA_PREFIX } from './cloudinary';
-import { ChatSignatureDto, DiscardDto, UploadSignatureDto } from './media.dto';
+import { DiscardDto, UploadSignatureDto } from './media.dto';
 import { MediaService } from './media.service';
 import { signUpload } from './signature';
 
@@ -57,31 +57,6 @@ export class MediaController {
       return { publicId, timestamp, signature: signUpload({ public_id: publicId, timestamp }, apiSecret) };
     });
     return { ...legacy, items };
-  }
-
-  /**
-   * Підпис для завантаження вкладень чату (фото, відео, файли) напряму в Cloudinary: доступний обом ролям. Кожне вкладення
-   * отримує свій ідентифікатор my-rent/<користувач>/chat/<випадковий рядок>; завантаження йде
-   * у розділ за видом (image, video чи raw для файлів). Сервер приймає в чат лише вкладення з такої папки відправника.
-   */
-  @Throttle({ default: { limit: 30, ttl: 60_000 } })
-  @Header('Cache-Control', 'no-store')
-  @HttpCode(200)
-  @Post('chat-signature')
-  chatSignature(@CurrentUser() user: AuthUser, @Body() dto: ChatSignatureDto) {
-    const cloudName = this.config.get<string>('CLOUDINARY_CLOUD_NAME');
-    const apiKey = this.config.get<string>('CLOUDINARY_API_KEY');
-    const apiSecret = this.config.get<string>('CLOUDINARY_API_SECRET');
-    if (!cloudName || !apiKey || !apiSecret) throw new ServiceUnavailableException('Завантаження файлів не налаштоване на сервері');
-    const timestamp = Math.floor(Date.now() / 1000);
-    if (!dto.files.length) throw new BadRequestException('Не вказано файлів');
-    // Тип ресурсу в Cloudinary: фото, відео й файли (raw) лежать у різних розділах; для файлів розширення входить в ідентифікатор
-    const items = dto.files.map((f) => {
-      const type = f.kind === 'file' ? 'raw' : f.kind;
-      const publicId = `${MEDIA_PREFIX}${user.id}/chat/${randomBytes(9).toString('hex')}${f.kind === 'file' && f.ext ? `.${f.ext.toLowerCase()}` : ''}`;
-      return { publicId, timestamp, signature: signUpload({ public_id: publicId, timestamp }, apiSecret), uploadUrl: `https://api.cloudinary.com/v1_1/${cloudName}/${type}/upload` };
-    });
-    return { cloudName, apiKey, timestamp, items };
   }
 
   /** Прибрати щойно завантажене фото, яке користувач видалив із форми до збереження. Чужі й уже збережені фото не чіпаються */

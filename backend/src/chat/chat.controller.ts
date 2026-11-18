@@ -46,7 +46,7 @@ export class ChatController {
   @Throttle({ default: { limit: 40, ttl: 60_000 } })
   @Post(':id/messages')
   send(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Body() dto: SendMessageDto) {
-    return this.chat.send(user, id, dto.text ?? '', dto.clientId, dto.attachments);
+    return this.chat.send(user, id, dto.text, dto.clientId);
   }
 
   /** Видалити розмову зі свого списку (співрозмовник її зберігає) */

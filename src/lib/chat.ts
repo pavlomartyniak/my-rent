@@ -29,13 +29,9 @@ export type ChatSummary = {
   lastActivityAt: string;
 };
 
-/** Вкладення повідомлення: фото, відео чи файл у хмарі (для ще не надісланих `url` — локальний шлях) */
-export type Attachment = { kind: 'image' | 'video' | 'file'; url: string; name: string; size: number };
-
 export type ChatMessage = {
   id: string;
   text: string;
-  attachments?: Attachment[];
   mine: boolean;
   createdAt: string;
   clientId: string | null;
