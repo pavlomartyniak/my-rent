@@ -18,7 +18,8 @@ export function offerMessage(i: { title: string; startDate: string; endDate: str
 }
 
 /** Запит чи пропозицію прийнято: договір вже сформовано */
-export function acceptedMessage(i: { startDate: string }) {
+export function acceptedMessage(i: { startDate: string; noContract?: boolean }) {
+  if (i.noContract) return `Домовленість прийнято ✅ Оренда без договору: застосунок лише веде облік (платежі, заставу, чат). Умови підтверджуємо в застосунку при зустрічі, коли передаємо авто, ключі й гроші: підтвердження відкриється ${date(shiftDay(i.startDate, -1))}.`;
   return `Домовленість прийнято ✅ Договір сформовано, його можна переглянути в застосунку. Підписуємо при зустрічі, коли передаємо авто, ключі й гроші: підписання відкриється ${date(shiftDay(i.startDate, -1))}.`;
 }
 

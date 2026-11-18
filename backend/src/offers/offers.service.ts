@@ -266,7 +266,7 @@ export class OffersService {
     if (!ids.length) return result;
     const deals = await this.deals.find({ source: 'offer', sourceId: { $in: ids } }).lean().exec();
     const today = todayUtc();
-    for (const d of deals) result.set(String(d.sourceId), { dealId: String(d._id), dealStage: dealStageOf(d, today), contract: !!d.contract });
+    for (const d of deals) result.set(String(d.sourceId), { dealId: String(d._id), dealStage: dealStageOf(d, today), contract: !!d.contract && d.contract.mode !== 'none' });
     return result;
   }
 

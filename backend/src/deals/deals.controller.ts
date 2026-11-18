@@ -119,6 +119,15 @@ export class DealsController {
     return this.deals.sign(user, id, dto.code, { ip: forwarded || req.ip, userAgent: String(req.headers['user-agent'] ?? '') });
   }
 
+  /** Підтвердити умови оренди без договору (без коду з пошти) */
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @HttpCode(200)
+  @Post(':id/acknowledge')
+  acknowledge(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Req() req: Request) {
+    const forwarded = String(req.headers['x-forwarded-for'] ?? '').split(',')[0]?.trim();
+    return this.deals.acknowledge(user, id, { ip: forwarded || req.ip, userAgent: String(req.headers['user-agent'] ?? '') });
+  }
+
   /** Відмова від підписаного договору в односторонньому порядку (власник: прострочка, ДТП…; орендар: авто непридатне…) */
   @HttpCode(200)
   @Post(':id/withdraw')

@@ -143,7 +143,7 @@ export class RentalsService {
    * Прийняття запиту: авто автоматично потрапляє в облік власника (статус «В оренді», водій —
    * орендар, початок оренди — з запиту), оголошення знімається, а решта запитів на це авто відхиляється.
    */
-  async accept(ownerId: string, id: string) {
+  async accept(ownerId: string, id: string, withContract = true) {
     const session = await this.connection.startSession();
     let accepted: RentalRequestDocument | null = null;
     let createdDeal = '';
@@ -206,6 +206,7 @@ export class RentalsService {
               sourceId: request._id,
               paymentPlan: request.paymentPlan as PaymentPlan,
               purpose: request.purpose as 'personal' | 'passengers' | 'delivery',
+              noContract: !withContract,
         });
         await this.deals.create([dealData], { session });
         createdDeal = String(dealData._id);
@@ -218,7 +219,7 @@ export class RentalsService {
     this.realtime.changed([accepted!.renterId, ...losers], 'rentals', 'deals');
     this.realtime.changed([ownerId], 'cars', 'deals', 'rentals');
     // Повідомлення в чат: домовленість прийнято, договір сформовано
-    await this.chat.autoStart({ id: ownerId, role: 'owner' }, { rentalId: String(accepted!._id) }, acceptedMessage({ startDate: accepted!.startDate }), `auto-accept-${accepted!._id}`).catch(() => null);
+    await this.chat.autoStart({ id: ownerId, role: 'owner' }, { rentalId: String(accepted!._id) }, acceptedMessage({ startDate: accepted!.startDate, noContract: !withContract }), `auto-accept-${accepted!._id}`).catch(() => null);
     // Відповідь одразу містить оренду з договором: застосунок пропонує його переглянути
     return this.view(accepted!, 'owner', await this.people([accepted!.renterId]), { dealId: createdDeal, dealStage: 'signing', contract: true });
   }
@@ -232,7 +233,7 @@ export class RentalsService {
     if (!ids.length) return result;
     const deals = await this.deals.find({ source: 'request', sourceId: { $in: ids } }).lean().exec();
     const today = todayUtc();
-    for (const d of deals) result.set(String(d.sourceId), { dealId: String(d._id), dealStage: dealStageOf(d, today), contract: !!d.contract });
+    for (const d of deals) result.set(String(d.sourceId), { dealId: String(d._id), dealStage: dealStageOf(d, today), contract: !!d.contract && d.contract.mode !== 'none' });
     return result;
   }
 

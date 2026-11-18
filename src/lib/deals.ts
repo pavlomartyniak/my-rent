@@ -19,7 +19,7 @@ export type DealView = {
   /** awaiting — чекаємо підписів під договором, active — договір підписано, terminated — розірвано чи скасовано */
   status: 'awaiting' | 'active' | 'terminated';
   /** Договір: номер і хто підписав; null — оренда створена до появи договорів */
-  contract: { number: string; signed: { owner: boolean; renter: boolean }; mySigned: boolean; signedAt: string | null; signing: { opensAt: string; closesAt: string; state: 'early' | 'open' | 'late' } } | null;
+  contract: { /** none — оренда без договору: сторони лише підтверджують умови в застосунку */ mode: 'full' | 'none'; number: string; signed: { owner: boolean; renter: boolean }; mySigned: boolean; signedAt: string | null; signing: { opensAt: string; closesAt: string; state: 'early' | 'open' | 'late' } } | null;
   /** Пропозиція розірвати оренду, що чекає відповіді; mine — подав її я */
   terminationRequest: { by: 'owner' | 'renter'; at: string; note: string; mine: boolean } | null;
   /** План оплати й графік платежів із відповідями сторін */

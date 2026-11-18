@@ -1,4 +1,4 @@
-import { IsIn, IsMongoId, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsIn, IsMongoId, IsOptional, IsString, MaxLength } from 'class-validator';
 
 import { IsIsoDay } from '../common/is-iso-day';
 import { Trim } from '../common/profile';
@@ -29,6 +29,13 @@ export class CreateRentalDto {
   @IsOptional()
   @IsIn(['personal', 'passengers', 'delivery'])
   purpose?: 'personal' | 'passengers' | 'delivery';
+}
+
+export class AcceptRentalDto {
+  /** Укласти договір (за замовчуванням) чи здати без договору: тоді орендар має погодитись із таким режимом, підтвердивши умови */
+  @IsOptional()
+  @IsBoolean()
+  withContract?: boolean;
 }
 
 export class DeclineRentalDto {

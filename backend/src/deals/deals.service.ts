@@ -7,7 +7,7 @@ import type { AuthUser } from '../common/current-user';
 import { effectiveAt, GROUND_LABELS, groundsFor, isEffective } from './withdrawal';
 import { renderContractPdf } from '../contract/contract.pdf';
 import { checkCode, generateCode, hashCode, maskEmail, OTP_MAX_ATTEMPTS, OTP_MINUTES, OTP_RESEND_SECONDS, resendWait } from '../contract/contract.otp';
-import { signContract } from '../contract/contract.signing';
+import { type Signature, signContract } from '../contract/contract.signing';
 import { MailService } from '../mail/mail.service';
 import { buildSections } from '../contract/contract.terms';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -264,6 +264,7 @@ export class DealsService {
     if (!groundsFor(user.role).includes(ground)) throw new BadRequestException('Ця підстава недоступна для вашої ролі');
     const deal = await this.mine(user, id);
     this.requireContract(deal);
+    if (this.isNoContract(deal)) throw new ConflictException('Оренда без договору: підстав для односторонньої відмови немає. Запропонуйте розірвати оренду за згодою сторін');
     if (deal.status !== 'active') throw new ConflictException(deal.status === 'terminated' ? 'Оренду вже розірвано' : 'Відмовитись можна від підписаного договору. Домовленість до підпису просто скасуйте');
     if (deal.withdrawal) throw new ConflictException('Повідомлення про відмову вже надіслано: договір буде розірвано через 12 годин після його отримання');
     if (ground === 'payment_overdue') {
@@ -336,6 +337,7 @@ export class DealsService {
     const deal = await this.mine(user, id);
     await this.touchWithdrawal(user, deal);
     const c = this.requireContract(deal);
+    this.assertHasContract(deal);
     return {
       dealId: String(deal._id),
       number: c.terms.number,
@@ -358,22 +360,26 @@ export class DealsService {
   async contractPdf(user: AuthUser, id: string) {
     const deal = await this.mine(user, id);
     const c = this.requireContract(deal);
+    this.assertHasContract(deal);
     const pdf = await renderContractPdf(c.terms, c.hash, { owner: c.signatures?.owner ?? null, renter: c.signatures?.renter ?? null });
     return { pdf, filename: `${c.terms.number}.pdf` };
   }
 
   /** Договір, який сторона зараз може підписати: перевірки, спільні для запиту коду й самого підпису */
-  private async signable(user: AuthUser, id: string) {
+  private async signable(user: AuthUser, id: string, mode: 'full' | 'none' = 'full') {
     const deal = await this.deals.findOne({ _id: id, ...this.side(user) }).exec();
     if (!deal) throw new NotFoundException('Оренду не знайдено');
     const c = this.requireContract(deal);
-    if (deal.status !== 'awaiting') throw new ConflictException(deal.status === 'terminated' ? 'Домовленість скасована' : 'Договір уже підписано обома сторонами');
+    // Код з пошти — для договору; оренду без договору підтверджують без коду (див. acknowledge)
+    if (mode === 'full') this.assertHasContract(deal);
+    else if (!this.isNoContract(deal)) throw new ConflictException('Для цієї оренди складено договір: його підписують кодом з пошти');
+    if (deal.status !== 'awaiting') throw new ConflictException(deal.status === 'terminated' ? 'Домовленість скасована' : mode === 'none' ? 'Умови вже підтверджені обома сторонами' : 'Договір уже підписано обома сторонами');
     const state = signingState(todayUtc(), deal.startDate);
     if (state === 'early') {
       throw new ConflictException(`Підписання відкриється ${signingWindow(deal.startDate).opensAt.split('-').reverse().join('.')}: підписуйте договір під час зустрічі, коли передаєте авто, ключі й гроші`);
     }
     if (state === 'late') throw new ConflictException('Час на підписання минув. Домовтесь про нову оренду');
-    if (c.signatures?.[user.role]) throw new ConflictException('Ви вже підписали цей договір');
+    if (c.signatures?.[user.role]) throw new ConflictException(mode === 'none' ? 'Ви вже підтвердили умови' : 'Ви вже підписали цей договір');
     return { deal, contract: c };
   }
 
@@ -432,7 +438,29 @@ export class DealsService {
     const consumed = await this.deals.findOneAndUpdate({ _id: seen._id, [`contract.otp.${user.role}.hash`]: pending!.hash }, { $unset: { [`contract.otp.${user.role}`]: '' } }).exec();
     if (!consumed) throw new ConflictException('Код уже використано. Запросіть новий');
     const account = await this.users.findById(user.id).exec();
+    return this.commitSignature(user, id, (c) => ({
+      ...signContract({ contractHash: c.hash, userId: user.id, role: user.role }),
+      ...(account?.email ? { email: maskEmail(account.email) } : {}),
+      ...(evidence.ip ? { ip: evidence.ip.slice(0, 64) } : {}),
+      ...(evidence.userAgent ? { userAgent: evidence.userAgent.slice(0, 200) } : {}),
+    }), 'full');
+  }
 
+  /**
+   * Підтвердження умов оренди без договору: без коду з пошти, лише згода сторони, яку фіксуємо з датою й часом. Коли
+   * підтвердили обидві сторони, оренда активується так само, як після підписання договору.
+   */
+  async acknowledge(user: AuthUser, id: string, evidence: { ip?: string; userAgent?: string }) {
+    await this.signable(user, id, 'none');
+    return this.commitSignature(user, id, (c) => ({
+      ...signContract({ contractHash: c.hash, userId: user.id, role: user.role, method: 'ack' }),
+      ...(evidence.ip ? { ip: evidence.ip.slice(0, 64) } : {}),
+      ...(evidence.userAgent ? { userAgent: evidence.userAgent.slice(0, 200) } : {}),
+    }), 'none');
+  }
+
+  /** Записує підпис (чи підтвердження) сторони й активує оренду, коли обидві сторони готові: авто стає «В оренді» чи лишається «Заброньованим» до початку */
+  private async commitSignature(user: AuthUser, id: string, make: (c: NonNullable<DealDocument['contract']>) => Signature, mode: 'full' | 'none') {
     const session = await this.connection.startSession();
     let result: DealDocument | null = null;
     try {
@@ -440,18 +468,12 @@ export class DealsService {
         const deal = await this.deals.findOne({ _id: id, ...this.side(user) }, null, { session }).exec();
         if (!deal) throw new NotFoundException('Оренду не знайдено');
         const c = this.requireContract(deal);
-        if (deal.status !== 'awaiting') throw new ConflictException(deal.status === 'terminated' ? 'Домовленість скасована' : 'Договір уже підписано обома сторонами');
+        if (deal.status !== 'awaiting') throw new ConflictException(deal.status === 'terminated' ? 'Домовленість скасована' : mode === 'none' ? 'Умови вже підтверджені обома сторонами' : 'Договір уже підписано обома сторонами');
         // Порожній об'єкт Mongoose не зберігає, тож створюємо його, коли підписує перший
         c.signatures ??= {};
-        if (c.signatures[user.role]) throw new ConflictException('Ви вже підписали цей договір');
+        if (c.signatures[user.role]) throw new ConflictException(mode === 'none' ? 'Ви вже підтвердили умови' : 'Ви вже підписали цей договір');
 
-        const signature = signContract({ contractHash: c.hash, userId: user.id, role: user.role });
-        c.signatures[user.role] = {
-          ...signature,
-          ...(account?.email ? { email: maskEmail(account.email) } : {}),
-          ...(evidence.ip ? { ip: evidence.ip.slice(0, 64) } : {}),
-          ...(evidence.userAgent ? { userAgent: evidence.userAgent.slice(0, 200) } : {}),
-        };
+        c.signatures[user.role] = make(c);
         if (c.signatures.owner && c.signatures.renter) {
           deal.status = 'active';
           c.signedAt = new Date();
@@ -751,6 +773,15 @@ export class DealsService {
     return { opensAt: w.opensAt, closesAt: w.closesAt, state: signingState(todayUtc(), startDate) };
   }
 
+  /** Оренда без договору: умови, графік і застава є, а тексту договору й підпису кодом немає */
+  private isNoContract(deal: DealDocument) {
+    return deal.contract?.mode === 'none';
+  }
+
+  private assertHasContract(deal: DealDocument) {
+    if (this.isNoContract(deal)) throw new ConflictException('Ця оренда без договору: умови погодили сторони в застосунку');
+  }
+
   private requireContract(deal: DealDocument) {
     if (!deal.contract) throw new NotFoundException('Для цієї оренди договір не створювався: її укладено до появи договорів');
     return deal.contract;
@@ -838,7 +869,7 @@ export class DealsService {
       status: d.status ?? 'active',
       /** Договір: номер і хто підписав (null — оренда без договору, створена до його появи) */
       contract: d.contract
-        ? { number: d.contract.terms.number, signed: { owner: !!d.contract.signatures?.owner, renter: !!d.contract.signatures?.renter }, mySigned: !!d.contract.signatures?.[as], signedAt: d.contract.signedAt ?? null, signing: this.signingView(d.startDate) }
+        ? { mode: d.contract.mode ?? 'full', number: d.contract.terms.number, signed: { owner: !!d.contract.signatures?.owner, renter: !!d.contract.signatures?.renter }, mySigned: !!d.contract.signatures?.[as], signedAt: d.contract.signedAt ?? null, signing: this.signingView(d.startDate) }
         : null,
       /** План оплати й графік платежів із відповідями сторін (для оренд з договором) */
       paymentPlan: d.contract?.terms.paymentPlan ?? null,

@@ -27,15 +27,15 @@ export function OwnerRentals() {
   const sorted = [...(data ?? [])].filter((r) => !(r.dealId && r.status === 'accepted') && !rentalArchived(r)).sort((a, b) => ORDER[a.status] - ORDER[b.status] || b.createdAt.localeCompare(a.createdAt));
   const pending = sorted.filter((r) => r.status === 'pending').length;
 
-  async function respond(r: RentalView, action: 'accept' | 'decline') {
+  async function respond(r: RentalView, action: 'accept' | 'decline', withContract = true) {
     setBusy(r.id);
     try {
-      const res = await api<RentalView>('POST', `/rentals/${r.id}/${action}`);
+      const res = await api<RentalView>('POST', `/rentals/${r.id}/${action}`, action === 'accept' ? { withContract } : undefined);
       // Після прийняття змінюється авто (статус, водій), тож оновлюємо й автопарк
       if (action === 'accept') reload();
       invalidate();
       retry();
-      if (action === 'accept') promptContract(res.dealId);
+      if (action === 'accept') promptContract(res.dealId, !withContract);
     } catch (e) {
       Alert.alert('Не вдалося', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
       retry();
@@ -50,7 +50,19 @@ export function OwnerRentals() {
       `Авто «${r.car.title}» стане «Заброньоване» до початку оренди (${formatDate(r.startDate)}), водієм буде ${r.counterpart.name}. Оголошення буде знято, а інші запити й пропозиції на це авто відхилено.`,
       [
         { text: 'Скасувати', style: 'cancel' },
-        { text: 'Прийняти', onPress: () => void respond(r, 'accept') },
+        { text: 'Без договору', onPress: () => confirmNoContract(r) },
+        { text: 'З договором', onPress: () => void respond(r, 'accept') },
+      ],
+    );
+
+  /** Оренда без договору: пояснюємо наслідки, перш ніж приймати */
+  const confirmNoContract = (r: RentalView) =>
+    Alert.alert(
+      'Здати без договору?',
+      `Договір не складатиметься. ${r.counterpart.name} має підтвердити цей режим у застосунку. Kolo лише веде облік платежів і застави; у разі спору підтверджень у застосунку може бути недостатньо. Розірвати оренду можна лише за згодою обох сторін.`,
+      [
+        { text: 'Назад', style: 'cancel' },
+        { text: 'Прийняти без договору', style: 'destructive', onPress: () => void respond(r, 'accept', false) },
       ],
     );
 

@@ -3,7 +3,7 @@ import { Throttle } from '@nestjs/throttler';
 
 import { type AuthUser, CurrentUser, Roles } from '../common/current-user';
 import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
-import { CreateRentalDto, DeclineRentalDto } from './rentals.dto';
+import { AcceptRentalDto, CreateRentalDto, DeclineRentalDto } from './rentals.dto';
 import { RentalsService } from './rentals.service';
 
 @Controller('rentals')
@@ -54,8 +54,8 @@ export class RentalsController {
   @Roles('owner')
   @HttpCode(200)
   @Post(':id/accept')
-  accept(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string) {
-    return this.rentals.accept(user.id, id);
+  accept(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Body() dto: AcceptRentalDto) {
+    return this.rentals.accept(user.id, id, dto.withContract ?? true);
   }
 
   @Roles('owner')

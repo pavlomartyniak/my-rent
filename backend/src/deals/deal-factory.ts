@@ -51,6 +51,8 @@ export function newDealData(input: {
   paymentPlan?: PaymentPlan;
   /** Мета використання авто (з запиту орендаря) */
   purpose?: Purpose;
+  /** Оренда без договору: умови, графік і застава ті самі, але текст договору не складається, а сторони підтверджують умови в застосунку */
+  noContract?: boolean;
 }) {
   const _id = new Types.ObjectId();
   const createdAt = new Date();
@@ -82,7 +84,7 @@ export function newDealData(input: {
     source: input.source,
     sourceId: input.sourceId,
     status: 'awaiting',
-    contract: { terms, hash: contractHash(terms), signatures: {} },
+    contract: { terms, hash: contractHash(terms), signatures: {}, ...(input.noContract ? { mode: 'none' as const } : {}) },
     payments: terms.payments.map((p) => ({ n: p.n, renterPaid: 0, ownerReceived: 0 })),
   };
 }

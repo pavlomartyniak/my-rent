@@ -55,7 +55,8 @@ export function useAttention(role: 'owner' | 'renter' | null) {
   const items: AttentionItem[] = [];
 
   for (const d of signing.filter((x) => x.contract?.signing.state === 'open')) {
-    items.push({ key: `sign-${d.id}`, tone: 'success', icon: 'create', title: 'Час підписати договір', action: 'Підписати', text: `${d.title}. Підписуйте під час зустрічі, коли передаєте авто, ключі й гроші`, count: 1, tab: 'home', target: { kind: 'contract', dealId: d.id } });
+    const none = d.contract?.mode === 'none';
+    items.push({ key: `sign-${d.id}`, tone: 'success', icon: 'create', title: none ? 'Підтвердіть оренду без договору' : 'Час підписати договір', action: none ? 'Підтвердити' : 'Підписати', text: `${d.title}. ${none ? 'Підтверджуйте' : 'Підписуйте'} під час зустрічі, коли передаєте авто, ключі й гроші`, count: 1, tab: 'home', target: { kind: none ? 'deal' : 'contract', dealId: d.id } });
   }
   // Платежі за договором: «ви сплатили?» (орендар) чи «ви отримали?» (власник)
   for (const p of payments) {
@@ -148,7 +149,8 @@ export function useAttention(role: 'owner' | 'renter' | null) {
     }
   }
   for (const d of signing.filter((x) => x.contract?.signing.state === 'early')) {
-    items.push({ key: `sign-early-${d.id}`, tone: 'info', icon: 'document-text', title: 'Договір сформовано', action: 'Переглянути', text: `${d.title}. Перегляньте його, підписувати — при зустрічі`, count: 0, tab: 'home', target: { kind: 'contract', dealId: d.id } });
+    const none = d.contract?.mode === 'none';
+    items.push({ key: `sign-early-${d.id}`, tone: 'info', icon: 'document-text', title: none ? 'Оренда без договору' : 'Договір сформовано', action: 'Переглянути', text: none ? `${d.title}. Умови підтвердите при зустрічі` : `${d.title}. Перегляньте його, підписувати — при зустрічі`, count: 0, tab: 'home', target: { kind: none ? 'deal' : 'contract', dealId: d.id } });
   }
 
   /** Числа для вкладок: лише те, що потребує дії */
