@@ -20,11 +20,8 @@ const THIS_YEAR = new Date().getFullYear();
 /** Помилка року водіння (порожнє поле допустиме) */
 export const drivingYearError = (value: number | null) => (value === null ? '' : value < 1950 ? 'Рік не раніше 1950' : value > THIS_YEAR ? 'Рік не може бути в майбутньому' : '');
 
-/**
- * Необов'язкові дані профілю: фото, місто, кілька слів про себе, рік початку водіння й (для орендаря) для чого орендує.
- * Однакова форма в онбордингу й у «Профілі». Стан тримає батьківський екран.
- */
-export function ProfileExtrasForm({ value, onChange, name, renter, submitted }: { value: ProfileExtras; onChange: (patch: Partial<ProfileExtras>) => void; name: string; renter: boolean; submitted?: boolean }) {
+/** Фото профілю: аватар із кнопкою камери, підказка й «Прибрати фото» */
+export function ProfilePhoto({ photoUri, name, onChange }: { photoUri: string; name: string; onChange: (photoUri: string) => void }) {
   const theme = useTheme();
   const [uploading, setUploading] = useState(false);
 
@@ -34,15 +31,14 @@ export function ProfileExtrasForm({ value, onChange, name, renter, submitted }: 
     setUploading(true);
     const url = await uploadAvatar(result.assets[0].uri);
     setUploading(false);
-    if (url) onChange({ photoUri: url });
+    if (url) onChange(url);
     else Alert.alert('Не вдалося завантажити фото', 'Спробуйте ще раз пізніше.');
   }
 
   return (
-    <View style={styles.wrap}>
       <View style={styles.photo}>
         <Pressable accessibilityRole="button" accessibilityLabel="Змінити фото профілю" onPress={() => void pick()} disabled={uploading}>
-          <Avatar uri={value.photoUri || null} name={name || 'Профіль'} size={96} />
+          <Avatar uri={photoUri || null} name={name || 'Профіль'} size={96} />
           <View style={[styles.camera, { backgroundColor: theme.accent, borderColor: theme.background }]}>
             {uploading ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Icon name="camera" size={16} color="#FFFFFF" />}
           </View>
@@ -54,8 +50,8 @@ export function ProfileExtrasForm({ value, onChange, name, renter, submitted }: 
           <ThemedText type="small" themeColor="textSecondary">
             З фото більше довіри: люди охочіше пишуть тим, кого бачать.
           </ThemedText>
-          {value.photoUri ? (
-            <Pressable accessibilityRole="button" onPress={() => onChange({ photoUri: '' })} hitSlop={8}>
+          {photoUri ? (
+            <Pressable accessibilityRole="button" onPress={() => onChange('')} hitSlop={8}>
               <ThemedText type="smallBold" themeColor="negative">
                 Прибрати фото
               </ThemedText>
@@ -63,6 +59,17 @@ export function ProfileExtrasForm({ value, onChange, name, renter, submitted }: 
           ) : null}
         </View>
       </View>
+  );
+}
+
+/**
+ * Необов'язкові дані профілю: фото, місто, кілька слів про себе, рік початку водіння й (для орендаря) для чого орендує.
+ * Однакова форма в онбордингу й у «Профілі». Стан тримає батьківський екран.
+ */
+export function ProfileExtrasForm({ value, onChange, name, renter, submitted }: { value: ProfileExtras; onChange: (patch: Partial<ProfileExtras>) => void; name: string; renter: boolean; submitted?: boolean }) {
+  return (
+    <View style={styles.wrap}>
+      <ProfilePhoto photoUri={value.photoUri} name={name} onChange={(photoUri) => onChange({ photoUri })} />
 
       <CityField label="Місто (необов’язково)" value={value.city} onChange={(city) => onChange({ city })} clearable />
       <Field
@@ -93,7 +100,7 @@ export function ProfileExtrasForm({ value, onChange, name, renter, submitted }: 
       {questionsFor(renter ? 'renter' : 'owner').map((q) => (
         <View key={q.key} style={styles.question}>
           {q.multi ? (
-            <ChoiceChips multi label={q.label} hint={q.hint} options={q.options} value={value[q.key] as string[]} onChange={(v) => onChange({ [q.key]: v })} />
+            <ChoiceChips multi exclusive={q.exclusive} label={q.label} hint={q.hint} options={q.options} value={value[q.key] as string[]} onChange={(v) => onChange({ [q.key]: v })} />
           ) : (
             <ChoiceChips label={q.label} hint={q.hint} options={q.options} value={value[q.key] as string} onChange={(v) => onChange({ [q.key]: v })} />
           )}

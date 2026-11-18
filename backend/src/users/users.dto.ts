@@ -114,7 +114,7 @@ export class UpdateMeDto {
 
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(2)
+  @ArrayMaxSize(3)
   @IsIn(INSURANCES, { each: true })
   insurances?: string[];
 

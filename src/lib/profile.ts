@@ -29,7 +29,7 @@ export type OwnerAnswers = {
 export type Answers = RenterAnswers & OwnerAnswers;
 
 /** Питання анкети (орендаря чи власника): з них будується і форма, і блок «Відомості» в профілі, тому текст в одному місці */
-export type Question = { key: keyof Answers; /** Як показати значення в профілі, якщо підпис варіанта для цього не підходить */ format?: (value: string, answers: Partial<Answers>) => string; label: string; /** Підпис у профілі */ shown: string; icon: string; multi?: boolean; hint?: string; options: { value: string; label: string }[] };
+export type Question = { key: keyof Answers; /** Для вибору кількох: варіант «Немає» */ exclusive?: string; /** Як показати значення в профілі, якщо підпис варіанта для цього не підходить */ format?: (value: string, answers: Partial<Answers>) => string; label: string; /** Підпис у профілі */ shown: string; icon: string; multi?: boolean; hint?: string; options: { value: string; label: string }[] };
 
 export const RENTER_QUESTIONS: Question[] = [
   { key: 'purposes', label: 'Для чого потрібне авто', shown: 'Орендує для', icon: 'car-sport-outline', multi: true, hint: 'Можна вибрати кілька', options: Object.entries(PURPOSE_LABELS).map(([value, label]) => ({ value, label })) },
@@ -47,7 +47,7 @@ export const OWNER_QUESTIONS: Question[] = [
   { key: 'handovers', label: 'Як передаєте авто', shown: 'Передача авто', icon: 'key-outline', multi: true, hint: 'Можна вибрати обидва способи', options: [{ value: 'onsite', label: 'Зустріч на місці' }, { value: 'delivery', label: 'Привожу авто до орендаря' }] },
   { key: 'occupations', label: 'Чим займаєтесь', shown: 'Зайнятість', icon: 'briefcase-outline', multi: true, hint: 'Можна вибрати кілька', options: [{ value: 'rental', label: 'Здаю авто' }, { value: 'employee', label: 'Працюю за наймом' }, { value: 'fop', label: 'ФОП' }, { value: 'business', label: 'Власний бізнес' }, { value: 'other', label: 'Інше' }] },
   { key: 'hostingExperience', label: 'Як давно здаєте авто', shown: 'Досвід здачі', icon: 'ribbon-outline', options: [{ value: 'new', label: 'Тільки починаю' }, { value: 'year', label: 'До року' }, { value: 'years', label: '1–3 роки' }, { value: 'long', label: 'Понад 3 роки' }] },
-  { key: 'insurances', label: 'Страхування авто', shown: 'Страхування', icon: 'shield-checkmark-outline', multi: true, hint: 'Можна вибрати обидва', options: [{ value: 'osago', label: 'ОСЦПВ' }, { value: 'kasko', label: 'КАСКО' }] },
+  { key: 'insurances', label: 'Страхування авто', shown: 'Страхування', icon: 'shield-checkmark-outline', multi: true, exclusive: 'none', hint: 'Можна вибрати обидва', options: [{ value: 'osago', label: 'ОСЦПВ' }, { value: 'kasko', label: 'КАСКО' }, { value: 'none', label: 'Немає' }] },
   { key: 'serviceCare', label: 'Де обслуговуєте авто', shown: 'Обслуговування', icon: 'construct-outline', options: [{ value: 'official', label: 'Офіційний сервіс' }, { value: 'trusted', label: 'Перевірений сервіс' }] },
   {
     key: 'mileageLimit',

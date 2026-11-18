@@ -11,7 +11,7 @@ type Option = { value: string; label: string };
 
 type Props = { label: string; hint?: string; options: readonly Option[] } & (
   | { multi?: false; value: string; onChange: (value: string) => void }
-  | { multi: true; value: string[]; onChange: (value: string[]) => void }
+  | { multi: true; /** Варіант «Немає»: вибір знімає решту, а вибір іншого знімає його */ exclusive?: string; value: string[]; onChange: (value: string[]) => void }
 );
 
 /**
@@ -25,7 +25,11 @@ export function ChoiceChips(props: Props) {
 
   function press(v: string) {
     haptic.select();
-    if (props.multi) props.onChange(props.value.includes(v) ? props.value.filter((x) => x !== v) : [...props.value, v]);
+    if (props.multi) {
+      const { exclusive } = props;
+      if (exclusive && v === exclusive) props.onChange(props.value.includes(v) ? [] : [v]);
+      else props.onChange(props.value.includes(v) ? props.value.filter((x) => x !== v) : [...props.value.filter((x) => x !== exclusive), v]);
+    }
     else props.onChange(props.value === v ? '' : v);
   }
 
