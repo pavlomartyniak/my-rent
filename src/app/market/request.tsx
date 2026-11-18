@@ -139,7 +139,7 @@ export default function RentalRequestScreen() {
     </Screen>
 
       <View style={[styles.footer, { backgroundColor: theme.backgroundElement, borderTopColor: theme.border, paddingBottom: Math.max(insets.bottom, Spacing.three) }]}>
-        <Button title={`Надіслати запит · ≈ ${formatMoney(total + car.deposit)}`} icon="paper-plane-outline" loading={sending} onPress={send} />
+        <Button title="Надіслати запит" icon="paper-plane-outline" loading={sending} onPress={send} />
       </View>
     </View>
   );
