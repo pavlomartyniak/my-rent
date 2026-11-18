@@ -96,6 +96,7 @@ function Routes() {
           <Stack.Screen name="profile" options={{ title: 'Профіль', presentation: 'modal' }} />
           <Stack.Screen name="blocked" options={{ title: 'Заблоковані', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="transactions" options={{ title: 'Записи', headerBackTitle: 'Назад' }} />
+          <Stack.Screen name="user/[id]" options={{ title: 'Профіль', headerBackTitle: 'Назад' }} />
         </Stack.Protected>
       </Stack>
     </>

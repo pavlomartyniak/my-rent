@@ -30,6 +30,7 @@ function publicView(car: CarDocument, ownerName: string) {
     deposit: listing.deposit ?? 0,
     description: listing.description,
     owner: ownerName,
+    ownerId: String(car.userId),
   };
 }
 

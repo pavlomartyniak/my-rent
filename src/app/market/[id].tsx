@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HeroButton } from '@/components/hero-button';
+import { RatingLine } from '@/components/rating-stars';
 import { ReportSheet } from '@/components/report-sheet';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { PhotoViewer } from '@/components/photo-viewer';
@@ -20,6 +21,7 @@ import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { formatKm, formatMoney, initials } from '@/lib/format';
 import { confirmBlock } from '@/lib/moderation';
+import { openProfile, type ProfileView } from '@/lib/profiles';
 import type { MarketCar } from '@/lib/rentals';
 
 /** Оголошення: фото, умови й закріплена внизу кнопка «Надіслати запит» */
@@ -31,6 +33,8 @@ export default function MarketCarScreen() {
   const [viewer, setViewer] = useState(false);
   const [reporting, setReporting] = useState(false);
   const { data: car, loading, error, retry } = useReport<MarketCar>(`/market/cars/${id}`, { useCache: false });
+  // Рейтинг власника беремо з його профілю: шлях порожній, доки оголошення не завантажилось
+  const ownerProfile = useReport<ProfileView>(car ? `/users/${car.ownerId}/profile` : null);
 
   if (!car) {
     return (
@@ -107,21 +111,23 @@ export default function MarketCarScreen() {
             </View>
           </View>
 
-          <View style={styles.owner}>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Власник ${car.owner}. Відкрити профіль`} onPress={() => openProfile(car.ownerId)} style={styles.owner}>
             <View style={[styles.avatar, { backgroundColor: theme.accentSoft }]}>
               <ThemedText type="smallBold" themeColor="accent">
                 {initials(car.owner)}
               </ThemedText>
             </View>
-            <View>
+            <View style={{ flex: 1, gap: 2 }}>
               <ThemedText type="small" themeColor="textSecondary">
                 Власник
               </ThemedText>
               <ThemedText type="default" style={styles.bold}>
                 {car.owner}
               </ThemedText>
+              {ownerProfile.data ? <RatingLine rating={ownerProfile.data.rating} /> : null}
             </View>
-          </View>
+            <Icon name="chevron-forward" size={18} color="textSecondary" />
+          </Pressable>
         </Card>
 
         {car.description ? (

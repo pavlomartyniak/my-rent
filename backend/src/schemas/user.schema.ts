@@ -45,6 +45,10 @@ export class User {
   phoneKey?: string;
 
   /** Тип акаунта: owner — власник авто (облік), renter — орендар (пошук і запити); не змінюється */
+  /** Місто користувача: показується в профілі (необов'язково) */
+  @Prop({ default: '', trim: true })
+  city: string;
+
   @Prop({ enum: ROLES, default: 'owner' })
   role: string;
 

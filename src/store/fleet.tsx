@@ -10,6 +10,8 @@ import { useAuth } from './auth';
 import { isThemePreference, useThemePreference, type ThemePreference } from './theme';
 
 type Data = Profile & {
+  /** Ідентифікатор користувача: для відкриття власного профілю */
+  id: string;
   email: string;
   /** Тип акаунта: власник авто чи орендар */
   role: Role;
@@ -23,20 +25,22 @@ type Data = Profile & {
 
 /** Відповідь GET /data і POST /data/import */
 type ServerData = {
-  user: Partial<Profile> & { email: string; role?: Role; onboarded: boolean; dismissedHints: string[]; theme?: ThemePreference };
+  user: Partial<Profile> & { id?: string; email: string; role?: Role; onboarded: boolean; dismissedHints: string[]; theme?: ThemePreference };
   cars: Car[];
   reminders: Reminder[];
 };
 
-const EMPTY: Data = { email: '', role: 'owner', firstName: '', lastName: '', middleName: '', phone: '', cars: [], reminders: [], onboarded: false, dismissedHints: [], theme: 'system' };
+const EMPTY: Data = { id: '', email: '', role: 'owner', firstName: '', lastName: '', middleName: '', phone: '', city: '', cars: [], reminders: [], onboarded: false, dismissedHints: [], theme: 'system' };
 
 const fromServer = ({ user, cars, reminders }: ServerData): Data => ({
+  id: user.id ?? '',
   email: user.email,
   role: user.role === 'renter' ? 'renter' : 'owner',
   firstName: user.firstName ?? '',
   lastName: user.lastName ?? '',
   middleName: user.middleName ?? '',
   phone: user.phone ?? '',
+  city: user.city ?? '',
   cars,
   reminders,
   onboarded: user.onboarded,
@@ -249,7 +253,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
   );
 
   const updateMe = useCallback(
-    (changes: Partial<Pick<Data, 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'middleName' | 'phone'>>, onFields?: FieldsHandler) =>
+    (changes: Partial<Pick<Data, 'onboarded' | 'dismissedHints' | 'theme' | 'firstName' | 'lastName' | 'middleName' | 'phone' | 'city'>>, onFields?: FieldsHandler) =>
       run(async () => {
         await api('PATCH', '/me', changes);
         patch((d) => ({ ...d, ...changes }));

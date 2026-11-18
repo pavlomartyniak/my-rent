@@ -287,11 +287,12 @@ export class OffersService {
   private view(o: OfferDocument, as: 'renter' | 'owner', w: { startDate: string; endDate: string; city: string; brand: string; model: string; status: string; _id: Types.ObjectId }, people: Map<string, Person>, deal?: { dealId: string; dealStage: string; contract: boolean }) {
     const other = people.get(String(as === 'renter' ? o.ownerId : o.renterId));
     const accepted = o.status === 'accepted' || o.status === 'ended';
+    const otherId = String(as === 'renter' ? o.ownerId : o.renterId);
     const counterpart = other
       ? accepted
-        ? { name: fullName(other.firstName, other.lastName) }
-        : { name: maskedName(other.firstName, other.lastName) }
-      : { name: 'Користувач видалений' };
+        ? { id: otherId, name: fullName(other.firstName, other.lastName) }
+        : { id: otherId, name: maskedName(other.firstName, other.lastName) }
+      : { id: otherId, name: 'Користувач видалений' };
 
     return {
       id: String(o._id),

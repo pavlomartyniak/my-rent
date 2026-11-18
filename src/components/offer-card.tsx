@@ -13,6 +13,7 @@ import { PhotoGallery } from './photo-gallery';
 import { ContactChips } from './contact-chips';
 import { StatusBadge } from './status-badge';
 import { planLabel } from '@/lib/payment-plan';
+import { openProfile } from '@/lib/profiles';
 import { ThemedText } from './themed-text';
 
 import { Card } from './ui/card';
@@ -55,7 +56,7 @@ export function OfferCard({ offer: o, viewer, children }: Props) {
         <InfoRow label="Дати" value={`${formatDate(o.wanted.startDate)} – ${formatDate(o.wanted.endDate)}`} />
         {o.car.deposit ? <InfoRow label="Застава" value={formatMoney(o.car.deposit)} /> : null}
         {o.paymentPlan !== 'lump' ? <InfoRow label="Оплата" value={planLabel(o.paymentPlan)} /> : null}
-        <InfoRow label={who} value={o.counterpart.name} />
+        <InfoRow label={who} value={o.counterpart.name} onPress={() => openProfile(o.counterpart.id)} />
         <InfoRow label={`${o.days} ${plural(o.days, 'доба', 'доби', 'діб')} × ${formatMoney(o.pricePerDay)}`} value={formatMoney(o.totalPrice)} strong />
       </InfoRows>
 

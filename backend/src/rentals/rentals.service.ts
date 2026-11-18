@@ -21,7 +21,7 @@ import { fullName, maskedName, rentalDays, todayUtc, totalPrice, validateRange }
 
 const MAX_PENDING_PER_RENTER = 10;
 
-type Person = { name: string };
+type Person = { id: string; name: string };
 
 @Injectable()
 export class RentalsService {
@@ -256,11 +256,12 @@ export class RentalsService {
     const other = people.get(String(as === 'renter' ? r.ownerId : r.renterId));
     // Після прийняття (і після завершення оренди) відкриті повне ім'я й телефон
     const accepted = r.status === 'accepted' || r.status === 'ended';
+    const otherId = String(as === 'renter' ? r.ownerId : r.renterId);
     const counterpart: Person = other
       ? as === 'owner' || accepted
-        ? { name: fullName(other.firstName, other.lastName) }
-        : { name: maskedName(other.firstName, other.lastName) }
-      : { name: 'Користувач видалений' };
+        ? { id: otherId, name: fullName(other.firstName, other.lastName) }
+        : { id: otherId, name: maskedName(other.firstName, other.lastName) }
+      : { id: otherId, name: 'Користувач видалений' };
 
     return {
       id: String(r._id),

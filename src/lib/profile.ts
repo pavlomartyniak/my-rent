@@ -1,4 +1,4 @@
-export type Profile = { firstName: string; lastName: string; middleName: string; phone: string };
+export type Profile = { firstName: string; lastName: string; middleName: string; phone: string; /** Необов'язково: показується в профілі */ city?: string };
 
 /** Той самий шаблон, що й на сервері: цифри, +, пробіли, дужки, дефіси; 7–20 символів */
 const PHONE_PATTERN = /^\+?[0-9 ()-]{7,20}$/;

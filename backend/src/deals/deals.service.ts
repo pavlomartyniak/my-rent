@@ -853,7 +853,7 @@ export class DealsService {
       terminationNote: d.terminationNote ?? '',
       // Для орендаря це власник, для власника — орендар
       // Номер телефону віддається лише в чаті
-      counterpart: { name: p ? fullName(p.firstName, p.lastName) || fallback : fallback },
+      counterpart: { id: String(as === 'renter' ? d.ownerId : d.renterId), name: p ? fullName(p.firstName, p.lastName) || fallback : fallback },
       createdAt: d.createdAt,
     };
   }

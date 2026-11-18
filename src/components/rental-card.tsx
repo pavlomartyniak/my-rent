@@ -12,6 +12,7 @@ import { CarPhoto } from './car-photo';
 import { ContactChips } from './contact-chips';
 import { StatusBadge } from './status-badge';
 import { planLabel } from '@/lib/payment-plan';
+import { openProfile } from '@/lib/profiles';
 import { ThemedText } from './themed-text';
 import { Card } from './ui/card';
 import { InfoRow, InfoRows } from './ui/info-rows';
@@ -48,7 +49,7 @@ export function RentalCard({ rental: r, viewer, children }: Props) {
         <InfoRow label="Дати" value={`${formatDate(r.startDate)} – ${formatDate(r.endDate)}`} />
         {r.car.deposit ? <InfoRow label="Застава" value={formatMoney(r.car.deposit)} /> : null}
         {r.paymentPlan !== 'lump' ? <InfoRow label="Оплата" value={planLabel(r.paymentPlan)} /> : null}
-        <InfoRow label={who} value={r.counterpart.name} />
+        <InfoRow label={who} value={r.counterpart.name} onPress={() => openProfile(r.counterpart.id)} />
         <InfoRow label={`${r.days} ${plural(r.days, 'доба', 'доби', 'діб')} × ${formatMoney(r.car.pricePerDay)}`} value={formatMoney(r.totalPrice)} strong />
       </InfoRows>
 

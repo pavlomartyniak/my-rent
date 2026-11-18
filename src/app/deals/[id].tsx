@@ -5,6 +5,7 @@ import { CarPhoto } from '@/components/car-photo';
 import { PaymentsCard } from '@/components/payments-card';
 import { HeroButton } from '@/components/hero-button';
 import { RenterDealCard } from '@/components/renter-deal-card';
+import { ReviewButton } from '@/components/review-button';
 import { HistoryList } from '@/components/history-list';
 import { ReportStatus } from '@/components/report-status';
 import { StatusBadge } from '@/components/status-badge';
@@ -128,6 +129,8 @@ export default function DealScreen() {
       )}
 
       <RenterDealCard deal={d} overview={o} />
+
+      {stage === 'finished' || stage === 'terminated' ? <ReviewButton dealId={d.id} /> : null}
 
       {o ? (
           <Card style={styles.rentCard}>

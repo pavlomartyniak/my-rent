@@ -1,8 +1,9 @@
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { openChat } from '@/lib/chat';
+import { openProfile } from '@/lib/profiles';
 import { daysUntil, formatDate } from '@/lib/date';
 import { dealStage, type DealOverview, type DealView } from '@/lib/deals';
 import { formatMoney, initials, plural } from '@/lib/format';
@@ -31,19 +32,21 @@ export function RenterDealCard({ deal, overview }: { deal: DealView; overview?: 
       </ThemedText>
 
       <View style={styles.person}>
-        <View style={[styles.avatar, { backgroundColor: theme.accentSoft }]}>
-          <ThemedText type="smallBold" themeColor="accent">
-            {initials(deal.counterpart.name)}
-          </ThemedText>
-        </View>
-        <View style={styles.flex}>
-          <ThemedText type="small" themeColor="textSecondary">
-            Власник
-          </ThemedText>
-          <ThemedText type="default" style={styles.bold} numberOfLines={1}>
-            {deal.counterpart.name}
-          </ThemedText>
-        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Власник ${deal.counterpart.name}. Відкрити профіль`} onPress={() => openProfile(deal.counterpart.id)} style={[styles.person, styles.flex]}>
+          <View style={[styles.avatar, { backgroundColor: theme.accentSoft }]}>
+            <ThemedText type="smallBold" themeColor="accent">
+              {initials(deal.counterpart.name)}
+            </ThemedText>
+          </View>
+          <View style={styles.flex}>
+            <ThemedText type="small" themeColor="textSecondary">
+              Власник
+            </ThemedText>
+            <ThemedText type="default" style={styles.bold} numberOfLines={1}>
+              {deal.counterpart.name}
+            </ThemedText>
+          </View>
+        </Pressable>
         <IconButton icon="chatbubble-ellipses-outline" label="Написати" onPress={() => void openChat({ dealId: deal.id })} />
       </View>
 

@@ -51,7 +51,7 @@ export type OfferView = {
   createdAt: string;
   car: { title: string; brand: string; model: string; year: number; mileage: number; fuel?: string; deposit?: number; photoUri?: string; photos: string[] };
   /** Для орендаря — власник, для власника — орендар; телефон віддається лише в чаті */
-  counterpart: { name: string };
+  counterpart: { id: string; name: string };
   wanted: { city: string; brand: string; model: string; startDate: string; endDate: string; status: WantedStatus };
 };
 

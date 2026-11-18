@@ -9,6 +9,7 @@ import { formatMoney } from '@/lib/format';
 import { Spacing } from '@/constants/theme';
 import { useFleet } from '@/store/fleet';
 
+import { ReviewButton } from './review-button';
 import { StatusBadge } from './status-badge';
 import { ThemedText } from './themed-text';
 import { Button } from './ui/button';
@@ -53,6 +54,7 @@ export function ArchivedDeals({ carId }: { carId: string }) {
               </View>
               <StatusBadge status={dealStage(d)} />
             </View>
+            <ReviewButton dealId={d.id} />
             <Button
               title="Видалити з архіву"
               icon="trash-outline"

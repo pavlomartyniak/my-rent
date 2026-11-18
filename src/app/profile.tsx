@@ -10,12 +10,13 @@ import { useFleet } from '@/store/fleet';
 /** Редагування профілю: прізвище, ім'я, по батькові (ПІБ у договорі) і телефон. Email змінити не можна. */
 export default function ProfileScreen() {
   const router = useRouter();
-  const { email, firstName: savedFirst, lastName: savedLast, middleName: savedMiddle, phone: savedPhone, updateProfile } = useFleet();
+  const { email, firstName: savedFirst, lastName: savedLast, middleName: savedMiddle, phone: savedPhone, city: savedCity, updateProfile, id: myId } = useFleet();
 
   const [firstName, setFirstName] = useState(savedFirst);
   const [lastName, setLastName] = useState(savedLast);
   const [middleName, setMiddleName] = useState(savedMiddle);
   const [phone, setPhone] = useState(savedPhone);
+  const [city, setCity] = useState(savedCity ?? '');
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
   // Помилки полів від сервера (наприклад, телефон уже зайнятий): підсвічують поле, поки його не змінять
@@ -35,7 +36,7 @@ export default function ProfileScreen() {
     if (Object.values(errors).some(Boolean)) return;
     setSaving(true);
     setServerErrors({});
-    const ok = await updateProfile({ firstName: firstName.trim(), lastName: lastName.trim(), middleName: middleName.trim(), phone: phone.trim() }, setServerErrors);
+    const ok = await updateProfile({ firstName: firstName.trim(), lastName: lastName.trim(), middleName: middleName.trim(), phone: phone.trim(), city: city.trim() }, setServerErrors);
     setSaving(false);
     if (ok) router.back();
   }
@@ -58,6 +59,8 @@ export default function ProfileScreen() {
         maxLength={20}
         placeholder="+380 67 123 45 67"
       />
+      <Field label="Місто (необов’язково)" value={city} onChangeText={(v) => { setCity(v); clear('city'); }} error={serverErrors.city} autoCapitalize="words" maxLength={60} placeholder="Київ" />
+      <Button title="Як бачать мій профіль інші" variant="soft" icon="eye-outline" disabled={!myId} onPress={() => router.push({ pathname: '/user/[id]', params: { id: myId } })} />
       <Field label="Email (змінити не можна)" value={email} editable={false} selectTextOnFocus={false} style={{ opacity: 0.6 }} />
       <Button title={saving ? 'Зберігаємо…' : 'Зберегти'} disabled={saving} onPress={onSave} />
     </Screen>

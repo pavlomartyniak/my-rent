@@ -33,6 +33,13 @@ export class UpdateMeDto {
   @Matches(PHONE_PATTERN, { message: 'Невірний формат телефону' })
   phone?: string;
 
+  /** Місто (необов'язково): можна й очистити */
+  @Trim()
+  @IsOptional()
+  @IsString()
+  @MaxLength(60, { message: 'Назва міста задовга' })
+  city?: string;
+
   @IsOptional()
   @IsBoolean()
   onboarded?: boolean;

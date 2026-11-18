@@ -1,5 +1,5 @@
 import { Children, Fragment, type ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -7,16 +7,16 @@ import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '../themed-text';
 
 /** Рядок «підпис — значення»: сірий підпис ліворуч, значення праворуч; `strong` — підсумковий рядок */
-export function InfoRow({ label, value, strong, tone }: { label: string; value: string; strong?: boolean; tone?: 'positive' | 'negative' }) {
+export function InfoRow({ label, value, strong, tone, onPress }: { label: string; value: string; strong?: boolean; tone?: 'positive' | 'negative'; /** Рядок натискається (наприклад, відкрити профіль): значення стає акцентним */ onPress?: () => void }) {
   return (
-    <View style={styles.row}>
+    <Pressable disabled={!onPress} onPress={onPress} accessibilityRole={onPress ? 'button' : undefined} accessibilityLabel={onPress ? `${label}: ${value}. Відкрити профіль` : undefined} style={styles.row}>
       <ThemedText type="small" themeColor="textSecondary" style={styles.label}>
         {label}
       </ThemedText>
-      <ThemedText type={strong ? 'default' : 'small'} style={[styles.value, strong && styles.strong]} themeColor={tone} numberOfLines={2}>
+      <ThemedText type={strong ? 'default' : 'small'} style={[styles.value, strong && styles.strong]} themeColor={onPress ? 'accent' : tone} numberOfLines={2}>
         {value}
       </ThemedText>
-    </View>
+    </Pressable>
   );
 }
 
