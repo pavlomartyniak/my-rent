@@ -136,7 +136,7 @@ export default function CarScreen() {
       </View>
 
       {report ? (
-        <SummaryCard title="Прибуток за весь час" profit={report.overview.profit} income={report.overview.income} expense={report.overview.expense}>
+        <SummaryCard title="Прибуток за весь час" profit={report.overview.profit} income={report.overview.income} expense={report.overview.expense} scope={{ period: 'all', label: 'За весь час', carId: car.id }}>
           <PaybackCard
             bare
             profit={report.overview.profit}

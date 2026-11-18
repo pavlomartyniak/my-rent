@@ -5,7 +5,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { openChat } from '@/lib/chat';
 import { contactActions } from '@/lib/contact-actions';
-import { daysUntil, formatDate } from '@/lib/date';
+import { daysUntil, formatDate, monthKey, monthTitle, todayISO } from '@/lib/date';
 import { dealStage, type DealOverview, type DealView } from '@/lib/deals';
 import { formatMoney, plural, splitTitle } from '@/lib/format';
 import type { Totals } from '@/lib/reports';
@@ -65,8 +65,12 @@ export function ActiveDealCard({ deal, month, overview }: Props) {
   const add = (type: 'income' | 'expense') => router.push({ pathname: '/transaction/new', params: { dealId: deal.id, type } });
 
   const balance = overview?.rentBalance ?? 0;
-  const balanceLabel = !overview || balance === 0 ? 'Оренда' : balance > 0 ? 'Оренда · борг' : 'Оренда · наперед';
-  const balanceText = !overview ? '—' : balance === 0 ? 'Сплачено' : formatMoney(Math.abs(balance));
+  // Баланс розрахунків з власником: пояснюємо словами, що саме означає сума (борг чи оплата наперед)
+  const balanceText = !overview ? '—' : balance === 0 ? 'Сплачено' : `${balance > 0 ? '−' : '+'}${formatMoney(Math.abs(balance))}`;
+  const balanceNote = !overview ? '' : balance === 0 ? 'розрахунок без боргу' : balance > 0 ? 'борг власнику' : 'оплачено на майбутні дні';
+  const month_ = monthKey(todayISO());
+  const openMonth = () => router.push({ pathname: '/transactions', params: { period: month_, label: monthTitle(month_), dealId: deal.id } });
+  const openDeal = () => router.push({ pathname: '/deals/[id]', params: { id: deal.id } });
   const days = stage === 'upcoming' ? daysUntil(deal.startDate) : left;
 
   return (
@@ -124,22 +128,44 @@ export function ActiveDealCard({ deal, month, overview }: Props) {
         ) : (
           <>
             <View style={styles.stats}>
-              <View style={[styles.stat, { backgroundColor: theme.backgroundSelected }]}>
-                <ThemedText type="small" themeColor="textSecondary">
-                  За місяць
-                </ThemedText>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`За місяць: ${formatMoney(month?.profit ?? 0)}. Показати записи`}
+                onPress={openMonth}
+                style={({ pressed }) => [styles.stat, { backgroundColor: theme.backgroundSelected }, pressed && styles.pressed]}>
+                <View style={styles.statHead}>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    За місяць
+                  </ThemedText>
+                  <Icon name="chevron-forward" size={14} color="textSecondary" />
+                </View>
                 <ThemedText style={styles.statValue} themeColor={!month || month.profit >= 0 ? 'positive' : 'negative'} numberOfLines={1} adjustsFontSizeToFit>
                   {formatMoney(month?.profit ?? 0)}
                 </ThemedText>
-              </View>
-              <View style={[styles.stat, { backgroundColor: theme.backgroundSelected }]}>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {balanceLabel}
+                <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
+                  доходи мінус витрати
                 </ThemedText>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Розрахунок з власником: ${balanceText}${balanceNote ? `, ${balanceNote}` : ''}. Відкрити платежі`}
+                onPress={openDeal}
+                style={({ pressed }) => [styles.stat, { backgroundColor: theme.backgroundSelected }, pressed && styles.pressed]}>
+                <View style={styles.statHead}>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Розрахунок
+                  </ThemedText>
+                  <Icon name="chevron-forward" size={14} color="textSecondary" />
+                </View>
                 <ThemedText style={styles.statValue} themeColor={balance > 0 ? 'negative' : 'positive'} numberOfLines={1} adjustsFontSizeToFit>
                   {balanceText}
                 </ThemedText>
-              </View>
+                {balanceNote ? (
+                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
+                    {balanceNote}
+                  </ThemedText>
+                ) : null}
+              </Pressable>
             </View>
 
             <View style={styles.actions}>
@@ -169,6 +195,7 @@ const styles = StyleSheet.create({
   fill: { height: 8, borderRadius: 4 },
   stats: { flexDirection: 'row', gap: Spacing.two },
   stat: { flex: 1, borderRadius: Radius.md, paddingVertical: Spacing.two + 4, paddingHorizontal: Spacing.three, gap: 2 },
+  statHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 4 },
   statValue: { fontSize: 22, lineHeight: 28, fontWeight: 700 },
   actions: { flexDirection: 'row', gap: Spacing.two },
   action: { flex: 1, minHeight: 48, borderRadius: Radius.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: Spacing.two },

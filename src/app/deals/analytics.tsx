@@ -42,7 +42,7 @@ export default function DealAnalyticsScreen() {
         <ReportStatus loading={loading} error={error} onRetry={retry} />
       ) : (
         <>
-          <SummaryCard title={`Прибуток · ${p.label}`} profit={data.totals.profit} income={data.totals.income} expense={data.totals.expense} />
+          <SummaryCard title={`Прибуток · ${p.label}`} profit={data.totals.profit} income={data.totals.income} expense={data.totals.expense} scope={{ period: p.key, label: p.label, dealId: id }} />
 
           <Card>
             <BarChart key={p.key} data={data.series} scope={{ dealId: id }} titled />
@@ -53,7 +53,7 @@ export default function DealAnalyticsScreen() {
           </Card>
 
           <SectionHeader title="За весь час оренди" />
-          <SummaryCard title="Прибуток" profit={o.profit} income={o.income} expense={o.expense}>
+          <SummaryCard title="Прибуток" profit={o.profit} income={o.income} expense={o.expense} scope={{ period: 'all', label: 'За весь час', dealId: id }}>
             {share !== null ? (
               <View style={styles.share}>
                 <SplitBar income={o.income} expense={o.expense} />

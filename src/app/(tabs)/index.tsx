@@ -74,7 +74,7 @@ export default function HomeScreen() {
       <AttentionList role="owner" />
 
       {report ? (
-        <SummaryCard title={`Прибуток · ${monthTitle(month)}`} profit={report.totals.profit} income={report.totals.income} expense={report.totals.expense} />
+        <SummaryCard title={`Прибуток · ${monthTitle(month)}`} profit={report.totals.profit} income={report.totals.income} expense={report.totals.expense} scope={{ period: month, label: monthTitle(month) }} />
       ) : (
         <ReportStatus loading={loading} error={error} onRetry={retry} />
       )}

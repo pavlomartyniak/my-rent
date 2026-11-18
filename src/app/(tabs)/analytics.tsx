@@ -70,7 +70,8 @@ export default function ReportScreen() {
             income={data.totals.income}
             expense={data.totals.expense}
             change={data.previousPeriod ? data.change.profit : undefined}
-            margin={data.totals.margin}>
+            margin={data.totals.margin}
+            scope={{ period: p.key, label: p.label }}>
             <View style={styles.export}>
               <ExportButton filter={{ period: p.key }} subtitle={`Усі авто · ${p.label}`} title={`Експорт за ${p.label}`} />
             </View>

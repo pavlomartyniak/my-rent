@@ -114,7 +114,7 @@ export default function DealScreen() {
       )}
 
       {o ? (
-          <SummaryCard title="Прибуток за весь час" profit={o.profit} income={o.income} expense={o.expense} caption={o.elapsedDays > 0 ? `≈ ${formatMoney(o.avgProfitPerDay)} на добу` : undefined}>
+          <SummaryCard title="Прибуток за весь час" profit={o.profit} income={o.income} expense={o.expense} scope={{ period: 'all', label: 'За весь час', dealId: d.id }} caption={o.elapsedDays > 0 ? `≈ ${formatMoney(o.avgProfitPerDay)} на добу` : undefined}>
             <Button
               title="Детальна аналітика"
               icon="stats-chart"

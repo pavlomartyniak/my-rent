@@ -67,7 +67,7 @@ function CarReportView({ report, carId, price, periodLabel, periodKey, exportSub
 
   return (
     <>
-      <SummaryCard title={`Прибуток · ${periodLabel}`} profit={totals.profit} income={totals.income} expense={totals.expense}>
+      <SummaryCard title={`Прибуток · ${periodLabel}`} profit={totals.profit} income={totals.income} expense={totals.expense} scope={{ period: periodKey, label: periodLabel, carId }}>
         <View style={styles.export}>
           <ExportButton filter={{ carId, period: periodKey }} subtitle={exportSubtitle} title={`Експорт за ${periodLabel}`} />
         </View>
@@ -89,7 +89,7 @@ function CarReportView({ report, carId, price, periodLabel, periodKey, exportSub
           з {formatDate(overview.since)} · {formatMonths(overview.monthsOwned)}
         </ThemedText>
       </View>
-      <SummaryCard title="Прибуток" profit={overview.profit} income={overview.income} expense={overview.expense}>
+      <SummaryCard title="Прибуток" profit={overview.profit} income={overview.income} expense={overview.expense} scope={{ period: 'all', label: 'За весь час', carId }}>
         {overview.expenseShare !== null ? (
           <View style={styles.share}>
             <SplitBar income={overview.income} expense={overview.expense} />

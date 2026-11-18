@@ -69,26 +69,53 @@ export class TransactionsService {
   }
 
   /**
-   * Записи користувача за місяць (РРРР-ММ) чи рік (РРРР), найновіші першими, з назвою авто. Без `carId`/`dealId` — усі
+   * Записи користувача за місяць (РРРР-ММ), рік (РРРР) чи увесь час (all), за потреби лише доходи або лише витрати, найновіші першими, з назвою авто. Без `carId`/`dealId` — усі
    * записи користувача, з ними — лише цього авто чи цієї оренди. Чужих записів тут не буває: вибірка завжди
    * обмежена власником. Віддається до `MONTH_LIMIT` записів, `total` каже, скільки їх є насправді.
    */
-  async inPeriod(user: AuthUser, periodKey: string, target: { carId?: string; dealId?: string }) {
+  async inPeriod(
+    user: AuthUser,
+    periodKey: string,
+    target: { carId?: string; dealId?: string; type?: 'income' | 'expense'; category?: string; from?: string; to?: string },
+  ) {
     const period = parsePeriod(periodKey);
-    if (!period || period.kind === 'all') throw new BadRequestException('Невірний період: очікується РРРР-ММ або РРРР');
-    const filter = {
+    if (!period) throw new BadRequestException('Невірний період: очікується РРРР-ММ, РРРР або all');
+    if (target.from && target.to && target.from > target.to) throw new BadRequestException('Початок діапазону пізніший за кінець');
+    // Довільний діапазон (обидві межі включно) має пріоритет над місяцем, роком чи всім часом
+    const range = target.from || target.to ? { $gte: target.from ?? '0000-01-01', $lte: target.to ?? '9999-12-31' } : { $gte: period.from, $lt: period.to };
+    const base = {
       userId: new Types.ObjectId(user.id),
-      date: { $gte: period.from, $lt: period.to },
+      date: range,
       ...(target.carId ? { carId: new Types.ObjectId(target.carId) } : {}),
       ...(target.dealId ? { dealId: new Types.ObjectId(target.dealId) } : {}),
+      ...(target.type ? { type: target.type } : {}),
     };
-    const [total, items] = await Promise.all([
+    const filter = target.category ? { ...base, category: target.category } : base;
+    const [total, items, groups] = await Promise.all([
       this.transactions.countDocuments(filter),
       this.transactions.find(filter).sort({ date: -1, _id: -1 }).limit(MONTH_LIMIT).exec(),
+      // Підсумки й розподіл за категоріями рахуємо по всіх записах періоду, а не лише по найновіших 300; категорія не звужує діаграму
+      this.transactions.aggregate<{ _id: { type: 'income' | 'expense'; category: string }; sum: number; count: number }>([
+        { $match: base },
+        { $group: { _id: { type: '$type', category: '$category' }, sum: { $sum: '$amount' }, count: { $sum: 1 } } },
+      ]),
     ]);
     const cars = await this.cars.find({ _id: { $in: [...new Set(items.map((t) => String(t.carId)))] } }, 'brand model').lean().exec();
     const titles = new Map(cars.map((c) => [String(c._id), `${c.brand} ${c.model}`]));
-    return { total, items: items.map((t) => ({ ...t.toJSON(), car: titles.get(String(t.carId)) ?? '' })) };
+
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+    const sum = (type: 'income' | 'expense') => groups.filter((g) => g._id.type === type).reduce((n, g) => n + g.sum, 0);
+    const income = round2(sum('income'));
+    const expense = round2(sum('expense'));
+    // Розподіл за категоріями має сенс для одного типу: або доходи, або витрати
+    const kindTotal = target.type === 'income' ? income : expense;
+    const categories = target.type
+      ? groups
+          .filter((g) => g._id.type === target.type)
+          .map((g) => ({ category: g._id.category, amount: round2(g.sum), count: g.count, share: kindTotal ? Math.round((g.sum / kindTotal) * 1000) / 10 : 0 }))
+          .sort((x, y) => y.amount - x.amount)
+      : [];
+    return { total, totals: { income, expense, profit: round2(income - expense) }, categories, items: items.map((t) => ({ ...t.toJSON(), car: titles.get(String(t.carId)) ?? '' })) };
   }
 
   async create(user: AuthUser, dto: CreateTransactionDto) {

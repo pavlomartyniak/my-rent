@@ -1,8 +1,9 @@
 import { Body, Controller, Delete, Get, Header, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
 import { Type } from 'class-transformer';
-import { IsInt, IsMongoId, IsOptional, Matches, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsMongoId, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 
 import { type AuthUser, CurrentUser } from '../common/current-user';
+import { IsIsoDay } from '../common/is-iso-day';
 import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
 import { CreateTransactionDto, UpdateTransactionDto } from './transactions.dto';
 import { TransactionsService } from './transactions.service';
@@ -25,9 +26,29 @@ class HistoryQuery {
 }
 
 class MonthQuery {
-  /** Місяць вигляду YYYY-MM або рік YYYY (стовпчик графіка за весь час) */
-  @Matches(/^\d{4}(-(0[1-9]|1[0-2]))?$/, { message: 'Період має вигляд РРРР-ММ або РРРР' })
+  /** Місяць вигляду YYYY-MM, рік YYYY (стовпчик графіка) або `all` — увесь час */
+  @Matches(/^(\d{4}(-(0[1-9]|1[0-2]))?|all)$/, { message: 'Період має вигляд РРРР-ММ, РРРР або all' })
   period: string;
+
+  /** Лише доходи чи лише витрати: так відкриваються плашки «Дохід» і «Витрати» */
+  @IsOptional()
+  @IsIn(['income', 'expense'])
+  type?: 'income' | 'expense';
+
+  /** Лише записи цієї категорії (клік по сегменту діаграми); діаграма й підсумки лишаються за весь вибраний період */
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  category?: string;
+
+  /** Довільний діапазон днів (включно): перекриває `period` */
+  @IsOptional()
+  @IsIsoDay()
+  from?: string;
+
+  @IsOptional()
+  @IsIsoDay()
+  to?: string;
 
   @IsOptional()
   @IsMongoId()
@@ -57,8 +78,8 @@ export class TransactionsController {
   /** Записи за вибраний місяць чи рік у звітах: що саме було доходом і на що пішли витрати */
   @Header('Cache-Control', 'no-store')
   @Get('period')
-  period(@CurrentUser() user: AuthUser, @Query() { period, carId, dealId }: MonthQuery) {
-    return this.transactions.inPeriod(user, period, { carId, dealId });
+  period(@CurrentUser() user: AuthUser, @Query() { period, carId, dealId, type, category, from, to }: MonthQuery) {
+    return this.transactions.inPeriod(user, period, { carId, dealId, type, category, from, to });
   }
 
   @Get(':id')

@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -11,7 +11,7 @@ import { ThemedText } from './themed-text';
 import { Icon } from './ui/icon';
 
 /** На що йдуть витрати: кільцева діаграма із загальною сумою, а під нею категорії з кольором, сумою, смужкою й часткою */
-export function CategoryBreakdown({ items }: { items: CategoryShare[] }) {
+export function CategoryBreakdown({ items, onSelect, emptyText = 'Витрат за цей період немає.', label }: { items: (CategoryShare & { count?: number })[]; /** Якщо задано, рядок категорії натискається (наприклад, показати її записи) */ onSelect?: (category: string) => void; emptyText?: string; /** Підпис під сумою в центрі кільця */ label?: string }) {
   const theme = useTheme();
   if (!items.length) {
     return (
@@ -19,7 +19,7 @@ export function CategoryBreakdown({ items }: { items: CategoryShare[] }) {
         <View style={[styles.emptyIcon, { backgroundColor: theme.positiveSoft }]}>
           <Icon name="checkmark" size={20} color="positive" />
         </View>
-        <ThemedText type="default">Витрат за цей період немає.</ThemedText>
+        <ThemedText type="default">{emptyText}</ThemedText>
       </View>
     );
   }
@@ -28,16 +28,27 @@ export function CategoryBreakdown({ items }: { items: CategoryShare[] }) {
 
   return (
     <View style={styles.wrap}>
-      <DonutChart slices={colored.map((c) => ({ key: c.category, amount: c.amount, color: c.color }))} />
+      <DonutChart slices={colored.map((c) => ({ key: c.category, amount: c.amount, color: c.color }))} label={label} />
       <View style={styles.list}>
         {colored.map((item) => (
-          <View key={item.category} style={styles.item}>
+          <Pressable
+            key={item.category}
+            disabled={!onSelect}
+            onPress={() => onSelect?.(item.category)}
+            accessibilityRole={onSelect ? 'button' : undefined}
+            accessibilityLabel={onSelect ? `${item.category}: ${formatMoney(item.amount)}, ${Math.round(item.share)}%. Показати записи` : undefined}
+            style={({ pressed }) => [styles.item, pressed && { opacity: 0.6 }]}>
             <View style={styles.row}>
               <View style={styles.name}>
                 <View style={[styles.dot, { backgroundColor: item.color }]} />
                 <ThemedText type="default" style={styles.bold}>
                   {item.category}
                 </ThemedText>
+                {item.count ? (
+                  <ThemedText type="small" themeColor="textSecondary">
+                    · {item.count}
+                  </ThemedText>
+                ) : null}
               </View>
               <ThemedText type="default" style={styles.amount}>
                 {formatMoney(item.amount)}
@@ -51,7 +62,7 @@ export function CategoryBreakdown({ items }: { items: CategoryShare[] }) {
                 {Math.round(item.share)}%
               </ThemedText>
             </View>
-          </View>
+          </Pressable>
         ))}
       </View>
     </View>

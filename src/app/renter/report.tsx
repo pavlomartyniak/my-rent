@@ -62,7 +62,8 @@ export default function RenterReportScreen() {
             expense={data.totals.expense}
             change={data.previousPeriod ? data.change.profit : undefined}
             margin={data.totals.margin}
-            caption={noIncomeNote}>
+            caption={noIncomeNote}
+            scope={{ period: p.key, label: p.label }}>
             <View style={styles.export}>
               <ExportButton filter={{ period: p.key }} subtitle={`Усі оренди · ${p.label}`} title={`Експорт за ${p.label}`} />
             </View>
