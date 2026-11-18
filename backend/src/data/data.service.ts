@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { ClientSession, Model } from 'mongoose';
 
@@ -42,6 +42,16 @@ export class DataService {
     ]);
     if (!user) throw new NotFoundException('Користувача не знайдено');
     return { user, cars, reminders };
+  }
+
+  /** «Видалити всі дані» не чіпає авто, що зараз в оренді: спершу оренду треба завершити чи розірвати */
+  async assertNoRentedCars(userId: string) {
+    const today = new Date().toISOString().slice(0, 10);
+    const [byStatus, byDeal] = await Promise.all([
+      this.cars.exists({ userId, status: { $in: ['В оренді', 'Заброньоване'] } }),
+      this.deals.exists({ ownerId: userId, status: { $ne: 'terminated' }, endDate: { $gte: today } }),
+    ]);
+    if (byStatus || byDeal) throw new ConflictException('Є авто в оренді, тому видалити всі дані не можна. Спершу завершіть чи розірвіть оренди або змініть статус авто');
   }
 
   /** Видаляє авто, записи й нагадування; акаунт залишається */

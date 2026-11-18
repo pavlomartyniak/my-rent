@@ -209,7 +209,7 @@ export default function CarScreen() {
         )}
       </Card>
 
-      <DeleteCar carId={car.id} name={`${car.brand} ${car.model}`} />
+      <DeleteCar carId={car.id} name={`${car.brand} ${car.model}`} rented={car.status === 'В оренді' || car.status === 'Заброньоване'} />
       {viewer ? <PhotoViewer photos={photos} startIndex={0} onClose={() => setViewer(false)} /> : null}
     </Screen>
   );

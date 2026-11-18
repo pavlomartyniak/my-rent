@@ -218,7 +218,7 @@ export function CarForm({ car }: { car?: Car }) {
       ) : null}
 
       <Button title={saving ? 'Зберігаємо…' : 'Зберегти'} disabled={saving} onPress={onSave} />
-      {car ? <DeleteCar carId={car.id} name={`${car.brand} ${car.model}`} /> : null}
+      {car ? <DeleteCar carId={car.id} name={`${car.brand} ${car.model}`} rented={car.status === 'В оренді' || car.status === 'Заброньоване'} /> : null}
     </Screen>
   );
 }

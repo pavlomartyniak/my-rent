@@ -33,6 +33,9 @@ function withCarLegal<T extends Partial<CarLegal>>(dto: T): T {
   return out;
 }
 
+/** Статуси, за яких авто вважається в оренді й видаляти його не можна */
+export const RENTED_STATUSES: readonly string[] = ['В оренді', 'Заброньоване'];
+
 @Injectable()
 export class CarsService {
   constructor(
@@ -136,10 +139,12 @@ export class CarsService {
 
   /** Видаляє авто разом з його записами й нагадуваннями */
   async remove(userId: string, id: string) {
-    // Авто, яке зараз здане орендарю, видаляти не можна: спершу розірвіть оренду
+    // Авто в оренді (за договором чи позначене власником «В оренді»/«Заброньоване») видаляти не можна: спершу завершіть чи розірвіть оренду
     const today = new Date().toISOString().slice(0, 10);
-    if (await this.deals.exists({ ownerId: userId, carId: id, status: { $ne: 'terminated' }, endDate: { $gte: today } })) {
-      throw new ConflictException('Авто зараз в оренді. Спершу розірвіть оренду (картка авто → «Зараз в оренді»)');
+    const current = await this.cars.findOne({ _id: id, userId }, 'status').lean().exec();
+    const hasDeal = await this.deals.exists({ ownerId: userId, carId: id, status: { $ne: 'terminated' }, endDate: { $gte: today } });
+    if (hasDeal || (current && RENTED_STATUSES.includes(current.status))) {
+      throw new ConflictException('Авто зараз в оренді, тому його не можна видалити. Спершу завершіть чи розірвіть оренду (картка авто → «Зараз в оренді») або змініть статус авто');
     }
     const car = await this.cars.findOneAndDelete({ _id: id, userId }).exec();
     if (!car) throw new NotFoundException('Авто не знайдено');

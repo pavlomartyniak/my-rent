@@ -16,6 +16,7 @@ export class DataController {
   @HttpCode(204)
   @Delete('data')
   async clear(@CurrentUser() user: AuthUser) {
+    await this.data.assertNoRentedCars(user.id);
     await this.data.clear(user.id);
   }
 

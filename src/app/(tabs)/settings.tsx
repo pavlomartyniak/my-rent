@@ -26,7 +26,7 @@ const THEMES: { label: string; value: ThemePreference }[] = [
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { role, email, firstName, lastName, phone, photoUri, clearAll, resetHints, setTheme, deleteAccount } = useFleet();
+  const { role, email, firstName, lastName, phone, photoUri, cars, clearAll, resetHints, setTheme, deleteAccount } = useFleet();
   const { signOut } = useAuth();
   const { preference } = useThemePreference();
   const owner = role === 'owner';
@@ -136,7 +136,11 @@ export default function SettingsScreen() {
             title="Видалити всі дані"
             subtitle="Авто, записи й нагадування буде стерто безповоротно"
             danger
-            onPress={() => confirm('Видалити всі дані?', 'Авто, записи й нагадування буде стерто безповоротно.', clearAll)}
+            onPress={() =>
+              cars.some((c) => c.status === 'В оренді' || c.status === 'Заброньоване')
+                ? Alert.alert('Є авто в оренді', 'Видалити всі дані не можна, поки хоч одне авто в оренді. Спершу завершіть чи розірвіть оренду або змініть статус авто.')
+                : confirm('Видалити всі дані?', 'Авто, записи й нагадування буде стерто безповоротно.', clearAll)
+            }
           />
         </SettingsGroup>
       ) : null}
