@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/date';
 import type { DealView } from '@/lib/deals';
 import { dealStage } from '@/lib/deals';
@@ -49,6 +50,7 @@ export function ContractCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
           <Steps title="Щоб почати оренду без договору" steps={steps} />
           {ready ? <Button title="Підтвердити умови" icon="checkmark-circle-outline" onPress={() => setAcking(true)} /> : null}
           {stateAction ? <Button title={stateAction.title} icon={stateAction.icon} onPress={() => router.push({ pathname: '/condition/[id]', params: { id: deal.id } })} /> : null}
+          <CancelAgreement dealId={deal.id} />
           <AckSheet
             dealId={deal.id}
             visible={acking}
@@ -97,6 +99,7 @@ export function ContractCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
         <Steps title="Щоб почати оренду" steps={steps} />
         {stateAction ? <Button title={stateAction.title} icon={stateAction.icon} onPress={() => router.push({ pathname: '/condition/[id]', params: { id: deal.id } })} /> : null}
         <Button title={ready ? 'Переглянути й підписати' : 'Переглянути договір'} icon="document-text-outline" variant={ready ? 'primary' : 'secondary'} onPress={open} />
+        <CancelAgreement dealId={deal.id} />
       </View>
     );
   }
@@ -119,6 +122,41 @@ export function ContractCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
         </View>
         <Icon name="chevron-forward" size={18} color="textSecondary" />
       </View>
+    </Pressable>
+  );
+}
+
+/** Вихід з угоди до підписання: спокійна кнопка під кроками. Після підписання її немає: далі лише розірвання за згодою */
+function CancelAgreement({ dealId }: { dealId: string }) {
+  const theme = useTheme();
+  const { invalidate } = useFleet();
+  const [busy, setBusy] = useState(false);
+
+  const confirm = () =>
+    Alert.alert('Скасувати домовленість?', 'Договір не буде підписано, авто знову стане вільним, а друга сторона побачить скасування.', [
+      { text: 'Залишити', style: 'cancel' },
+      {
+        text: 'Скасувати домовленість',
+        style: 'destructive',
+        onPress: async () => {
+          setBusy(true);
+          try {
+            await api('POST', `/deals/${dealId}/cancel-agreement`, {});
+          } catch (e) {
+            Alert.alert('Не вдалося скасувати', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
+          } finally {
+            setBusy(false);
+            invalidate();
+          }
+        },
+      },
+    ]);
+
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel="Скасувати домовленість" disabled={busy} onPress={confirm} style={[styles.cancel, busy && { opacity: 0.5 }]} hitSlop={8}>
+      <ThemedText type="callout" style={{ color: theme.negative, fontWeight: 600 }}>
+        Скасувати домовленість
+      </ThemedText>
     </Pressable>
   );
 }
@@ -199,6 +237,7 @@ const styles = StyleSheet.create({
   iconBox: { width: 40, height: 40, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
   text: { flex: 1, gap: 2 },
   box: { gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md, borderWidth: 0 },
+  cancel: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   flow: { gap: Spacing.three },
   steps: { borderWidth: 1, borderRadius: Radius.md, padding: Spacing.three, gap: Spacing.two },
   stepsHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
