@@ -1,10 +1,10 @@
+import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { api, ApiError } from '@/lib/api';
-import { formatDate } from '@/lib/date';
+import { api, ApiError, BASE_URL, getApiToken } from '@/lib/api';
 import { formatSize } from '@/lib/format';
 import { downloadPolicy, type PolicyInfo, pickPolicy, uploadPolicy } from '@/lib/insurance';
 
@@ -81,11 +81,14 @@ export function InsuranceSheet({ carId, data, visible, onClose, onChanged }: { c
             <Icon name={data.mime === 'application/pdf' ? 'document-text' : 'image'} size={22} color="positive" />
           </View>
           <View style={styles.flex}>
+            <ThemedText type="small" themeColor="positive" style={styles.name}>
+              Файл додано
+            </ThemedText>
             <ThemedText type="body" style={styles.name} numberOfLines={2}>
               {data.name}
             </ThemedText>
             <ThemedText type="callout" themeColor="textSecondary">
-              {formatSize(data.size)} · додано {formatDate(data.uploadedAt.slice(0, 10))}
+              {formatSize(data.size)}
             </ThemedText>
           </View>
         </View>
@@ -95,7 +98,16 @@ export function InsuranceSheet({ carId, data, visible, onClose, onChanged }: { c
         </ThemedText>
       )}
 
-      {data.hasPolicy ? <Button title="Завантажити поліс" icon="download-outline" loading={busy === 'download'} disabled={busy !== null} onPress={() => void download()} /> : null}
+      {data.hasPolicy && data.mime.startsWith('image/') ? (
+        <Image
+          source={{ uri: `${BASE_URL}/insurance/cars/${carId}/file`, headers: { Authorization: `Bearer ${getApiToken() ?? ''}` }, cacheKey: `policy-${carId}-${data.uploadedAt}` }}
+          style={styles.preview}
+          contentFit="cover"
+          accessibilityLabel="Попередній перегляд полісу"
+        />
+      ) : null}
+
+      {data.hasPolicy ? <Button title="Переглянути поліс" icon="eye-outline" loading={busy === 'download'} disabled={busy !== null} onPress={() => void download()} /> : null}
       {data.canEdit ? (
         <>
           <Button
@@ -119,4 +131,5 @@ const styles = StyleSheet.create({
   icon: { width: 48, height: 48, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1, gap: 2 },
   name: { fontWeight: 600 },
+  preview: { width: '100%', height: 200, borderRadius: Radius.md },
 });

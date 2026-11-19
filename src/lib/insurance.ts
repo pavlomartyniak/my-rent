@@ -65,3 +65,10 @@ export async function downloadPolicy(carId: string, mime: string) {
   if (!(await Sharing.isAvailableAsync())) throw new Error('На цьому пристрої не можна поділитись файлом');
   await Sharing.shareAsync(file.uri, { mimeType: mime, UTI: UTI[mime], dialogTitle: 'Страховий поліс' });
 }
+
+/** Відкриває ще не завантажений файл полісу (з пристрою) для перегляду через системне вікно */
+export async function viewPickedPolicy(file: { uri: string; mime?: string | null }) {
+  if (!(await Sharing.isAvailableAsync())) throw new Error('На цьому пристрої не можна відкрити файл');
+  const mime = file.mime ?? 'application/pdf';
+  await Sharing.shareAsync(file.uri, { mimeType: mime, UTI: UTI[mime], dialogTitle: 'Страховий поліс' });
+}

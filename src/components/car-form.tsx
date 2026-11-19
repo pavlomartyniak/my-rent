@@ -1,8 +1,9 @@
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { lookupBrandId } from '@/lib/catalog';
 import { openCatalogPicker } from '@/lib/catalog-picker';
 import { isValidISODate, todayISO } from '@/lib/date';
@@ -13,12 +14,13 @@ import { DocumentsCard } from './documents-card';
 import { DeleteCar } from './delete-car';
 import { Hint } from './hint';
 import { formatSize } from '@/lib/format';
-import { pickPolicy, type PickedPolicy, uploadPolicy } from '@/lib/insurance';
+import { pickPolicy, type PickedPolicy, uploadPolicy, viewPickedPolicy } from '@/lib/insurance';
 import { PhotoPicker } from './photo-picker';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { DateField } from './ui/date-field';
 import { Field } from './ui/field';
+import { Icon } from './ui/icon';
 import { SectionHeader } from './ui/section-header';
 import { NumberField } from './ui/number-field';
 import { PickerField } from './ui/picker-field';
@@ -44,7 +46,6 @@ export function CarForm({ car }: { car?: Car }) {
   const { addCar, updateCar } = useFleet();
   // Поліс до збереження нового авто: файл вибираємо зараз, а завантажуємо, коли авто створено
   const [policy, setPolicy] = useState<PickedPolicy | null>(null);
-  const [policyUntil, setPolicyUntil] = useState(todayISO());
 
   const [brand, setBrand] = useState(car?.brand ?? '');
   // id марки в каталозі; для збереженого авто невідомий, знаходимо за назвою, коли потрібно
@@ -162,7 +163,7 @@ export function CarForm({ car }: { car?: Car }) {
     const created = await addCar(data, setServerErrors);
     if (created && policy) {
       try {
-        await uploadPolicy(created.id, policy, policyUntil);
+        await uploadPolicy(created.id, policy);
       } catch (e) {
         // Авто вже створено: не блокуємо, а підказуємо, де додати поліс
         Alert.alert('Поліс не завантажено', `${e instanceof Error ? e.message : 'Спробуйте ще раз'}. Авто додано: завантажте поліс на екрані авто, розділ «Страховий поліс».`);
@@ -195,13 +196,32 @@ export function CarForm({ car }: { car?: Car }) {
           <Card style={styles.policy}>
             {policy ? (
               <>
+                {policy.mime?.startsWith('image/') ? (
+                  <Image source={{ uri: policy.uri }} style={styles.policyPreview} contentFit="cover" accessibilityLabel="Попередній перегляд полісу" />
+                ) : (
+                  <View style={styles.policyPdf}>
+                    <Icon name="document-text" size={32} color="textSecondary" />
+                    <ThemedText type="small" themeColor="textSecondary">PDF</ThemedText>
+                  </View>
+                )}
+                <View style={styles.policyAdded}>
+                  <Icon name="checkmark-circle" size={20} color="positive" />
+                  <ThemedText type="small" themeColor="positive" style={{ fontWeight: 600 }}>
+                    Файл додано
+                  </ThemedText>
+                </View>
                 <ThemedText type="default" style={{ fontWeight: 600 }} numberOfLines={2}>
                   {policy.name}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
                   {formatSize(policy.size)}
                 </ThemedText>
-                <DateField label="Діє до" value={policyUntil} onChange={setPolicyUntil} />
+                <Button
+                  title="Переглянути файл"
+                  icon="eye-outline"
+                  variant="secondary"
+                  onPress={() => void viewPickedPolicy(policy).catch((e) => Alert.alert('Не вдалося відкрити файл', e instanceof Error ? e.message : 'Спробуйте ще раз'))}
+                />
                 <Button title="Прибрати файл" variant="secondary" icon="close" onPress={() => setPolicy(null)} />
               </>
             ) : (
@@ -269,5 +289,8 @@ export function CarForm({ car }: { car?: Car }) {
 
 const styles = StyleSheet.create({
   policy: { gap: Spacing.two },
+  policyAdded: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  policyPreview: { width: '100%', height: 180, borderRadius: Radius.md },
+  policyPdf: { height: 96, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: 'rgba(128,128,128,0.12)' },
   group: { gap: Spacing.one },
 });

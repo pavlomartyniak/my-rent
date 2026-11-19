@@ -68,6 +68,16 @@ export function PhotoPicker({ value, onChange, error }: Props) {
     if (!result.canceled) await accept(result.assets.slice(0, room).map((a) => a.uri));
   }
 
+  /** Дотик до порожнього фото: системний вибір «Камера чи Галерея» */
+  function askSource() {
+    if (uploading || room <= 0) return;
+    Alert.alert('Додати фото', 'Звідки взяти фото авто?', [
+      { text: 'Зробити фото', onPress: () => void fromCamera() },
+      { text: 'Вибрати з галереї', onPress: () => void fromLibrary() },
+      { text: 'Скасувати', style: 'cancel' },
+    ]);
+  }
+
   const makeCover = (i: number) => onChange([value[i], ...value.filter((_, k) => k !== i)]);
   const remove = (i: number) => {
     // Якщо фото щойно завантажене й ще не збережене, сервер прибере його з хмари; збережене лишається до збереження форми
@@ -81,12 +91,18 @@ export function PhotoPicker({ value, onChange, error }: Props) {
         Фото авто{value.length ? ` · ${value.length} з ${MAX_PHOTOS}` : ''}
       </ThemedText>
 
-      <CarPhoto
-        uri={value[0]}
-        style={styles.preview}
-        iconSize={40}
-        placeholder={uploading ? `Завантажуємо ${Math.min(progress.done + 1, progress.total)} з ${progress.total}…` : 'Фото ще не додано'}
-      />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Додати фото"
+        disabled={value.length > 0 || uploading}
+        onPress={askSource}>
+        <CarPhoto
+          uri={value[0]}
+          style={styles.preview}
+          iconSize={40}
+          placeholder={uploading ? `Завантажуємо ${Math.min(progress.done + 1, progress.total)} з ${progress.total}…` : 'Торкніться, щоб додати фото'}
+        />
+      </Pressable>
 
       {value.length > 0 ? (
         <>

@@ -4,11 +4,9 @@ import { useState } from 'react';
 import { CurrentRentals } from '@/components/current-rentals';
 import { OwnerArchive } from '@/components/requests/owner-archive';
 import { OwnerBoard } from '@/components/requests/owner-board';
-import { OwnerOffers } from '@/components/requests/owner-offers';
 import { OwnerRentals } from '@/components/requests/owner-rentals';
 import { ScreenTitle } from '@/components/screen-title';
 import { Screen } from '@/components/ui/screen';
-import { SectionHeader } from '@/components/ui/section-header';
 import { Segmented } from '@/components/ui/segmented';
 import { useAttention } from '@/hooks/use-attention';
 import { useReport } from '@/hooks/use-report';
@@ -24,7 +22,7 @@ const FROM_PARAM: Record<string, Section> = { requests: 'Запити', wanted: 
  */
 export default function RentalsScreen() {
   const params = useLocalSearchParams<{ section?: string }>();
-  const { requests } = useAttention('owner');
+  const { requests, home } = useAttention('owner');
   const { data: current } = useReport<DealView[]>('/deals/current', { refetchOnFocus: true });
   // `?section=` відкриває потрібний сегмент (з чату чи з блоку «Потрібна ваша увага»); власний вибір діє, доки параметр той самий
   const [pick, setPick] = useState<{ param?: string; section: Section }>();
@@ -33,18 +31,14 @@ export default function RentalsScreen() {
   return (
     <Screen tabs>
       <ScreenTitle>Оренди</ScreenTitle>
-      <Segmented scroll options={SECTIONS} value={section} onChange={(s) => setPick({ param: params.section, section: s })} badges={{ Активні: current?.length ?? 0, Запити: requests }} />
+      <Segmented scroll options={SECTIONS} value={section} onChange={(s) => setPick({ param: params.section, section: s })} badges={{ Активні: home, Запити: requests }} counts={{ Активні: current?.length ?? 0 }} />
 
       {section === 'Активні' ? (
         <CurrentRentals />
       ) : section === 'Запити' ? (
         <OwnerRentals />
       ) : section === 'Заявки орендарів' ? (
-        <>
-          <OwnerBoard />
-          <SectionHeader title="Мої пропозиції" />
-          <OwnerOffers />
-        </>
+        <OwnerBoard />
       ) : (
         <OwnerArchive />
       )}

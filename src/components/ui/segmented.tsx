@@ -13,11 +13,13 @@ type Props<T extends string> = {
   onChange: (value: T) => void;
   /** Лічильник біля варіанта; 0 чи відсутній — не показується */
   badges?: Partial<Record<T, number>>;
+  /** Спокійний лічильник у підписі («Запити 2»): просто кількість, без вимоги дії. Червоний бейдж — лише для того, що чекає на користувача */
+  counts?: Partial<Record<T, number>>;
   /** Один рядок, що гортається вбік, замість перенесення на другий */
   scroll?: boolean;
 };
 
-export function Segmented<T extends string>({ options, value, onChange, badges, scroll }: Props<T>) {
+export function Segmented<T extends string>({ options, value, onChange, badges, counts, scroll }: Props<T>) {
   const theme = useTheme();
 
   const Wrap = scroll ? ScrollView : View;
@@ -45,6 +47,9 @@ export function Segmented<T extends string>({ options, value, onChange, badges, 
             ]}>
             <ThemedText type="smallBold" style={{ color: selected ? theme.onInk : theme.text }}>
               {option}
+              {counts?.[option] ? (
+                <ThemedText type="smallBold" style={{ color: selected ? theme.onInk : theme.textSecondary, opacity: selected ? 0.75 : 1 }}>{`  ${counts[option]}`}</ThemedText>
+              ) : null}
             </ThemedText>
             {badges?.[option] ? (
               // Лічильник сидить на верхньому куті кнопки, а не в рядку з назвою: так видно число, і кнопка не розтягується

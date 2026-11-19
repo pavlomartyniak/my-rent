@@ -1,5 +1,8 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+
+import { OwnerOffers } from './owner-offers';
+import { offerArchived } from '@/lib/archive';
 import { View } from 'react-native';
 
 import { ReportStatus } from '@/components/report-status';
@@ -13,31 +16,34 @@ import { WantedCard } from '@/components/wanted-card';
 import { Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { plural } from '@/lib/format';
-import type { WantedBoard } from '@/lib/wanted';
+import type { OfferView, WantedBoard } from '@/lib/wanted';
 import { useFleet } from '@/store/fleet';
 
-const SCOPES = ['Підходять мені', 'Усі'] as const;
+const SCOPES = ['Підходять мені', 'Усі', 'Мої пропозиції'] as const;
 
-/** Дошка заявок орендарів «шукаю авто»: власник пропонує своє вільне авто */
+/** Заявки орендарів «шукаю авто»: власник пропонує своє вільне авто. Третій варіант — «Мої пропозиції» (що вже надіслано й відповіді) */
 export function OwnerBoard() {
   const router = useRouter();
   const { cars } = useFleet();
   const [place, setPlace] = useState<Place | null>(null);
   const [scope, setScope] = useState<(typeof SCOPES)[number]>(SCOPES[0]);
+  const mine = scope === SCOPES[2];
+  const offers = useReport<OfferView[]>('/offers/mine', { refetchOnFocus: true });
+  const offersCount = (offers.data ?? []).filter((o) => !(o.dealId && o.status === 'accepted') && !offerArchived(o)).length;
   const params = new URLSearchParams({ limit: '30' });
   if (scope === SCOPES[1]) params.set('matching', 'false');
   if (place?.city) params.set('city', place.city);
   else if (place?.regionId !== undefined) params.set('regionId', String(place.regionId));
-  const { data, loading, error, retry } = useReport<WantedBoard>(`/wanted?${params}`, { refetchOnFocus: true, keepPrevious: true });
+  const { data, loading, error, retry } = useReport<WantedBoard>(mine ? null : `/wanted?${params}`, { refetchOnFocus: true, keepPrevious: true });
 
   const hasFree = cars.some((c) => c.status === 'Вільне');
 
   return (
     <>
-      <Segmented options={SCOPES} value={scope} onChange={setScope} />
-      <PlaceFilter value={place} onChange={setPlace} />
+      <Segmented options={SCOPES} value={scope} onChange={setScope} counts={{ 'Мої пропозиції': offersCount }} />
+      {mine ? <OwnerOffers /> : <PlaceFilter value={place} onChange={setPlace} />}
 
-      {!data ? (
+      {mine ? null : !data ? (
         <ReportStatus loading={loading} error={error} onRetry={retry} />
       ) : data.items.length === 0 ? (
         scope === SCOPES[0] ? (

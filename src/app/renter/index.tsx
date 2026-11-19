@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { Spacing } from '@/constants/theme';
+import { useAttention } from '@/hooks/use-attention';
 import { useReport } from '@/hooks/use-report';
 import { rentalArchived, wantedArchived } from '@/lib/archive';
 import { dealStage, type DealView } from '@/lib/deals';
@@ -36,6 +37,7 @@ export default function RenterRentalsScreen() {
   // `?section=` відкриває потрібний сегмент (після створення запиту, з чату); власний вибір діє, доки параметр той самий
   const [pick, setPick] = useState<{ param?: string; section: Section }>();
   const section: Section = pick && pick.param === params.section ? pick.section : (FROM_PARAM[params.section ?? ''] ?? 'Активні');
+  const attention = useAttention('renter');
   const deals = useReport<DealView[]>('/deals', { refetchOnFocus: true });
 
   // Лічильники на кнопках розділів: скільки елементів у кожному (архів не лічимо)
@@ -53,7 +55,7 @@ export default function RenterRentalsScreen() {
 
       <AttentionList role="renter" />
 
-      <Segmented scroll options={SECTIONS} value={section} onChange={(s) => setPick({ param: params.section, section: s })} badges={{ Активні: current.length, Запити: requestsCount, 'Шукаю авто': wantedCount }} />
+      <Segmented scroll options={SECTIONS} value={section} onChange={(s) => setPick({ param: params.section, section: s })} badges={{ Активні: attention.home, 'Шукаю авто': attention.requests }} counts={{ Активні: current.length, Запити: requestsCount, 'Шукаю авто': wantedCount }} />
 
       {section === 'Активні' ? (
         !deals.data ? (
