@@ -142,13 +142,6 @@ export class UpdateMeDto {
   onboarded?: boolean;
 
   @IsOptional()
-  @IsArray()
-  @ArrayMaxSize(50)
-  @IsString({ each: true })
-  @MaxLength(40, { each: true })
-  dismissedHints?: string[];
-
-  @IsOptional()
   @IsIn(THEMES)
   theme?: string;
 }

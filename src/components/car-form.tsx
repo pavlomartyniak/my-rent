@@ -13,7 +13,6 @@ import { CAR_STATUSES, FUEL_TYPES, MANUAL_CAR_STATUSES, type Car, type FuelType 
 import { DocumentsCard } from './documents-card';
 import { DeleteCar } from './delete-car';
 import { UploadBar } from './upload-progress';
-import { Hint } from './hint';
 import { formatSize } from '@/lib/format';
 import { pickPolicy, type PickedPolicy, uploadPolicy, viewPickedPolicy } from '@/lib/insurance';
 import { PhotoPicker } from './photo-picker';
@@ -190,7 +189,6 @@ export function CarForm({ car }: { car?: Car }) {
 
   return (
     <Screen>
-      {!car ? <Hint id="car-form">Оберіть марку й модель зі списку, вкажіть рік, вартість і пробіг. VIN і водія можна залишити порожніми, державний номер обов’язковий.</Hint> : null}
       <PhotoPicker value={photos} onChange={setPhotos} error={err('photo')} />
       {car ? (
         <DocumentsCard carId={car.id} as="owner" />

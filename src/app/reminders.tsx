@@ -1,9 +1,8 @@
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 
-import { Hint } from '@/components/hint';
 import { ReminderRow } from '@/components/reminder-row';
-import { Button } from '@/components/ui/button';
+import { ThemedText } from '@/components/themed-text';import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Screen } from '@/components/ui/screen';
 import { Spacing } from '@/constants/theme';
@@ -29,7 +28,9 @@ export default function RemindersScreen() {
         />
       ) : (
         <>
-          <Hint id="reminders">Тапніть на кружечок, коли ТО чи страховку виконано. Нагадування прийде за день і в сам день о 9–10 ранку.</Hint>
+          <ThemedText type="small" themeColor="textSecondary">
+            Тапніть на кружечок, коли ТО чи страховку виконано. Нагадування прийде за день і в сам день о 9–10 ранку.
+          </ThemedText>
           <View style={{ gap: Spacing.two }}>
             {sorted.map((r) => (
               <ReminderRow key={r.id} reminder={r} />

@@ -29,7 +29,7 @@ const THEMES: { label: string; value: ThemePreference }[] = [
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { role, email, firstName, lastName, phone, photoUri, cars, clearAll, resetHints, setTheme, deleteAccount } = useFleet();
+  const { role, email, firstName, lastName, phone, photoUri, cars, clearAll, setTheme, deleteAccount } = useFleet();
   const { signOut } = useAuth();
   const { preference } = useThemePreference();
   const owner = role === 'owner';
@@ -119,14 +119,6 @@ export default function SettingsScreen() {
           title="Написати нам"
           subtitle={LEGAL_CONTACT}
           onPress={() => Linking.openURL(`mailto:${LEGAL_CONTACT}`).catch(() => Alert.alert('Напишіть нам', LEGAL_CONTACT))}
-        />
-        <SettingsRow
-          icon="bulb-outline"
-          title="Показати підказки знову"
-          subtitle="Повернути закриті підказки на екранах"
-          onPress={async () => {
-            if (await resetHints()) Alert.alert('Готово', 'Підказки знову з’являться на екранах.');
-          }}
         />
       </SettingsGroup>
 

@@ -142,9 +142,6 @@ export class User {
   @Prop({ default: false })
   onboarded: boolean;
 
-  @Prop({ type: [String], default: [] })
-  dismissedHints: string[];
-
   /** Тема оформлення: system — як у телефоні */
   @Prop({ enum: THEMES, default: 'system' })
   theme: string;

@@ -8,7 +8,6 @@ import { useFleet } from '@/store/fleet';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORY, RENTER_EXPENSE_CATEGORIES, RENTER_INCOME_SOURCES, type Transaction, type TransactionType } from '@/types';
 
 import { CarPicker } from './car-picker';
-import { Hint } from './hint';
 import { ThemedText } from './themed-text';
 import { Button } from './ui/button';
 import { DateField } from './ui/date-field';
@@ -104,13 +103,6 @@ export function TransactionFields({ tx, initialCarId, initialType, dealId: dealP
 
   return (
     <>
-      {!tx && !embedded ? (
-        renter ? (
-          <Hint id="tx-form-renter">«Заробіток» — гроші, які ви отримали з цим авто. Позначте, звідки вони: Bolt, Uklon, Uber, Glovo чи інше, і в звіті буде видно, що приносить більше. «Витрата» — усе, що ви платите: оренда власнику, паливо, мийка. Прибуток порахується сам.</Hint>
-        ) : (
-          <Hint id="tx-form">Оберіть «Дохід» (оренда) або «Витрата» і введіть суму. Прибуток і ROI порахуються самі.</Hint>
-        )
-      ) : null}
       <Segmented options={types} value={kind} onChange={setKind} />
 
       <Field
