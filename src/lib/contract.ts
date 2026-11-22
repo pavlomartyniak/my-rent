@@ -1,8 +1,7 @@
 import { Directory, File, Paths } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 
 import { BASE_URL, getApiToken } from './api';
-
+import { openFileViewer } from './file-viewer';
 /** Відповідь /deals/:id/contract */
 export type ContractSection = { title: string; paragraphs: string[] };
 export type ContractSignature = { at: string; method: string; signatureId: string; /** Частково прихована пошта, на яку приходив код */ email?: string } | null;
@@ -51,7 +50,7 @@ export type WithdrawGround = (typeof OWNER_GROUNDS)[number]['value'] | (typeof R
 
 export const METHOD_LABEL = (method: string) => (method === 'button' ? 'підтвердження в застосунку' : method === 'email_otp' ? 'підтвердження кодом з e-mail' : method === 'demo' ? 'підтвердження в застосунку' : method);
 
-/** Завантажує PDF із сервера (з токеном) у кеш пристрою й відкриває системне вікно «Поділитись»: звідти його можна переглянути, зберегти чи надіслати */
+/** Завантажує PDF із сервера (з токеном) у кеш пристрою й відкриває його у вбудованому переглядачі (звідти його можна ще й надіслати) */
 async function downloadPdf(urlPath: string, fileName: string, dialogTitle: string) {
   const dir = new Directory(Paths.cache, 'contracts');
   dir.create({ idempotent: true });
@@ -62,8 +61,7 @@ async function downloadPdf(urlPath: string, fileName: string, dialogTitle: strin
   const task = File.createDownloadTask(`${BASE_URL}${urlPath}`, dir, { headers: { Authorization: `Bearer ${getApiToken() ?? ''}` } });
   const file = await task.downloadAsync();
   if (!file) throw new Error('Не вдалося завантажити файл');
-  if (!(await Sharing.isAvailableAsync())) throw new Error('На цьому пристрої не можна поділитись файлом');
-  await Sharing.shareAsync(file.uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf', dialogTitle });
+  openFileViewer({ uri: file.uri, name: `${dialogTitle}.pdf`, mime: 'application/pdf' });
 }
 
 /** PDF договору */

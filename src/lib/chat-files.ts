@@ -1,6 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { Directory, File, Paths } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
+import { openFileViewer } from './file-viewer';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert } from 'react-native';
 
@@ -111,7 +111,7 @@ export async function uploadDrafts(drafts: Draft[], chatId: string): Promise<Att
   return out;
 }
 
-/** Завантажує файл із розмови (з токеном) у кеш пристрою й відкриває вікно «Поділитись»: звідти його можна переглянути, зберегти чи надіслати */
+/** Завантажує файл із розмови (з токеном) у кеш пристрою й відкриває його у вбудованому переглядачі */
 export async function downloadChatFile(chatId: string, fileId: string, name: string) {
   const res = await fetch(`${BASE_URL}/chats/${chatId}/files/${fileId}`, { headers: authHeader() });
   if (!res.ok) {
@@ -128,8 +128,7 @@ export async function downloadChatFile(chatId: string, fileId: string, name: str
   if (target.exists) target.delete();
   target.create({ overwrite: true });
   target.write(bytes);
-  if (!(await Sharing.isAvailableAsync())) throw new Error('На цьому пристрої не можна поділитись файлом');
-  await Sharing.shareAsync(target.uri, { dialogTitle: name });
+  openFileViewer({ uri: target.uri, name });
 }
 
 /** Постер відео: перший кадр із Cloudinary (для відео, що вже завантажене) */

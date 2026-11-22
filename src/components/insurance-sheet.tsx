@@ -42,7 +42,7 @@ export function InsuranceSheet({ carId, data, visible, onClose, onChanged }: { c
     try {
       await downloadPolicy(carId, data.mime);
     } catch (e) {
-      Alert.alert('Не вдалося завантажити поліс', e instanceof Error ? e.message : 'Спробуйте ще раз');
+      Alert.alert('Не вдалося відкрити поліс', e instanceof Error ? e.message : 'Спробуйте ще раз');
     } finally {
       setBusy(null);
     }

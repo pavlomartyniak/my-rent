@@ -20,7 +20,7 @@ import { downloadContractPdf, METHOD_LABEL, type ContractSignature, type Contrac
 import { formatDate, todayISO } from '@/lib/date';
 import { useFleet } from '@/store/fleet';
 
-/** Договір оренди: текст, підписи сторін, підписання й завантаження PDF */
+/** Договір оренди: текст, підписи сторін, підписання й перегляд PDF */
 export default function ContractScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -174,7 +174,7 @@ export default function ContractScreen() {
         </Card>
       ) : null}
 
-      <Button title="Завантажити PDF" icon="download-outline" variant="secondary" disabled={busy === 'pdf'} onPress={() => void pdf()} />
+      <Button title="Переглянути PDF" icon="document-text-outline" variant="secondary" disabled={busy === 'pdf'} onPress={() => void pdf()} />
 
       <Card>
         <ThemedText type="small" themeColor="textSecondary">

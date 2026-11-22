@@ -1,8 +1,8 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { Directory, File, Paths } from 'expo-file-system';
 import { Alert } from 'react-native';
-import * as Sharing from 'expo-sharing';
 
+import { openFileViewer } from './file-viewer';
 import { ApiError, BASE_URL, getApiToken } from './api';
 
 /** Відповідь /insurance/cars/:carId: чи є поліс і що про нього відомо */
@@ -39,11 +39,9 @@ export async function uploadPolicy(carId: string, file: { uri: string; name: str
 }
 
 const EXT: Record<string, string> = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/heic': 'heic' };
-const UTI: Record<string, string> = { 'application/pdf': 'com.adobe.pdf', 'image/jpeg': 'public.jpeg', 'image/png': 'public.png', 'image/webp': 'org.webmproject.webp', 'image/heic': 'public.heic' };
 
 /**
- * Завантажує поліс із сервера (з токеном) у кеш пристрою й відкриває системне вікно «Поділитись»: звідти його можна переглянути,
- * зберегти чи надіслати. Файл зберігається під фіксованою назвою з правильним розширенням: без розширення iOS не вміє його відкрити.
+ * Завантажує поліс із сервера (з токеном) у кеш пристрою й відкриває його у вбудованому переглядачі. Файл зберігається під фіксованою назвою з правильним розширенням: без розширення iOS не вміє його відкрити.
  */
 export async function downloadPolicy(carId: string, mime: string) {
   const dir = new Directory(Paths.cache, 'insurance');
@@ -61,14 +59,10 @@ export async function downloadPolicy(carId: string, mime: string) {
   if (!bytes.length) throw new Error('Файл порожній');
   target.create({ overwrite: true });
   target.write(bytes);
-  const file = target;
-  if (!(await Sharing.isAvailableAsync())) throw new Error('На цьому пристрої не можна поділитись файлом');
-  await Sharing.shareAsync(file.uri, { mimeType: mime, UTI: UTI[mime], dialogTitle: 'Страховий поліс' });
+  openFileViewer({ uri: target.uri, name: `Страховий поліс.${EXT[mime] ?? 'pdf'}`, mime });
 }
 
 /** Відкриває ще не завантажений файл полісу (з пристрою) для перегляду через системне вікно */
 export async function viewPickedPolicy(file: { uri: string; mime?: string | null }) {
-  if (!(await Sharing.isAvailableAsync())) throw new Error('На цьому пристрої не можна відкрити файл');
-  const mime = file.mime ?? 'application/pdf';
-  await Sharing.shareAsync(file.uri, { mimeType: mime, UTI: UTI[mime], dialogTitle: 'Страховий поліс' });
+  openFileViewer({ uri: file.uri, name: 'Страховий поліс', mime: file.mime ?? 'application/pdf' });
 }
