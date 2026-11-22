@@ -83,7 +83,7 @@ export default function RenterReportScreen() {
         dealReport.data ? (
           <>
             <Button title="Додати дохід або витрату" icon="add" onPress={addRecord} />
-            <DealReportView id={deal.id} data={dealReport.data} p={p} />
+            <DealReportView id={deal.id} data={dealReport.data} p={p} startDate={deal.startDate} endDate={deal.endDate} />
           </>
         ) : (
           <ReportStatus loading={dealReport.loading} error={dealReport.error} onRetry={dealReport.retry} />
