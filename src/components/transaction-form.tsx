@@ -19,7 +19,12 @@ import { Segmented } from './ui/segmented';
 const TYPES = ['Дохід', 'Витрата'] as const;
 const RENTER_TYPES = ['Заробіток', 'Витрата'] as const;
 
+export type SavedTx = { type: TransactionType; carId?: string; dealId?: string };
+
 type Props = {
+  /** Нижній лист: без підказки, після збереження викликає onDone замість повернення назад */
+  embedded?: boolean;
+  onDone?: (saved: SavedTx) => void;
   /** Існуючий запис для редагування */
   tx?: Transaction;
   initialCarId?: string;
@@ -28,7 +33,17 @@ type Props = {
   dealId?: string;
 };
 
-export function TransactionForm({ tx, initialCarId, initialType, dealId: dealParam }: Props) {
+/** Екран редагування запису. Новий запис додається нижнім листом (TransactionSheet), тож тут лише редагування */
+export function TransactionForm(props: Props) {
+  return (
+    <Screen>
+      <TransactionFields {...props} />
+    </Screen>
+  );
+}
+
+/** Поля запису: спільні для екрана редагування й нижнього листа додавання */
+export function TransactionFields({ tx, initialCarId, initialType, dealId: dealParam, embedded, onDone }: Props) {
   const router = useRouter();
   const { cars, addTransaction, updateTransaction, deleteTransaction } = useFleet();
 
@@ -67,7 +82,10 @@ export function TransactionForm({ tx, initialCarId, initialType, dealId: dealPar
     setSaving(true);
     const ok = await (tx ? updateTransaction(tx.id, data) : addTransaction(data));
     setSaving(false);
-    if (ok) router.back();
+    if (ok) {
+      if (onDone) onDone({ type, ...(renter ? { dealId } : { carId }) });
+      else router.back();
+    }
   }
 
   function onDelete() {
@@ -85,8 +103,8 @@ export function TransactionForm({ tx, initialCarId, initialType, dealId: dealPar
   }
 
   return (
-    <Screen>
-      {!tx ? (
+    <>
+      {!tx && !embedded ? (
         renter ? (
           <Hint id="tx-form-renter">«Заробіток» — гроші, які ви отримали з цим авто. Позначте, звідки вони: Bolt, Uklon, Uber, Glovo чи інше, і в звіті буде видно, що приносить більше. «Витрата» — усе, що ви платите: оренда власнику, паливо, мийка. Прибуток порахується сам.</Hint>
         ) : (
@@ -131,7 +149,7 @@ export function TransactionForm({ tx, initialCarId, initialType, dealId: dealPar
 
       <Button title={saving ? 'Зберігаємо…' : 'Зберегти'} disabled={saving} onPress={onSave} />
       {tx ? <Button title="Видалити запис" variant="danger" onPress={onDelete} /> : null}
-    </Screen>
+    </>
   );
 }
 

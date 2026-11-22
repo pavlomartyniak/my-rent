@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Colors, Spacing, Type } from '@/constants/theme';
 import '@/lib/notifications';
 import { AuthProvider, useAuth } from '@/store/auth';
+import { TransactionSheetProvider } from '@/components/transaction-sheet';
 import { ChatProvider } from '@/store/chat';
 import { FleetProvider, useFleet } from '@/store/fleet';
 import { ThemePreferenceProvider } from '@/store/theme';
@@ -98,7 +99,6 @@ function Routes() {
           <Stack.Screen name="deposit/[id]" options={{ title: 'Застава', headerBackTitle: 'Назад', presentation: 'modal' }} />
           <Stack.Screen name="contracts/[id]" options={{ title: 'Договір', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="chats/[id]" options={{ headerShown: false }} />
-          <Stack.Screen name="transaction/new" options={{ title: 'Новий запис', presentation: 'modal' }} />
           <Stack.Screen name="transaction/[id]" options={{ title: 'Запис', presentation: 'modal' }} />
           <Stack.Screen name="profile" options={{ title: 'Особисті дані', presentation: 'modal' }} />
           <Stack.Screen name="legal" options={{ title: 'Дані для договору', presentation: 'modal' }} />
@@ -121,7 +121,9 @@ export default function RootLayout() {
         <AuthProvider>
           <FleetProvider>
             <ChatProvider>
-              <Routes />
+              <TransactionSheetProvider>
+                <Routes />
+              </TransactionSheetProvider>
             </ChatProvider>
           </FleetProvider>
         </AuthProvider>

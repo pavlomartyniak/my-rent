@@ -40,6 +40,9 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     borderWidth: 1,
     paddingHorizontal: Spacing.three,
+    // Явні вертикальні відступи замість покладання на авто-центрування: текст і плейсхолдер стоять рівно посередині в усіх полях
+    paddingVertical: 16,
+    textAlignVertical: 'center',
     fontSize: Type.body.fontSize,
     letterSpacing: 0,
   },

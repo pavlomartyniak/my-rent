@@ -1,3 +1,4 @@
+import { useAddTransaction } from '@/components/transaction-sheet';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
@@ -36,6 +37,7 @@ import { useFleet } from '@/store/fleet';
 export default function CarScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const addTransaction = useAddTransaction();
   const theme = useTheme();
   const [viewer, setViewer] = useState(false);
   const { cars } = useFleet();
@@ -56,7 +58,7 @@ export default function CarScreen() {
 
   const photos = car.photos?.length ? car.photos : car.photoUri ? [car.photoUri] : [];
 
-  const add = (type: 'income' | 'expense') => router.push({ pathname: '/transaction/new', params: { carId: car.id, type } });
+  const add = (type: 'income' | 'expense') => addTransaction({ carId: car.id, type });
 
   type Tile = { label: string; value: string; wide?: boolean; right?: React.ReactNode };
   const aboutItems = ([

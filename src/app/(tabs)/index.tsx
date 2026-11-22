@@ -1,3 +1,4 @@
+import { useAddTransaction } from '@/components/transaction-sheet';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { RefreshControl, View } from 'react-native';
@@ -36,6 +37,7 @@ const FILTERS: Record<string, string | null> = { Усі: null, 'В оренді'
  */
 export default function HomeScreen() {
   const router = useRouter();
+  const addTransaction = useAddTransaction();
   const theme = useTheme();
   const { cars, reminders, invalidate } = useFleet();
   const [sort, setSort] = useState<Sort>('За прибутком');
@@ -86,8 +88,8 @@ export default function HomeScreen() {
       ) : null}
 
       <View style={{ flexDirection: 'row', gap: Spacing.two }}>
-        <Button title="Дохід" icon="add" variant="positive" style={{ flex: 1 }} onPress={() => router.push({ pathname: '/transaction/new', params: { type: 'income' } })} />
-        <Button title="Витрата" icon="remove" variant="danger" style={{ flex: 1 }} onPress={() => router.push({ pathname: '/transaction/new', params: { type: 'expense' } })} />
+        <Button title="Дохід" icon="add" variant="positive" style={{ flex: 1 }} onPress={() => addTransaction({ type: 'income' })} />
+        <Button title="Витрата" icon="remove" variant="danger" style={{ flex: 1 }} onPress={() => addTransaction({ type: 'expense' })} />
       </View>
 
       <Card style={{ paddingVertical: Spacing.one }}>

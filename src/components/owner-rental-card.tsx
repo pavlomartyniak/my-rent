@@ -9,6 +9,7 @@ import { dealStage, type DealView } from '@/lib/deals';
 import { formatMoney, plural } from '@/lib/format';
 
 import { ContractCard } from './contract-card';
+import { QuickRecord } from './quick-record';
 import { TerminateDeal } from './terminate-deal';
 import { Avatar } from './avatar';
 import { ThemedText } from './themed-text';
@@ -64,6 +65,7 @@ export function OwnerRentalCard({ deal }: { deal: DealView }) {
         ) : null}
       </View>
 
+      {active && deal.carId ? <QuickRecord carId={deal.carId} /> : null}
       <ContractCard deal={deal} as="owner" />
       {awaiting ? null : <TerminateDeal deal={deal} as="owner" />}
     </Card>

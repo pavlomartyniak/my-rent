@@ -1,3 +1,4 @@
+import { useAddTransaction } from '@/components/transaction-sheet';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Alert, StyleSheet, View } from 'react-native';
 
@@ -31,6 +32,7 @@ import { formatKm, splitTitle } from '@/lib/format';
 export default function DealScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const addTransaction = useAddTransaction();
   const theme = useTheme();
   const { invalidate } = useFleet();
   const deal = useReport<DealView>(`/deals/${id}`);
@@ -65,7 +67,7 @@ export default function DealScreen() {
       },
     ]);
 
-  const add = (type: 'income' | 'expense') => router.push({ pathname: '/transaction/new', params: { dealId: d.id, type } });
+  const add = (type: 'income' | 'expense') => addTransaction({ dealId: d.id, type });
 
   const { name, year } = splitTitle(d.title);
   const subtitle = [year, d.city].filter(Boolean);

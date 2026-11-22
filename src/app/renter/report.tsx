@@ -1,4 +1,5 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useAddTransaction } from '@/components/transaction-sheet';
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
@@ -29,7 +30,7 @@ import { formatMoney, splitTitle } from '@/lib/format';
 
 /** Звіт орендаря: скільки заробив, скільки витратив і платить власникам, прибуток по кожній оренді */
 export default function RenterReportScreen() {
-  const router = useRouter();
+  const addTransaction = useAddTransaction();
   const theme = useTheme();
   const p = usePeriod();
   const deals = useReport<DealView[]>('/deals');
@@ -43,7 +44,7 @@ export default function RenterReportScreen() {
 
   // Запис орендаря прив'язаний до оренди: вибрану відкриваємо одразу, одну чинну теж, з кількох просимо обрати
   const addRecord = () => {
-    const open = (id: string) => router.push({ pathname: '/transaction/new', params: { dealId: id } });
+    const open = (id: string) => addTransaction({ dealId: id });
     if (deal) return open(deal.id);
     const current = (deals.data ?? []).filter((d) => dealStage(d) !== 'finished' && dealStage(d) !== 'terminated');
     if (current.length === 1) return open(current[0].id);

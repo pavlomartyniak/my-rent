@@ -1,20 +1,21 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useAddTransaction } from '@/components/transaction-sheet';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { CategoryBreakdown } from '@/components/category-breakdown';
 import { ReportStatus } from '@/components/report-status';
 import { ThemedText } from '@/components/themed-text';
 import { TransactionRow } from '@/components/transaction-row';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { DateField } from '@/components/ui/date-field';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { Screen } from '@/components/ui/screen';
+import { Segmented } from '@/components/ui/segmented';
 import { SwitchTabs } from '@/components/ui/switch-tabs';
-import { Spacing, Type } from '@/constants/theme';
+import { Radius, Spacing, Type } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDate, monthTitle, shiftMonth, todayISO } from '@/lib/date';
@@ -28,6 +29,51 @@ const KINDS: readonly Kind[] = ['Усі', 'Доходи', 'Витрати'];
 const VIEWS = ['Список', 'Діаграма'] as const;
 type View_ = (typeof VIEWS)[number];
 
+/** Тип записів: широкі вкладки зі своїм кольором для кожного типу, щоб відрізнялись від чипів періоду */
+function KindTabs({ value, onChange }: { value: Kind; onChange: (k: Kind) => void }) {
+  const theme = useTheme();
+  const tint = (k: Kind) => (k === 'Доходи' ? { bg: theme.positiveSoft, fg: theme.positive } : k === 'Витрати' ? { bg: theme.negativeSoft, fg: theme.negative } : { bg: theme.ink, fg: theme.onInk });
+  return (
+    <View style={[styles.kinds, { borderColor: theme.border }]} accessibilityRole="tablist">
+      {KINDS.map((k) => {
+        const on = k === value;
+        const c = tint(k);
+        return (
+          <Pressable key={k} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => onChange(k)} style={[styles.kind, on && { backgroundColor: c.bg }]}>
+            <ThemedText type="smallBold" style={{ color: on ? c.fg : theme.textSecondary }}>
+              {k}
+            </ThemedText>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Додати запис: компактна кольорова таблетка біля суми. У «Усі» тип запитуємо в меню */
+function AddButton({ kind, onAdd }: { kind: Kind; onAdd: (t: 'income' | 'expense') => void }) {
+  const theme = useTheme();
+  const bg = kind === 'Доходи' ? theme.positive : kind === 'Витрати' ? theme.negative : theme.ink;
+  const label = kind === 'Доходи' ? 'Дохід' : kind === 'Витрати' ? 'Витрата' : 'Запис';
+  function press() {
+    if (kind === 'Доходи') return onAdd('income');
+    if (kind === 'Витрати') return onAdd('expense');
+    Alert.alert('Новий запис', 'Що додати?', [
+      { text: 'Дохід', onPress: () => onAdd('income') },
+      { text: 'Витрату', onPress: () => onAdd('expense') },
+      { text: 'Скасувати', style: 'cancel' },
+    ]);
+  }
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={`Додати: ${label.toLowerCase()}`} onPress={press} style={({ pressed }) => [styles.addPill, { backgroundColor: bg }, pressed && { opacity: 0.8 }]}>
+      <Icon name="add" size={20} color={theme.onInk} />
+      <ThemedText type="smallBold" style={{ color: theme.onInk }}>
+        {label}
+      </ThemedText>
+    </Pressable>
+  );
+}
+
 const TYPE_OF: Record<Kind, 'income' | 'expense' | undefined> = { Усі: undefined, Доходи: 'income', Витрати: 'expense' };
 const SCREEN_TITLE: Record<Kind, string> = { Усі: 'Записи', Доходи: 'Дохід', Витрати: 'Витрати' };
 
@@ -38,7 +84,7 @@ const SCREEN_TITLE: Record<Kind, string> = { Усі: 'Записи', Доход�
  */
 export default function TransactionsScreen() {
   const theme = useTheme();
-  const router = useRouter();
+  const addTransaction = useAddTransaction();
   const { period, type, carId, dealId } = useLocalSearchParams<{ period?: string; type?: 'income' | 'expense'; carId?: string; dealId?: string; label?: string }>();
   const today = todayISO();
   const current = today.slice(0, 7);
@@ -85,14 +131,13 @@ export default function TransactionsScreen() {
   const categorySum = category && data && effType ? data.breakdown[effType].find((c) => c.category === category)?.amount : undefined;
   const shown = !data ? 0 : effType === 'expense' ? data.totals.expense : effType === 'income' ? data.totals.income : data.totals.profit;
 
-  const addEntry = (t: 'income' | 'expense') => router.push({ pathname: '/transaction/new', params: { type: t, ...(carId ? { carId } : {}), ...(dealId ? { dealId } : {}) } });
+  const addEntry = (t: 'income' | 'expense') => addTransaction({ type: t, carId, dealId });
 
   return (
     <Screen>
       <Stack.Screen options={{ title: SCREEN_TITLE[kind], headerBackTitle: 'Назад' }} />
 
-      <SwitchTabs
-        options={KINDS}
+      <KindTabs
         value={kind}
         onChange={(k) => {
           setKind(k);
@@ -100,7 +145,8 @@ export default function TransactionsScreen() {
         }}
       />
 
-      <SwitchTabs
+      <Segmented
+        scroll
         options={MODES}
         value={mode}
         onChange={(m) => {
@@ -111,12 +157,8 @@ export default function TransactionsScreen() {
 
       {mode === 'Діапазон' ? (
         <View style={styles.range}>
-          <View style={styles.flex}>
-            <DateField label="Від" value={from} onChange={setFrom} />
-          </View>
-          <View style={styles.flex}>
-            <DateField label="До" value={to} onChange={setTo} />
-          </View>
+          <DateField label="Від" value={from} onChange={setFrom} />
+          <DateField label="До" value={to} onChange={setTo} />
         </View>
       ) : mode === 'Весь час' ? null : (
         <View style={styles.stepper}>
@@ -127,11 +169,6 @@ export default function TransactionsScreen() {
           <IconButton icon="chevron-forward" label="Вперед" disabled={atEnd} onPress={() => setMonth(shiftMonth(month, step))} />
         </View>
       )}
-      <View style={styles.add}>
-        {kind !== 'Витрати' ? <Button title={kind === 'Усі' ? 'Додати дохід' : 'Додати запис про дохід'} icon="add" variant="secondary" style={styles.flex} onPress={() => addEntry('income')} /> : null}
-        {kind !== 'Доходи' ? <Button title={kind === 'Усі' ? 'Додати витрату' : 'Додати запис про витрату'} icon="add" variant="secondary" style={styles.flex} onPress={() => addEntry('expense')} /> : null}
-      </View>
-
       {rangeInvalid ? (
         <ThemedText type="small" themeColor="negative" accessibilityRole="alert">
           Початок діапазону пізніший за кінець.
@@ -142,19 +179,22 @@ export default function TransactionsScreen() {
         <ReportStatus shape="list" loading={loading} error={error} onRetry={retry} />
       ) : (
         <>
-          <View style={styles.head}>
-            <ThemedText type="small" themeColor="textSecondary">
-              {periodText} · {data.total}
-            </ThemedText>
-            <ThemedText style={styles.total} themeColor={tone} numberOfLines={1} adjustsFontSizeToFit>
-              {effType === 'expense' ? '−' : effType === 'income' ? '+' : shown >= 0 ? '' : '−'}
-              {formatMoney(Math.abs(category && categorySum !== undefined ? categorySum : shown))}
-            </ThemedText>
-            {!effType ? (
+          <View style={styles.headRow}>
+            <View style={styles.head}>
               <ThemedText type="small" themeColor="textSecondary">
-                Дохід {formatMoney(data.totals.income)} · Витрати {formatMoney(data.totals.expense)}
+                {periodText} · {data.total}
               </ThemedText>
-            ) : null}
+              <ThemedText style={styles.total} themeColor={tone} numberOfLines={1} adjustsFontSizeToFit>
+                {effType === 'expense' ? '−' : effType === 'income' ? '+' : shown >= 0 ? '' : '−'}
+                {formatMoney(Math.abs(category && categorySum !== undefined ? categorySum : shown))}
+              </ThemedText>
+              {!effType ? (
+                <ThemedText type="small" themeColor="textSecondary">
+                  Дохід {formatMoney(data.totals.income)} · Витрати {formatMoney(data.totals.expense)}
+                </ThemedText>
+              ) : null}
+            </View>
+            <AddButton kind={kind} onAdd={addEntry} />
           </View>
 
           {/* Для одного типу — одна діаграма; для підсумку (доходи разом із витратами) — окремо доходи й окремо витрати */}
@@ -223,10 +263,14 @@ export default function TransactionsScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   bold: { fontWeight: 600 },
-  range: { flexDirection: 'row', gap: Spacing.three },
+  range: { gap: Spacing.three },
   stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   add: { flexDirection: 'row', gap: Spacing.two },
-  head: { gap: 2 },
+  head: { flex: 1, gap: 2 },
+  headRow: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.three },
+  kinds: { flexDirection: 'row', borderWidth: 1, borderRadius: Radius.md, padding: 4, gap: 4 },
+  kind: { flex: 1, minHeight: 40, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
+  addPill: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44, paddingLeft: 12, paddingRight: 16, borderRadius: 999, marginBottom: 4 },
   total: { ...Type.hero },
   filter: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
   card: { paddingVertical: 0, gap: 0 },

@@ -13,6 +13,7 @@ import { CarPhoto } from './car-photo';
 import { ColorDot } from './color-dot';
 import { ContactChips } from './contact-chips';
 import { ContractCard } from './contract-card';
+import { QuickRecord } from './quick-record';
 import { PersonLink } from './person-link';
 import { PlateBadge } from './plate-badge';
 import { FactTiles } from './request-facts';
@@ -82,6 +83,8 @@ export function ActiveDealCard({ deal }: { deal: DealView }) {
             <View style={[styles.fill, { backgroundColor: theme.accent, width: `${Math.max(3, Math.round(progress * 100))}%` }]} />
           </View>
         ) : null}
+
+        {running ? <QuickRecord dealId={deal.id} /> : null}
 
         {stage === 'signing' ? (
           <>

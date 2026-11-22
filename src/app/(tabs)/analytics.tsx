@@ -1,4 +1,5 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useAddTransaction } from '@/components/transaction-sheet';
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -34,7 +35,7 @@ type Criterion = (typeof CRITERIA)[number];
 const paybackRank = (months: number | null) => (months === null ? Infinity : months === 0 ? -1 : months);
 
 export default function ReportScreen() {
-  const router = useRouter();
+  const addTransaction = useAddTransaction();
   const theme = useTheme();
   const { cars } = useFleet();
   const p = usePeriod();
@@ -82,7 +83,7 @@ export default function ReportScreen() {
       {car ? (
         carReport.data ? (
           <>
-            <Button title="Додати дохід або витрату" icon="add" onPress={() => router.push({ pathname: '/transaction/new', params: { carId: car.id } })} />
+            <Button title="Додати дохід або витрату" icon="add" onPress={() => addTransaction({ carId: car.id })} />
             <CarReportView report={carReport.data} carId={car.id} price={car.price} periodLabel={p.label} periodKey={p.key} exportSubtitle={`${car.brand} ${car.model} · ${p.label}`} />
           </>
         ) : (
@@ -115,7 +116,7 @@ export default function ReportScreen() {
 
           <BarChart key={p.key} data={data.series} card />
 
-          <Button title="Додати дохід або витрату" icon="add" onPress={() => router.push('/transaction/new')} />
+          <Button title="Додати дохід або витрату" icon="add" onPress={() => addTransaction()} />
 
           <SectionHeader title="Рейтинг авто" />
           <Segmented scroll options={CRITERIA} value={criterion} onChange={setCriterion} />

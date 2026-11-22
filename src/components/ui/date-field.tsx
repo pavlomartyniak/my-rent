@@ -53,7 +53,7 @@ export function DateField({ label, value, onChange, minimumDate, maximumDate, pl
           pressed && styles.pressed,
         ]}>
         <Icon name="calendar-outline" size={20} color="accent" />
-        <ThemedText type="default" themeColor={value ? 'text' : 'textSecondary'} style={styles.text}>
+        <ThemedText type="default" themeColor={value ? 'text' : 'textSecondary'} style={styles.text} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
           {shown}
         </ThemedText>
         <Icon name={open ? 'chevron-up' : 'chevron-down'} size={20} color="accent" />
