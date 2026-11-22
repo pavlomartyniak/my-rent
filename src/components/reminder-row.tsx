@@ -1,9 +1,10 @@
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
-import { Spacing } from '@/constants/theme';
 import { daysUntil, formatDate } from '@/lib/date';
+import { Radius, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { useFleet } from '@/store/fleet';
-import type { Reminder } from '@/types';
+import { type Reminder, reminderTitle } from '@/types';
 
 import { ThemedText } from './themed-text';
 import { Card } from './ui/card';
@@ -21,6 +22,7 @@ export function dueLabel(days: number) {
 export function ReminderRow({ reminder }: { reminder: Reminder }) {
   const { cars, toggleReminder, deleteReminder } = useFleet();
   const car = cars.find((c) => c.id === reminder.carId);
+  const theme = useTheme();
   const days = daysUntil(reminder.date);
   const urgent = !reminder.done && days < 0;
 
@@ -43,12 +45,20 @@ export function ReminderRow({ reminder }: { reminder: Reminder }) {
       </Pressable>
       <View style={styles.flex}>
         <ThemedText type="default" style={reminder.done ? styles.strike : styles.bold}>
-          {reminder.kind} · {car ? `${car.brand} ${car.model}` : 'Авто видалено'}
+          {reminderTitle(reminder)} · {car ? `${car.brand} ${car.model}` : 'Авто видалено'}
         </ThemedText>
-        <ThemedText type="small" themeColor={urgent ? 'negative' : 'textSecondary'}>
-          {reminder.done ? formatDate(reminder.date) : `${dueLabel(days)} · ${formatDate(reminder.date)}`}
+        <ThemedText type="small" themeColor="textSecondary">
+          {formatDate(reminder.date)}
         </ThemedText>
       </View>
+      {reminder.done ? null : (
+        // Скільки лишилось: червоне — прострочено, жовте — найближчі дні, нейтральне — ще далеко
+        <View style={[styles.chip, { backgroundColor: urgent ? theme.negativeSoft : days <= 7 ? theme.warningSoft : theme.backgroundSelected }]}>
+          <ThemedText type="smallBold" themeColor={urgent ? 'negative' : days <= 7 ? 'warning' : 'textSecondary'}>
+            {dueLabel(days)}
+          </ThemedText>
+        </View>
+      )}
       <IconButton icon="trash-outline" label="Видалити" tone="neutral" size={38} onPress={confirmDelete} />
     </Card>
   );
@@ -57,6 +67,7 @@ export function ReminderRow({ reminder }: { reminder: Reminder }) {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   flex: { flex: 1 },
+  chip: { paddingHorizontal: Spacing.two, paddingVertical: 4, borderRadius: Radius.pill },
   done: { opacity: 0.55 },
   strike: { textDecorationLine: 'line-through' },
   bold: { fontWeight: 600 },

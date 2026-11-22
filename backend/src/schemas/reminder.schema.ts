@@ -15,6 +15,10 @@ export class Reminder {
   @Prop({ required: true, enum: REMINDER_KINDS })
   kind: string;
 
+  /** Що саме треба зробити (обов'язково для типу «Інше») */
+  @Prop({ default: '' })
+  note: string;
+
   /** YYYY-MM-DD */
   @Prop({ required: true })
   date: string;

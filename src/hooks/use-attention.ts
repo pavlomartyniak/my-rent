@@ -3,6 +3,7 @@ import { daysUntil } from '@/lib/date';
 import type { DealView, DepositQuestion, PaymentQuestion } from '@/lib/deals';
 import { formatMoney, plural } from '@/lib/format';
 import type { RentalView } from '@/lib/rentals';
+import { reminderTitle } from '@/types';
 import type { WantedView } from '@/lib/wanted';
 import { useFleet } from '@/store/fleet';
 import type { IconName } from '@/components/ui/icon';
@@ -151,7 +152,7 @@ export function useAttention(role: 'owner' | 'renter' | null) {
         key: `rem-${next.id}`,
         tone: days < 0 ? 'urgent' : 'warning',
         icon: 'alert-circle',
-        title: `${next.kind}${car ? ` · ${car.brand} ${car.model}` : ''}`,
+        title: `${reminderTitle(next)}${car ? ` · ${car.brand} ${car.model}` : ''}`,
         action: 'Відкрити',
         text: days < 0 ? `Прострочено на ${-days} ${plural(-days, 'день', 'дні', 'днів')}` : days === 0 ? 'Сьогодні' : `Через ${days} ${plural(days, 'день', 'дні', 'днів')}`,
         count: 0,

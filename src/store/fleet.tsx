@@ -85,7 +85,7 @@ type FleetContextValue = Data & {
   addTransaction: (tx: NewTransaction) => Promise<boolean>;
   updateTransaction: (id: string, patch: Partial<NewTransaction>) => Promise<boolean>;
   deleteTransaction: (id: string) => Promise<boolean>;
-  addReminder: (reminder: Pick<Reminder, 'carId' | 'kind' | 'date'>) => Promise<boolean>;
+  addReminder: (reminder: Pick<Reminder, 'carId' | 'kind' | 'date' | 'note'>) => Promise<boolean>;
   toggleReminder: (id: string) => Promise<boolean>;
   deleteReminder: (id: string) => Promise<boolean>;
   finishOnboarding: () => Promise<boolean>;
@@ -235,7 +235,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
   );
 
   const addReminder = useCallback(
-    (input: Pick<Reminder, 'carId' | 'kind' | 'date'>) =>
+    (input: Pick<Reminder, 'carId' | 'kind' | 'date' | 'note'>) =>
       run(async () => {
         let created = await api<Reminder>('POST', '/reminders', input);
         // Локальні сповіщення планує сам пристрій; їхні id зберігаємо, щоб скасувати при виконанні/видаленні

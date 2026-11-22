@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-import type { Car, Reminder } from '@/types';
+import { type Car, type Reminder, reminderTitle } from '@/types';
 
 import { fromISODate } from './date';
 
@@ -39,8 +39,8 @@ export async function scheduleReminder(reminder: Reminder, car?: Car): Promise<s
 
   const carName = car ? `${car.brand} ${car.model}` : 'Авто';
   const slots = [
-    { date: at(reminder.date, 1, 10), body: `Завтра: ${reminder.kind}` },
-    { date: at(reminder.date, 0, 9), body: `Сьогодні: ${reminder.kind}` },
+    { date: at(reminder.date, 1, 10), body: `Завтра: ${reminderTitle(reminder)}` },
+    { date: at(reminder.date, 0, 9), body: `Сьогодні: ${reminderTitle(reminder)}` },
   ].filter((s) => s.date.getTime() > Date.now());
 
   const ids: string[] = [];

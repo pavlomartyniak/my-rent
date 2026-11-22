@@ -71,10 +71,15 @@ export type Transaction = {
 export const REMINDER_KINDS = ['ТО', 'Страховка', 'Інше'] as const;
 export type ReminderKind = (typeof REMINDER_KINDS)[number];
 
+/** Назва нагадування: для «Інше» це текст, який ввів користувач */
+export const reminderTitle = (r: { kind: string; note?: string }) => (r.kind === 'Інше' && r.note?.trim() ? r.note.trim() : r.kind);
+
 export type Reminder = {
   id: string;
   carId: string;
   kind: ReminderKind;
+  /** Що саме нагадати (для типу «Інше») */
+  note?: string;
   /** ISO date, YYYY-MM-DD */
   date: string;
   done: boolean;
