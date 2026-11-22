@@ -1,4 +1,4 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -6,6 +6,7 @@ import { CategoryBreakdown } from '@/components/category-breakdown';
 import { ReportStatus } from '@/components/report-status';
 import { ThemedText } from '@/components/themed-text';
 import { TransactionRow } from '@/components/transaction-row';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { DateField } from '@/components/ui/date-field';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -23,6 +24,7 @@ import type { PeriodEntries } from '@/lib/reports';
 const MODES = ['Місяць', 'Рік', 'Весь час', 'Діапазон'] as const;
 type Mode = (typeof MODES)[number];
 type Kind = 'Усі' | 'Доходи' | 'Витрати';
+const KINDS: readonly Kind[] = ['Усі', 'Доходи', 'Витрати'];
 const VIEWS = ['Список', 'Діаграма'] as const;
 type View_ = (typeof VIEWS)[number];
 
@@ -36,6 +38,7 @@ const SCREEN_TITLE: Record<Kind, string> = { Усі: 'Записи', Доход�
  */
 export default function TransactionsScreen() {
   const theme = useTheme();
+  const router = useRouter();
   const { period, type, carId, dealId } = useLocalSearchParams<{ period?: string; type?: 'income' | 'expense'; carId?: string; dealId?: string; label?: string }>();
   const today = todayISO();
   const current = today.slice(0, 7);
@@ -45,8 +48,8 @@ export default function TransactionsScreen() {
   const [month, setMonth] = useState(period && /^\d{4}-\d{2}$/.test(period) ? period : period && /^\d{4}$/.test(period) ? `${period}-01` : current);
   const [from, setFrom] = useState(`${current}-01`);
   const [to, setTo] = useState(today);
-  // Тип записів визначає плашка, з якої відкрили екран («Дохід», «Витрати» чи місячний підсумок), і на екрані не змінюється
-  const kind: Kind =type === 'income' ? 'Доходи' : type === 'expense' ? 'Витрати' : 'Усі';
+  // Стартовий тип записів задає плашка, з якої відкрили екран («Дохід», «Витрати» чи підсумок); далі його можна перемикати тут же
+  const [kind, setKind] = useState<Kind>(type === 'income' ? 'Доходи' : type === 'expense' ? 'Витрати' : 'Усі');
   const [view, setView] = useState<View_>('Список');
   const [category, setCategory] = useState<string | undefined>();
 
@@ -70,7 +73,7 @@ export default function TransactionsScreen() {
   ]
     .filter(Boolean)
     .join('&');
-  const { data, loading, error, retry } = useReport<PeriodEntries>(rangeInvalid ? null : `/transactions/period?${query}`, { keepPrevious: true });
+  const { data, loading, error, retry } = useReport<PeriodEntries>(rangeInvalid ? null : `/transactions/period?${query}`, { keepPrevious: true, refetchOnFocus: true });
 
   // Назву авто показуємо лише там, де записи охоплюють кілька авто
   const showCar = !carId && !dealId;
@@ -82,9 +85,20 @@ export default function TransactionsScreen() {
   const categorySum = category && data && effType ? data.breakdown[effType].find((c) => c.category === category)?.amount : undefined;
   const shown = !data ? 0 : effType === 'expense' ? data.totals.expense : effType === 'income' ? data.totals.income : data.totals.profit;
 
+  const addEntry = (t: 'income' | 'expense') => router.push({ pathname: '/transaction/new', params: { type: t, ...(carId ? { carId } : {}), ...(dealId ? { dealId } : {}) } });
+
   return (
     <Screen>
       <Stack.Screen options={{ title: SCREEN_TITLE[kind], headerBackTitle: 'Назад' }} />
+
+      <SwitchTabs
+        options={KINDS}
+        value={kind}
+        onChange={(k) => {
+          setKind(k);
+          setCategory(undefined);
+        }}
+      />
 
       <SwitchTabs
         options={MODES}
@@ -113,6 +127,11 @@ export default function TransactionsScreen() {
           <IconButton icon="chevron-forward" label="Вперед" disabled={atEnd} onPress={() => setMonth(shiftMonth(month, step))} />
         </View>
       )}
+      <View style={styles.add}>
+        {kind !== 'Витрати' ? <Button title={kind === 'Усі' ? 'Додати дохід' : 'Додати запис про дохід'} icon="add" variant="secondary" style={styles.flex} onPress={() => addEntry('income')} /> : null}
+        {kind !== 'Доходи' ? <Button title={kind === 'Усі' ? 'Додати витрату' : 'Додати запис про витрату'} icon="add" variant="secondary" style={styles.flex} onPress={() => addEntry('expense')} /> : null}
+      </View>
+
       {rangeInvalid ? (
         <ThemedText type="small" themeColor="negative" accessibilityRole="alert">
           Початок діапазону пізніший за кінець.
@@ -206,6 +225,7 @@ const styles = StyleSheet.create({
   bold: { fontWeight: 600 },
   range: { flexDirection: 'row', gap: Spacing.three },
   stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  add: { flexDirection: 'row', gap: Spacing.two },
   head: { gap: 2 },
   total: { ...Type.hero },
   filter: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
