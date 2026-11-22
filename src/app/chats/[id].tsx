@@ -1,5 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import * as Clipboard from 'expo-clipboard';
 import { ActionSheetIOS, ActivityIndicator, Alert, AppState, Linking, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -319,6 +320,7 @@ export default function ChatScreen() {
   function ownMenu(m: ChatMessage) {
     const canEdit = canEditNow(m);
     Alert.alert('Повідомлення', undefined, [
+      ...(m.text ? [{ text: 'Копіювати', onPress: () => void Clipboard.setStringAsync(m.text) }] : []),
       ...(canEdit ? [{ text: 'Редагувати', onPress: () => startEdit(m) }] : []),
       { text: 'Видалити', style: 'destructive' as const, onPress: () => removeMessage(m) },
       { text: 'Скасувати', style: 'cancel' as const },
@@ -328,12 +330,12 @@ export default function ChatScreen() {
   // Довге натискання на чуже повідомлення пропонує поскаржитись на нього
   function reportMessage(m: ChatMessage) {
     Alert.alert('Повідомлення', undefined, [
+      ...(m.text ? [{ text: 'Копіювати', onPress: () => void Clipboard.setStringAsync(m.text) }] : []),
       { text: 'Поскаржитись на повідомлення', style: 'destructive', onPress: () => setReporting({ kind: 'message', messageId: m.id }) },
       { text: 'Скасувати', style: 'cancel' },
     ]);
   }
 
-  const lastMineId = messages.find((m) => m.mine && !m.status)?.id;
   const readUntil = chat?.otherReadAt ? new Date(chat.otherReadAt).getTime() : 0;
 
   return (
@@ -439,7 +441,7 @@ export default function ChatScreen() {
               const older = messages[index + 1];
               const sepBefore = !older || differentDays(item.createdAt, older.createdAt);
               const failed = item.status === 'failed';
-              const seen = item.id === lastMineId && new Date(item.createdAt).getTime() <= readUntil;
+              const seen = new Date(item.createdAt).getTime() <= readUntil;
               return (
                 <View>
                   {sepBefore ? (
@@ -451,7 +453,7 @@ export default function ChatScreen() {
                   ) : null}
                   <View style={[styles.line, item.mine ? styles.lineMine : styles.lineTheirs]}>
                     <Pressable
-                      disabled={!failed && (item.mine || !!item.status)}
+                      disabled={!failed && (!!item.status || (item.mine && (item.system || !!item.deletedAt)))}
                       onPress={failed ? () => retry(item) : undefined}
                       onLongPress={item.status || item.deletedAt ? undefined : item.mine ? (item.system ? undefined : () => ownMenu(item)) : () => reportMessage(item)}
                       accessibilityLabel={failed ? 'Не надіслано. Натисніть, щоб повторити' : undefined}
@@ -467,7 +469,7 @@ export default function ChatScreen() {
                       ) : null}
                       {!item.deletedAt && item.attachments?.length ? <ChatAttachments items={item.attachments} mine={item.mine} chatId={String(id)} inert={!!item.status} progress={item.clientId ? uploads[item.clientId] : undefined} onCancel={item.clientId ? () => aborts.current.get(item.clientId!)?.abort() : undefined} /> : null}
                       {!item.deletedAt && item.text ? (
-                        <ThemedText type="default" style={{ color: item.mine ? theme.onAccent : theme.text }} selectable>
+                        <ThemedText type="default" style={{ color: item.mine ? theme.onAccent : theme.text }}>
                           {item.text}
                         </ThemedText>
                       ) : null}
