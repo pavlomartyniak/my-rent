@@ -1,8 +1,8 @@
-import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert, Linking } from 'react-native';
 
 import { api } from './api';
+import { mimeFor, postForm } from './upload';
 
 export type Phase = 'handover' | 'return';
 
@@ -80,20 +80,19 @@ export async function pickPhoto(): Promise<string | null> {
 
 type Signature = { cloudName: string; apiKey: string; items: { publicId: string; timestamp: number; signature: string; uploadUrl: string }[] };
 
-/** Завантажує фото в Cloudinary за підписом сервера й повертає https-посилання */
-export async function uploadConditionPhoto(dealId: string, uri: string): Promise<string> {
+/** Завантажує фото в Cloudinary за підписом сервера й повертає https-посилання; `onProgress` — частка відправленого (0..1) */
+export async function uploadConditionPhoto(dealId: string, uri: string, onProgress?: (fraction: number) => void): Promise<string> {
   const sig = await api<Signature>('POST', `/condition/${dealId}/signature`, { count: 1 });
   const item = sig.items[0]!;
-  const form = new FormData();
-  form.append('file', new File(uri) as unknown as Blob);
-  form.append('api_key', sig.apiKey);
-  form.append('timestamp', String(item.timestamp));
-  form.append('public_id', item.publicId);
-  form.append('signature', item.signature);
-  const res = await fetch(item.uploadUrl, { method: 'POST', body: form });
-  const data = (await res.json().catch(() => null)) as { secure_url?: string; error?: { message?: string } } | null;
-  if (!res.ok || !data?.secure_url) throw new Error(data?.error?.message ?? 'Не вдалося завантажити фото');
-  return data.secure_url;
+  const name = uri.split('/').pop() || 'photo.jpg';
+  const res = await postForm(item.uploadUrl, {
+    fields: { api_key: sig.apiKey, timestamp: String(item.timestamp), public_id: item.publicId, signature: item.signature },
+    file: { uri, name, type: mimeFor(name, 'image/jpeg') },
+    onProgress,
+  });
+  const url = (res.json as { secure_url?: string } | null)?.secure_url;
+  if (!res.ok || !url) throw new Error(((res.json as { error?: { message?: string } } | null)?.error?.message) ?? 'Не вдалося завантажити фото');
+  return url;
 }
 
 export const savePhoto = (dealId: string, phase: Phase, body: { slot: string; url: string; note?: string }) => api<ConditionView>('PUT', `/condition/${dealId}/${phase}/photo`, body);

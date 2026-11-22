@@ -61,6 +61,12 @@ export class SendMessageDto {
   clientId?: string;
 }
 
+export class EditMessageDto {
+  @IsString()
+  @MaxLength(MAX_MESSAGE_LENGTH, { message: `Повідомлення задовге (до ${MAX_MESSAGE_LENGTH} символів)` })
+  text: string;
+}
+
 export class MessagesQuery {
   /** id найстарішого вже завантаженого повідомлення: віддаємо ті, що раніше */
   @ValidateIf((_, v) => v !== undefined)

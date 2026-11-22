@@ -1,11 +1,11 @@
-import { Body, Controller, Delete, Get, Header, HttpCode, Param, Post, Query, StreamableFile, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, HttpCode, Param, Patch, Post, Query, StreamableFile, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 
 import { type AuthUser, CurrentUser } from '../common/current-user';
 import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
 import { MAX_CHAT_FILE_BYTES } from './chat-files';
-import { MessagesQuery, OpenChatDto, SendMessageDto } from './chat.dto';
+import { EditMessageDto, MessagesQuery, OpenChatDto, SendMessageDto } from './chat.dto';
 import { ChatService } from './chat.service';
 
 /** Чати власників і орендарів: ті самі маршрути для обох ролей, сервер сам визначає сторону */
@@ -66,6 +66,20 @@ export class ChatController {
   @Post(':id/messages')
   send(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Body() dto: SendMessageDto) {
     return this.chat.send(user, id, dto.text ?? '', dto.clientId, dto.attachments);
+  }
+
+  /** Змінити текст свого повідомлення (протягом 15 хвилин після відправки) */
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @Patch(':id/messages/:messageId')
+  edit(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Param('messageId', ParseObjectIdPipe) messageId: string, @Body() dto: EditMessageDto) {
+    return this.chat.editMessage(user, id, messageId, dto.text);
+  }
+
+  /** Видалити своє повідомлення для обох: лишається слід «Повідомлення видалено» */
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @Delete(':id/messages/:messageId')
+  deleteMessage(@CurrentUser() user: AuthUser, @Param('id', ParseObjectIdPipe) id: string, @Param('messageId', ParseObjectIdPipe) messageId: string) {
+    return this.chat.deleteMessage(user, id, messageId);
   }
 
   /** Видалити розмову зі свого списку (співрозмовник її зберігає) */

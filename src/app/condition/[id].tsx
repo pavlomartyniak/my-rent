@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PhotoViewer } from '@/components/photo-viewer';
 import { ReportStatus } from '@/components/report-status';
+import { UploadBar, UploadRing } from '@/components/upload-progress';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -41,6 +42,8 @@ export default function ConditionScreen() {
   const { data, loading, error, retry } = useReport<ConditionView>(`/condition/${id}`, { useCache: false, refetchOnFocus: true });
   const [phaseLabel, setPhaseLabel] = useState<(typeof PHASES)[number]>(PHASES[0]);
   const [busy, setBusy] = useState<string | null>(null);
+  // Частка відправленого фото (0..1); null, коли йде не завантаження, а інша дія
+  const [progress, setProgress] = useState<number | null>(null);
   const [viewer, setViewer] = useState<{ urls: string[]; index: number } | null>(null);
   const [km, setKm] = useState('');
   const [damage, setDamage] = useState<{ uri: string } | null>(null);
@@ -102,13 +105,19 @@ export default function ConditionScreen() {
       retry();
     } finally {
       setBusy(null);
+      setProgress(null);
     }
   }
+
+  const uploadPhoto = (uri: string) => {
+    setProgress(0);
+    return uploadConditionPhoto(String(id), uri, setProgress);
+  };
 
   async function capture(slot: string) {
     const uri = await pickPhoto();
     if (!uri) return;
-    await run(slot, async () => savePhoto(String(id), phase, { slot, url: await uploadConditionPhoto(String(id), uri) }));
+    await run(slot, async () => savePhoto(String(id), phase, { slot, url: await uploadPhoto(uri) }));
   }
 
   function openPhoto(p: ConditionPhoto, all: ConditionPhoto[]) {
@@ -133,7 +142,7 @@ export default function ConditionScreen() {
     if (!damage || !note.trim()) return;
     const { uri } = damage;
     setDamage(null);
-    await run('damage', async () => savePhoto(String(id), phase, { slot: 'damage', url: await uploadConditionPhoto(String(id), uri), note: note.trim() }));
+    await run('damage', async () => savePhoto(String(id), phase, { slot: 'damage', url: await uploadPhoto(uri), note: note.trim() }));
   }
 
   // Головна кнопка екрана (внизу, під рукою): за ролею й етапом. Лишилось зробити, підтвердити чи просто завершити перегляд.
@@ -184,7 +193,7 @@ export default function ConditionScreen() {
               {p ? <Image source={{ uri: thumbnailUrl(p.url, 500) }} style={StyleSheet.absoluteFill} contentFit="cover" /> : null}
               {!p ? (
                 <View style={styles.empty}>
-                  {working ? <ActivityIndicator /> : <Icon name={canEdit ? 'camera-outline' : 'image-outline'} size={26} color="textSecondary" />}
+                  {working ? progress !== null ? <UploadRing progress={progress} size={44} /> : <ActivityIndicator /> : <Icon name={canEdit ? 'camera-outline' : 'image-outline'} size={26} color="textSecondary" />}
                   {!canEdit && !working && phase === 'handover' && renter ? (
                     <ThemedText type="caption" themeColor="textSecondary">
                       Чекаємо власника
@@ -205,7 +214,7 @@ export default function ConditionScreen() {
               </View>
               {working && p ? (
                 <View style={[StyleSheet.absoluteFill, styles.empty, { backgroundColor: 'rgba(255,255,255,0.6)' }]}>
-                  <ActivityIndicator />
+                  {progress !== null ? <UploadRing progress={progress} size={44} /> : <ActivityIndicator />}
                 </View>
               ) : null}
             </Pressable>
@@ -253,6 +262,7 @@ export default function ConditionScreen() {
           {phase === 'handover' ? 'Подряпини, вм’ятини, плями в салоні: сфотографуйте й опишіть їх тут, щоб потім не було суперечок.' : 'Тут будуть нові пошкодження, помічені при поверненні.'}
         </ThemedText>
       ) : null}
+      {busy === 'damage' && progress !== null ? <UploadBar progress={progress} label="Завантажуємо фото" /> : null}
       {canDamage ? <Button title={busy === 'damage' ? 'Завантажуємо…' : 'Додати пошкодження'} icon="alert-circle-outline" variant="secondary" disabled={busy !== null} onPress={() => void addDamage()} /> : null}
       {phase === 'handover' && !data.handover.canEdit && data.handover.canAddDamage ? (
         <ThemedText type="small" themeColor="textSecondary">

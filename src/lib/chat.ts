@@ -39,11 +39,23 @@ export type ChatMessage = {
   mine: boolean;
   createdAt: string;
   clientId: string | null;
+  /** Службове повідомлення про домовленість: його не можна змінити чи видалити */
+  system?: boolean;
+  /** Коли текст змінили («змінено») */
+  editedAt?: string | null;
+  /** Коли повідомлення видалили: замість нього показується слід «Повідомлення видалено» */
+  deletedAt?: string | null;
   /** Лише для локальних повідомлень: ще надсилається чи не вдалося надіслати */
   status?: 'sending' | 'failed';
   /** Лише для не надісланих: чому не вдалося (показується під повідомленням) */
   error?: string;
 };
+
+/** Скільки після відправки можна змінити текст (збігається з сервером) */
+export const EDIT_WINDOW_MS = 15 * 60_000;
+
+/** Чи можна ще змінити текст цього повідомлення */
+export const canEditNow = (m: { text: string; createdAt: string }) => !!m.text && Date.now() - new Date(m.createdAt).getTime() <= EDIT_WINDOW_MS;
 
 export type MessagesPage = { items: ChatMessage[]; hasMore: boolean };
 

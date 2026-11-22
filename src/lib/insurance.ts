@@ -3,6 +3,7 @@ import { Directory, File, Paths } from 'expo-file-system';
 import { Alert } from 'react-native';
 
 import { openFileViewer } from './file-viewer';
+import { mimeFor, postForm, serverMessage } from './upload';
 import { ApiError, BASE_URL, getApiToken } from './api';
 
 /** Відповідь /insurance/cars/:carId: чи є поліс і що про нього відомо */
@@ -27,15 +28,17 @@ export async function pickPolicy(): Promise<PickedPolicy | null> {
   return { uri: a.uri, name: a.name, mime: a.mimeType, size: a.size ?? 0 };
 }
 
-/** Завантажує файл полісу на сервер (PDF чи фото); новий замінює попередній. Помилку сервера повертає як ApiError */
-export async function uploadPolicy(carId: string, file: { uri: string; name: string; mime?: string | null }, validUntil?: string | null): Promise<PolicyInfo> {
-  const form = new FormData();
-  form.append('file', new File(file.uri) as unknown as Blob);
-  if (validUntil) form.append('validUntil', validUntil);
-  const res = await fetch(`${BASE_URL}/insurance/cars/${carId}`, { method: 'PUT', headers: { Authorization: `Bearer ${getApiToken() ?? ''}` }, body: form });
-  const body = (await res.json().catch(() => null)) as (PolicyInfo & { message?: string | string[] }) | null;
-  if (!res.ok) throw new ApiError(Array.isArray(body?.message) ? String(body?.message[0]) : (body?.message ?? 'Не вдалося завантажити поліс'), res.status);
-  return body as PolicyInfo;
+/** Завантажує файл полісу на сервер (PDF чи фото); новий замінює попередній. Помилку сервера повертає як ApiError; `onProgress` — частка відправленого (0..1) */
+export async function uploadPolicy(carId: string, file: { uri: string; name: string; mime?: string | null }, validUntil?: string | null, onProgress?: (fraction: number) => void): Promise<PolicyInfo> {
+  const res = await postForm(`${BASE_URL}/insurance/cars/${carId}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${getApiToken() ?? ''}` },
+    fields: validUntil ? { validUntil } : {},
+    file: { uri: file.uri, name: file.name, type: file.mime || mimeFor(file.name, 'application/pdf') },
+    onProgress,
+  });
+  if (!res.ok) throw new ApiError(serverMessage(res.json) ?? 'Не вдалося завантажити поліс', res.status);
+  return res.json as unknown as PolicyInfo;
 }
 
 const EXT: Record<string, string> = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/heic': 'heic' };

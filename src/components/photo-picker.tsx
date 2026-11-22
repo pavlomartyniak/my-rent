@@ -9,6 +9,7 @@ import { plural } from '@/lib/format';
 
 import { CarPhoto } from './car-photo';
 import { ThemedText } from './themed-text';
+import { UploadBar } from './upload-progress';
 import { Button } from './ui/button';
 import { IconButton } from './ui/icon-button';
 
@@ -19,16 +20,16 @@ type Props = { value: string[]; onChange: (photos: string[]) => void; error?: st
 /** Галерея фото авто: кілька фото одразу з галереї або знімок з камери; перше фото — обкладинка */
 export function PhotoPicker({ value, onChange, error }: Props) {
   const theme = useTheme();
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number; fraction: number } | null>(null);
   const uploading = progress !== null;
   const room = MAX_PHOTOS - value.length;
 
   /** Фото потрібні й іншим користувачам (оголошення), тому одразу завантажуємо їх у хмару */
   async function accept(localUris: string[]) {
     if (!localUris.length) return;
-    setProgress({ done: 0, total: localUris.length });
+    setProgress({ done: 0, total: localUris.length, fraction: 0 });
     try {
-      const res = await uploadPhotos(localUris, (done, total) => setProgress({ done, total }));
+      const res = await uploadPhotos(localUris, (done, total, fraction) => setProgress({ done, total, fraction }));
       if (res.unavailable) {
         // Хмара не налаштована: лишаємо локальні фото, їх бачить лише власник
         onChange([...value, ...localUris]);
@@ -103,6 +104,8 @@ export function PhotoPicker({ value, onChange, error }: Props) {
           placeholder={uploading ? `Завантажуємо ${Math.min(progress.done + 1, progress.total)} з ${progress.total}…` : 'Торкніться, щоб додати фото'}
         />
       </Pressable>
+
+      {progress ? <UploadBar progress={(progress.done + progress.fraction) / progress.total} label={`Завантажуємо ${Math.min(progress.done + 1, progress.total)} з ${progress.total}`} /> : null}
 
       {value.length > 0 ? (
         <>

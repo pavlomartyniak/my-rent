@@ -12,6 +12,7 @@ import { CAR_STATUSES, FUEL_TYPES, MANUAL_CAR_STATUSES, type Car, type FuelType 
 
 import { DocumentsCard } from './documents-card';
 import { DeleteCar } from './delete-car';
+import { UploadBar } from './upload-progress';
 import { Hint } from './hint';
 import { formatSize } from '@/lib/format';
 import { pickPolicy, type PickedPolicy, uploadPolicy, viewPickedPolicy } from '@/lib/insurance';
@@ -69,6 +70,8 @@ export function CarForm({ car }: { car?: Car }) {
   // Помилки полів від сервера (наприклад, хибний державний номер): підсвічують поле, поки його не змінять
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  // Відправка файлу полісу після створення авто (0..1); null — файл не відправляється
+  const [policyProgress, setPolicyProgress] = useState<number | null>(null);
 
   const rented = status === RENTED;
   const yearNum = Number(year);
@@ -163,7 +166,8 @@ export function CarForm({ car }: { car?: Car }) {
     const created = await addCar(data, setServerErrors);
     if (created && policy) {
       try {
-        await uploadPolicy(created.id, policy);
+        setPolicyProgress(0);
+        await uploadPolicy(created.id, policy, null, setPolicyProgress);
       } catch (e) {
         // Авто вже створено: не блокуємо, а підказуємо, де додати поліс
         Alert.alert('Поліс не завантажено', `${e instanceof Error ? e.message : 'Спробуйте ще раз'}. Авто додано: завантажте поліс на екрані авто, розділ «Страховий поліс».`);
@@ -281,6 +285,7 @@ export function CarForm({ car }: { car?: Car }) {
         </>
       ) : null}
 
+      {policyProgress !== null && saving ? <UploadBar progress={policyProgress} label="Завантажуємо поліс" /> : null}
       <Button title={saving ? 'Зберігаємо…' : 'Зберегти'} disabled={saving} onPress={onSave} />
       {car ? <DeleteCar carId={car.id} name={`${car.brand} ${car.model}`} rented={car.status === 'В оренді' || car.status === 'Заброньоване'} /> : null}
     </Screen>

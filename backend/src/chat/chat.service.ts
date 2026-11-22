@@ -19,7 +19,7 @@ import { User } from '../schemas/user.schema';
 import type { OpenChatDto } from './chat.dto';
 import { ChatGateway } from './chat.gateway';
 import { type Attachment, AttachmentError, attachmentsLabel, parseAttachments } from './attachments';
-import { cleanMessage, preview } from './chat.math';
+import { canEditMessage, cleanMessage, DELETED_PREVIEW, preview } from './chat.math';
 import { ChatFileError, checkChatFile } from './chat-files';
 import { binaryToBuffer } from '../insurance/insurance.files';
 
@@ -157,7 +157,7 @@ export class ChatService implements OnModuleInit {
   async autoStart(user: AuthUser, context: OpenChatDto, text: string, clientId: string): Promise<string | null> {
     try {
       const chat = await this.open(user, context);
-      await this.send(user, chat.id, text, clientId);
+      await this.send(user, chat.id, text, clientId, undefined, true);
       return chat.id;
     } catch (e) {
       this.log.warn(`Авто-повідомлення не надіслано: ${String(e)}`);
@@ -249,7 +249,7 @@ export class ChatService implements OnModuleInit {
 
   // ---- надсилання й читання ----
 
-  async send(user: AuthUser, id: string, rawText: string, clientId?: string, rawAttachments?: { url?: string; fileId?: string; name: string; size: number }[]) {
+  async send(user: AuthUser, id: string, rawText: string, clientId?: string, rawAttachments?: { url?: string; fileId?: string; name: string; size: number }[], system = false) {
     const text = cleanMessage(rawText) ?? '';
     const fileIds = (rawAttachments ?? []).filter((a) => a.fileId).map((a) => a.fileId!);
     if ((rawAttachments ?? []).some((a) => !a.url && !a.fileId)) throw new BadRequestException('Невірне вкладення');
@@ -282,7 +282,7 @@ export class ChatService implements OnModuleInit {
 
     let message: MessageDocument;
     try {
-      message = await this.messages.create({ conversationId: c._id, senderId: user.id, text, attachments: attachments.map((a) => ({ ...a, fileId: a.fileId ? new Types.ObjectId(a.fileId) : undefined })), clientId });
+      message = await this.messages.create({ conversationId: c._id, senderId: user.id, text, attachments: attachments.map((a) => ({ ...a, fileId: a.fileId ? new Types.ObjectId(a.fileId) : undefined })), clientId, ...(system ? { system: true } : {}) });
       if (fileIds.length) await this.chatFiles.updateMany({ _id: { $in: fileIds } }, { $set: { messageId: message._id } });
     } catch (e) {
       // Гонка двох однакових відправок: unique-індекс залишає одну, повертаємо її
@@ -313,6 +313,54 @@ export class ChatService implements OnModuleInit {
       unread: updated?.unread,
     });
     return this.messageView(message, user.id);
+  }
+
+  /** Своє, не службове й не видалене повідомлення цієї розмови */
+  private async ownMessage(user: AuthUser, id: string, messageId: string) {
+    const c = await this.mineOrThrow(user, id);
+    const m = await this.messages.findOne({ _id: messageId, conversationId: c._id }).exec();
+    if (!m || m.deletedAt) throw new NotFoundException('Повідомлення не знайдено');
+    if (String(m.senderId) !== user.id) throw new ForbiddenException('Можна змінювати лише свої повідомлення');
+    if (m.system) throw new ForbiddenException('Службове повідомлення про домовленість змінити не можна');
+    return { c, m };
+  }
+
+  /** Після зміни чи видалення оновлює прев'ю в списку розмов, якщо це було останнє повідомлення, і розсилає подію обом сторонам */
+  private async publishChange(c: ConversationDocument, m: MessageDocument, user: AuthUser, previewText: string) {
+    if (c.lastMessage && String(c.lastMessage.senderId) === user.id && c.lastMessage.at.getTime() === m.createdAt.getTime()) {
+      await this.conversations.updateOne({ _id: c._id }, { $set: { 'lastMessage.text': preview(previewText, 200) } }).exec();
+    }
+    const recipient = String(user.role === 'owner' ? c.renterId : c.ownerId);
+    this.gateway.emitTo([user.id, recipient], 'message', { conversationId: String(c._id), message: this.messageView(m, user.id), senderId: user.id });
+  }
+
+  /** Змінює текст свого повідомлення: протягом 15 хвилин, лише коли воно має текст; з позначкою «змінено» */
+  async editMessage(user: AuthUser, id: string, messageId: string, rawText: string) {
+    const { c, m } = await this.ownMessage(user, id, messageId);
+    if (!canEditMessage(m.createdAt)) throw new BadRequestException('Змінити повідомлення можна лише протягом 15 хвилин після відправки');
+    const text = cleanMessage(rawText);
+    if (!text) throw new BadRequestException('Текст не може бути порожнім: щоб прибрати повідомлення, видаліть його');
+    if (text === m.text) return this.messageView(m, user.id);
+    m.text = text;
+    m.editedAt = new Date();
+    await m.save();
+    await this.publishChange(c, m, user, text);
+    return this.messageView(m, user.id);
+  }
+
+  /** Видаляє своє повідомлення для обох: текст і вкладення стираються (файли з хмари теж), лишається слід «Повідомлення видалено» */
+  async deleteMessage(user: AuthUser, id: string, messageId: string) {
+    const { c, m } = await this.ownMessage(user, id, messageId);
+    const urls = (m.attachments ?? []).map((a) => a.url).filter(Boolean);
+    const fileIds = (m.attachments ?? []).map((a) => a.fileId).filter(Boolean);
+    m.text = '';
+    m.attachments = [];
+    m.deletedAt = new Date();
+    await m.save();
+    if (urls.length) void this.media.release(urls);
+    if (fileIds.length) await this.chatFiles.deleteMany({ _id: { $in: fileIds } });
+    await this.publishChange(c, m, user, DELETED_PREVIEW);
+    return this.messageView(m, user.id);
   }
 
   /** Позначає чат прочитаним і повідомляє співрозмовника */
@@ -465,6 +513,9 @@ export class ChatService implements OnModuleInit {
       attachments: (m.attachments ?? []).map((a) => ({ kind: a.kind, url: a.url, name: a.name, size: a.size, fileId: a.fileId ? String(a.fileId) : null })),
       createdAt: m.createdAt,
       clientId: m.clientId ?? null,
+      system: !!m.system,
+      editedAt: m.editedAt ?? null,
+      deletedAt: m.deletedAt ?? null,
     };
   }
 

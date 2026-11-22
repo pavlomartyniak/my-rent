@@ -10,6 +10,7 @@ import { downloadPolicy, type PolicyInfo, pickPolicy, uploadPolicy } from '@/lib
 
 import { ThemedText } from './themed-text';
 import { BottomSheet } from './ui/bottom-sheet';
+import { UploadBar } from './upload-progress';
 import { Button } from './ui/button';
 import { Icon } from './ui/icon';
 
@@ -21,13 +22,15 @@ import { Icon } from './ui/icon';
 export function InsuranceSheet({ carId, data, visible, onClose, onChanged }: { carId: string; data: PolicyInfo; visible: boolean; onClose: () => void; onChanged: () => void }) {
   const theme = useTheme();
   const [busy, setBusy] = useState<'upload' | 'download' | 'remove' | null>(null);
+  const [progress, setProgress] = useState(0);
 
   async function pick() {
     const a = await pickPolicy();
     if (!a) return;
+    setProgress(0);
     setBusy('upload');
     try {
-      await uploadPolicy(carId, a);
+      await uploadPolicy(carId, a, null, setProgress);
       onChanged();
     } catch (e) {
       Alert.alert('Не вдалося завантажити поліс', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
@@ -107,6 +110,7 @@ export function InsuranceSheet({ carId, data, visible, onClose, onChanged }: { c
         />
       ) : null}
 
+      {busy === 'upload' ? <UploadBar progress={progress} label="Завантажуємо файл" /> : null}
       {data.hasPolicy ? <Button title="Переглянути поліс" icon="eye-outline" loading={busy === 'download'} disabled={busy !== null} onPress={() => void download()} /> : null}
       {data.canEdit ? (
         <>

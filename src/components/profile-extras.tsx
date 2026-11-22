@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -9,6 +9,7 @@ import { questionsFor, type ProfileExtras } from '@/lib/profile';
 
 import { Avatar } from './avatar';
 import { ThemedText } from './themed-text';
+import { UploadRing } from './upload-progress';
 import { CityField } from './place-field';
 import { ChoiceChips } from './ui/choice-chips';
 import { Field } from './ui/field';
@@ -24,12 +25,14 @@ export const drivingYearError = (value: number | null) => (value === null ? '' :
 export function ProfilePhoto({ photoUri, name, onChange }: { photoUri: string; name: string; onChange: (photoUri: string) => void }) {
   const theme = useTheme();
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   async function pick() {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.7 });
     if (result.canceled || !result.assets[0]) return;
+    setProgress(0);
     setUploading(true);
-    const url = await uploadAvatar(result.assets[0].uri);
+    const url = await uploadAvatar(result.assets[0].uri, setProgress);
     setUploading(false);
     if (url) onChange(url);
     else Alert.alert('Не вдалося завантажити фото', 'Спробуйте ще раз пізніше.');
@@ -39,8 +42,13 @@ export function ProfilePhoto({ photoUri, name, onChange }: { photoUri: string; n
       <View style={styles.photo}>
         <Pressable accessibilityRole="button" accessibilityLabel="Змінити фото профілю" onPress={() => void pick()} disabled={uploading}>
           <Avatar uri={photoUri || null} name={name || 'Профіль'} size={96} />
+          {uploading ? (
+            <View style={styles.avatarRing} pointerEvents="none">
+              <UploadRing progress={progress} size={56} />
+            </View>
+          ) : null}
           <View style={[styles.camera, { backgroundColor: theme.accent, borderColor: theme.background }]}>
-            {uploading ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Icon name="camera" size={16} color="#FFFFFF" />}
+            <Icon name="camera" size={16} color="#FFFFFF" />
           </View>
         </Pressable>
         <View style={styles.photoText}>
@@ -130,6 +138,7 @@ const styles = StyleSheet.create({
   question: { gap: Spacing.three },
   photo: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   photoText: { flex: 1, gap: 2 },
+  avatarRing: { position: 'absolute', top: 0, left: 0, width: 96, height: 96, alignItems: 'center', justifyContent: 'center' },
   camera: { position: 'absolute', right: 0, bottom: 0, width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 2 },
   counter: { textAlign: 'right', marginTop: -Spacing.two },
 });

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { cleanMessage, isRead, preview } from '../src/chat/chat.math';
+import { canEditMessage, cleanMessage, EDIT_WINDOW_MS, isRead, preview } from '../src/chat/chat.math';
 
 describe('cleanMessage', () => {
   it('обрізає пробіли по краях', () => assert.equal(cleanMessage('  привіт  '), 'привіт'));
@@ -60,5 +60,15 @@ describe('автоповідомлення', () => {
     assert.ok(requestMessage({ ...base, days: 1, total: 1 }).includes('1 доба'));
     assert.ok(requestMessage({ ...base, days: 3, total: 1 }).includes('3 доби'));
     assert.ok(requestMessage({ ...base, days: 12, total: 1 }).includes('12 діб'));
+  });
+});
+
+describe('canEditMessage', () => {
+  const at = new Date('2026-01-01T10:00:00Z');
+  it('дозволяє зміну в межах 15 хвилин', () => {
+    assert.equal(canEditMessage(at, new Date(at.getTime() + EDIT_WINDOW_MS)), true);
+  });
+  it('забороняє пізніше', () => {
+    assert.equal(canEditMessage(at, new Date(at.getTime() + EDIT_WINDOW_MS + 1)), false);
   });
 });

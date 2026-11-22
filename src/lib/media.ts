@@ -1,6 +1,5 @@
-import { File } from 'expo-file-system';
-
 import { api, ApiError } from './api';
+import { mimeFor, postForm } from './upload';
 
 /** Підпис завантаження: з `items` кожне фото має свій публічний ідентифікатор (так сервер знає, чиє воно, і може його прибрати) */
 type Signature = {
@@ -25,39 +24,29 @@ async function getSignature(count: number, path = '/media/upload-signature'): Pr
   }
 }
 
-/**
- * Завантажує одне фото напряму в Cloudinary за підписом нашого сервера.
- * Глобальний fetch у SDK 57 — це expo/fetch: частиною FormData має бути справжній файл (`File`),
- * а не об'єкт {uri, name, type}, як було в старому React Native.
- */
-async function uploadOne(sig: Signature, index: number, localUri: string): Promise<string> {
-  const form = new FormData();
-  form.append('file', new File(localUri) as unknown as Blob);
-  form.append('api_key', sig.apiKey);
+/** Завантажує одне фото напряму в Cloudinary за підписом нашого сервера; `onProgress` — частка відправленого (0..1) */
+async function uploadOne(sig: Signature, index: number, localUri: string, onProgress?: (fraction: number) => void): Promise<string> {
+  const fields: Record<string, string> = { api_key: sig.apiKey };
   const item = sig.items?.[index];
   if (item) {
     // Власний ідентифікатор: за ним сервер знає, чиє фото, і може його прибрати
-    form.append('timestamp', String(item.timestamp));
-    form.append('public_id', item.publicId);
-    form.append('signature', item.signature);
+    Object.assign(fields, { timestamp: String(item.timestamp), public_id: item.publicId, signature: item.signature });
   } else {
     // Старий сервер без окремих підписів: фото йдуть в одну папку
-    form.append('timestamp', String(sig.timestamp));
-    form.append('folder', sig.folder);
-    form.append('signature', sig.signature);
+    Object.assign(fields, { timestamp: String(sig.timestamp), folder: sig.folder, signature: sig.signature });
   }
-
-  const res = await fetch(sig.uploadUrl, { method: 'POST', body: form });
-  const data = (await res.json().catch(() => null)) as { secure_url?: string; error?: { message?: string } } | null;
-  if (!res.ok || !data?.secure_url) throw new Error(data?.error?.message ?? 'Не вдалося завантажити фото');
-  return data.secure_url;
+  const name = localUri.split('/').pop() || 'photo.jpg';
+  const res = await postForm(sig.uploadUrl, { fields, file: { uri: localUri, name, type: mimeFor(name, 'image/jpeg') }, onProgress });
+  const url = (res.json as { secure_url?: string } | null)?.secure_url;
+  if (!res.ok || !url) throw new Error(((res.json as { error?: { message?: string } } | null)?.error?.message) ?? 'Не вдалося завантажити фото');
+  return url;
 }
 
 /** Завантажує фото профілю (доступне обом ролям); повертає https-посилання або null, якщо не вдалось чи хмара не налаштована */
-export async function uploadAvatar(localUri: string): Promise<string | null> {
+export async function uploadAvatar(localUri: string, onProgress?: (fraction: number) => void): Promise<string | null> {
   try {
     const sig = await getSignature(1, '/media/avatar-signature');
-    return await uploadOne(sig, 0, localUri);
+    return await uploadOne(sig, 0, localUri, onProgress);
   } catch {
     return null;
   }
@@ -72,7 +61,7 @@ export type UploadResult = {
 };
 
 /** Завантажує кілька фото по черзі з одним підписом; помилка одного фото не зупиняє решту */
-export async function uploadPhotos(localUris: string[], onProgress?: (done: number, total: number) => void): Promise<UploadResult> {
+export async function uploadPhotos(localUris: string[], onProgress?: (done: number, total: number, fraction: number) => void): Promise<UploadResult> {
   let sig: Signature;
   try {
     sig = await getSignature(localUris.length);
@@ -84,14 +73,14 @@ export async function uploadPhotos(localUris: string[], onProgress?: (done: numb
   const urls: string[] = [];
   let failed = 0;
   for (const [i, uri] of localUris.entries()) {
-    onProgress?.(i, localUris.length);
+    onProgress?.(i, localUris.length, 0);
     try {
-      urls.push(await uploadOne(sig, i, uri));
+      urls.push(await uploadOne(sig, i, uri, (f) => onProgress?.(i, localUris.length, f)));
     } catch {
       failed += 1;
     }
   }
-  onProgress?.(localUris.length, localUris.length);
+  onProgress?.(localUris.length, localUris.length, 1);
   return { urls, failed, unavailable: false };
 }
 

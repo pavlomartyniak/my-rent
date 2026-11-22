@@ -9,6 +9,17 @@ export function cleanMessage(raw: unknown): string | null {
   return text ? text : null;
 }
 
+/** Скільки після відправки автор може змінити текст повідомлення */
+export const EDIT_WINDOW_MS = 15 * 60_000;
+
+/** Чи можна ще змінити текст повідомлення, надісланого о `at` */
+export function canEditMessage(at: Date, now = new Date()) {
+  return now.getTime() - at.getTime() <= EDIT_WINDOW_MS;
+}
+
+/** Текст у списку розмов на місці видаленого повідомлення */
+export const DELETED_PREVIEW = 'Повідомлення видалено';
+
 /** Чи прочитала сторона повідомлення, надіслане о `at`: вона відкривала чат після нього */
 export function isRead(at: Date, otherReadAt?: Date | null) {
   return !!otherReadAt && otherReadAt.getTime() >= at.getTime();

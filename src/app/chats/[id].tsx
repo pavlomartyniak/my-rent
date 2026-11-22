@@ -22,8 +22,9 @@ import { Avatar } from '@/components/avatar';
 import { ChatAttachments } from '@/components/chat-attachments';
 import { Image } from 'expo-image';
 import { openProfile } from '@/lib/profiles';
-import { type Attachment, clock, dayLabel, differentDays, newClientId, type ChatMessage, type ChatSummary, type MessagesPage } from '@/lib/chat';
+import { type Attachment, canEditNow, clock, dayLabel, differentDays, newClientId, type ChatMessage, type ChatSummary, type MessagesPage } from '@/lib/chat';
 import { type Draft, formatSize, MAX_FILES, pickDocuments, pickFromCamera, pickFromLibrary, uploadDrafts } from '@/lib/chat-files';
+import { UploadCancelled } from '@/lib/upload';
 import { useChat, useChatEvents } from '@/store/chat';
 import { useFleet } from '@/store/fleet';
 import { ListSkeleton } from '@/components/ui/skeleton';
@@ -51,9 +52,14 @@ export default function ChatScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [text, setText] = useState('');
+  // Повідомлення, текст якого зараз редагується (поле вводу тоді містить його текст)
+  const [editing, setEditing] = useState<ChatMessage | null>(null);
   // Файли, вибрані, але ще не надіслані
   const [drafts, setDrafts] = useState<Draft[]>([]);
   // Що саме надсилається в кожному повідомленні (за clientId): для повтору після збою, щоб не завантажувати файли двічі
+  // Прогрес відправки вкладень (частка 0..1 для кожного) і керування скасуванням — за clientId повідомлення
+  const [uploads, setUploads] = useState<Record<string, number[]>>({});
+  const aborts = useRef(new Map<string, AbortController>());
   const outbox = useRef(new Map<string, { text: string; drafts: Draft[]; uploaded?: Attachment[] }>());
   const [typing, setTyping] = useState(false);
   const [keyboard, setKeyboard] = useState(false);
@@ -148,7 +154,14 @@ export default function ChatScreen() {
     try {
       const out = outbox.current.get(clientId);
       // Файли завантажуємо в хмару один раз: після збою відправки повтор використовує вже завантажені
-      if (out?.drafts.length && !out.uploaded) out.uploaded = await uploadDrafts(out.drafts, String(id));
+      if (out?.drafts.length && !out.uploaded) {
+        const controller = new AbortController();
+        aborts.current.set(clientId, controller);
+        const files = out.drafts;
+        setUploads((u) => ({ ...u, [clientId]: files.map(() => 0) }));
+        const sent = await uploadDrafts(files, String(id), (i, f) => setUploads((u) => (u[clientId] ? { ...u, [clientId]: u[clientId].map((x, j) => (j === i ? f : x)) } : u)), controller.signal);
+        out.uploaded = sent;
+      }
       const attachments = out?.uploaded;
       const saved = await api<ChatMessage>('POST', `/chats/${id}/messages`, { text: body, clientId, ...(attachments?.length ? { attachments: attachments.map(({ url, name, size, fileId }) => (fileId ? { fileId, name, size } : { url, name, size })) } : {}) });
       outbox.current.delete(clientId);
@@ -158,10 +171,24 @@ export default function ChatScreen() {
         return prev.map((m) => (m.clientId === clientId ? { ...saved, mine: true } : m));
       });
     } catch (e) {
+      if (e instanceof UploadCancelled) {
+        // Користувач скасував відправку: повідомлення зникає, а текст і файли повертаються в поле вводу
+        const out = outbox.current.get(clientId);
+        outbox.current.delete(clientId);
+        setMessages((prev) => prev.filter((m) => m.clientId !== clientId));
+        if (out) {
+          setText((t) => t || out.text);
+          setDrafts((d) => (d.length ? d : out.drafts));
+        }
+        return;
+      }
       // Причину показуємо під повідомленням: інакше повтор «нічого не робить», коли збій повторюється
       const reason = e instanceof Error && e.message ? e.message : 'Немає зв’язку із сервером';
       setMessages((prev) => prev.map((m) => (m.clientId === clientId ? { ...m, status: 'failed', error: reason } : m)));
       if (e instanceof ApiError && e.status === 403) load();
+    } finally {
+      aborts.current.delete(clientId);
+      setUploads(({ [clientId]: _done, ...rest }) => rest);
     }
   }
 
@@ -244,6 +271,59 @@ export default function ChatScreen() {
     }
   }
   const contextTappable = !!chat && (!!chat.dealId || !!chat.source);
+
+  function startEdit(m: ChatMessage) {
+    setDrafts([]);
+    setEditing(m);
+    setText(m.text);
+  }
+
+  function cancelEdit() {
+    setEditing(null);
+    setText('');
+  }
+
+  async function saveEdit() {
+    const m = editing;
+    const body = text.trim();
+    if (!m || !body) return;
+    if (body === m.text) return cancelEdit();
+    try {
+      const saved = await api<ChatMessage>('PATCH', `/chats/${id}/messages/${m.id}`, { text: body });
+      setMessages((prev) => prev.map((x) => (x.id === saved.id ? { ...saved, mine: true } : x)));
+      cancelEdit();
+    } catch (e) {
+      Alert.alert('Не вдалося змінити', e instanceof ApiError ? e.message : 'Спробуйте ще раз');
+    }
+  }
+
+  function removeMessage(m: ChatMessage) {
+    Alert.alert('Видалити повідомлення?', 'Воно зникне в обох: у чаті лишиться напис «Повідомлення видалено».', [
+      { text: 'Скасувати', style: 'cancel' },
+      {
+        text: 'Видалити',
+        style: 'destructive',
+        onPress: () =>
+          api<ChatMessage>('DELETE', `/chats/${id}/messages/${m.id}`).then(
+            (saved) => {
+              setMessages((prev) => prev.map((x) => (x.id === saved.id ? { ...saved, mine: true } : x)));
+              if (editing?.id === m.id) cancelEdit();
+            },
+            (e) => Alert.alert('Не вдалося видалити', e instanceof ApiError ? e.message : 'Спробуйте ще раз'),
+          ),
+      },
+    ]);
+  }
+
+  /** Довге натискання на своє повідомлення: змінити (лише текст і лише 15 хвилин) чи видалити */
+  function ownMenu(m: ChatMessage) {
+    const canEdit = canEditNow(m);
+    Alert.alert('Повідомлення', undefined, [
+      ...(canEdit ? [{ text: 'Редагувати', onPress: () => startEdit(m) }] : []),
+      { text: 'Видалити', style: 'destructive' as const, onPress: () => removeMessage(m) },
+      { text: 'Скасувати', style: 'cancel' as const },
+    ]);
+  }
 
   // Довге натискання на чуже повідомлення пропонує поскаржитись на нього
   function reportMessage(m: ChatMessage) {
@@ -373,21 +453,27 @@ export default function ChatScreen() {
                     <Pressable
                       disabled={!failed && (item.mine || !!item.status)}
                       onPress={failed ? () => retry(item) : undefined}
-                      onLongPress={!item.mine && !item.status ? () => reportMessage(item) : undefined}
+                      onLongPress={item.status || item.deletedAt ? undefined : item.mine ? (item.system ? undefined : () => ownMenu(item)) : () => reportMessage(item)}
                       accessibilityLabel={failed ? 'Не надіслано. Натисніть, щоб повторити' : undefined}
                       style={[
                         styles.bubble,
                         item.mine ? { backgroundColor: failed ? theme.negative : theme.accent } : { backgroundColor: theme.backgroundElement, borderColor: theme.border, borderWidth: 1 },
                         item.status === 'sending' && styles.sending,
                       ]}>
-                      {item.attachments?.length ? <ChatAttachments items={item.attachments} mine={item.mine} chatId={String(id)} inert={!!item.status} /> : null}
-                      {item.text ? (
+                      {item.deletedAt ? (
+                        <ThemedText type="default" style={{ color: item.mine ? theme.onAccent : theme.textSecondary, fontStyle: 'italic', opacity: 0.85 }}>
+                          Повідомлення видалено
+                        </ThemedText>
+                      ) : null}
+                      {!item.deletedAt && item.attachments?.length ? <ChatAttachments items={item.attachments} mine={item.mine} chatId={String(id)} inert={!!item.status} progress={item.clientId ? uploads[item.clientId] : undefined} onCancel={item.clientId ? () => aborts.current.get(item.clientId!)?.abort() : undefined} /> : null}
+                      {!item.deletedAt && item.text ? (
                         <ThemedText type="default" style={{ color: item.mine ? theme.onAccent : theme.text }} selectable>
                           {item.text}
                         </ThemedText>
                       ) : null}
                       <View style={styles.meta}>
                         <ThemedText type="small" style={[styles.time, { color: item.mine ? theme.onAccent : theme.textSecondary, opacity: item.mine ? 0.8 : 1 }]}>
+                          {item.editedAt && !item.deletedAt ? 'змінено · ' : ''}
                           {clock(item.createdAt)}
                         </ThemedText>
                         {item.mine && !item.status ? <Icon name={seen ? 'checkmark-done' : 'checkmark'} size={14} color={theme.onAccent} /> : null}
@@ -426,6 +512,20 @@ export default function ChatScreen() {
           </View>
         ) : (
           <View style={{ backgroundColor: theme.backgroundElement, borderTopColor: theme.border, borderTopWidth: StyleSheet.hairlineWidth }}>
+            {editing ? (
+              <View style={[styles.editBar, { borderBottomColor: theme.border }]}>
+                <Icon name="create-outline" size={18} color="accent" />
+                <View style={styles.flex}>
+                  <ThemedText type="smallBold" themeColor="accent">
+                    Редагування
+                  </ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                    {editing.text}
+                  </ThemedText>
+                </View>
+                <IconButton icon="close" label="Скасувати редагування" tone="neutral" size={32} onPress={cancelEdit} />
+              </View>
+            ) : null}
             {drafts.length ? (
               <View style={styles.drafts}>
                 {drafts.map((d) => (
@@ -451,9 +551,11 @@ export default function ChatScreen() {
               </View>
             ) : null}
           <View style={[styles.composer, { paddingBottom: keyboard ? Spacing.two : Math.max(insets.bottom, Spacing.two), borderTopWidth: 0 }]}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Додати вкладення" onPress={attach} style={({ pressed }) => [styles.attach, pressed && { opacity: 0.6 }]}>
-              <Icon name="attach" size={24} color="textSecondary" />
-            </Pressable>
+            {editing ? null : (
+              <Pressable accessibilityRole="button" accessibilityLabel="Додати вкладення" onPress={attach} style={({ pressed }) => [styles.attach, pressed && { opacity: 0.6 }]}>
+                <Icon name="attach" size={24} color="textSecondary" />
+              </Pressable>
+            )}
             <TextInput
               value={text}
               onChangeText={onChange}
@@ -465,11 +567,11 @@ export default function ChatScreen() {
             />
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Надіслати"
+              accessibilityLabel={editing ? 'Зберегти зміни' : 'Надіслати'}
               disabled={!text.trim() && !drafts.length}
-              onPress={send}
+              onPress={editing ? () => void saveEdit() : send}
               style={({ pressed }) => [styles.send, { backgroundColor: text.trim() || drafts.length ? theme.accent : theme.backgroundSelected }, pressed && { opacity: 0.8 }]}>
-              <Icon name="send" size={20} color={text.trim() || drafts.length ? theme.onAccent : 'textSecondary'} />
+              <Icon name={editing ? 'checkmark' : 'send'} size={20} color={text.trim() || drafts.length ? theme.onAccent : 'textSecondary'} />
             </Pressable>
           </View>
           </View>
@@ -505,6 +607,7 @@ const styles = StyleSheet.create({
   typing: { flexDirection: 'row', justifyContent: 'flex-start', paddingTop: 2 },
   typingBubble: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, borderRadius: Radius.lg, borderWidth: 1 },
   typingText: { fontStyle: 'italic', fontWeight: 600 },
+  editBar: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, borderBottomWidth: StyleSheet.hairlineWidth },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.two, paddingHorizontal: Spacing.three, paddingTop: Spacing.two, borderTopWidth: StyleSheet.hairlineWidth },
   input: { flex: 1, minHeight: 44, maxHeight: 130, borderRadius: 22, borderWidth: 1, paddingHorizontal: Spacing.three, paddingTop: 11, paddingBottom: 11, fontSize: Type.body.fontSize },
   send: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },

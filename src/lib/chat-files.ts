@@ -1,6 +1,7 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { Directory, File, Paths } from 'expo-file-system';
 import { openFileViewer } from './file-viewer';
+import { mimeFor, postForm, serverMessage } from './upload';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert } from 'react-native';
 
@@ -75,8 +76,9 @@ const authHeader = () => ({ Authorization: `Bearer ${getApiToken() ?? ''}` });
 /**
  * Завантажує вибране й повертає вкладення в тому ж порядку. Фото й відео йдуть напряму в Cloudinary за підписами сервера
  * (повертаються https-посилання), а файли — на наш сервер, як страховий поліс (повертається fileId): їх віддає лише сервер учасникам розмови.
+ * `onProgress(i, f)` — частка відправленого (0..1) для вкладення з номером i; `signal` скасовує відправку.
  */
-export async function uploadDrafts(drafts: Draft[], chatId: string): Promise<Attachment[]> {
+export async function uploadDrafts(drafts: Draft[], chatId: string, onProgress?: (index: number, fraction: number) => void, signal?: AbortSignal): Promise<Attachment[]> {
   const media = drafts.filter((d) => d.kind !== 'file');
   let sig: ChatSignature | null = null;
   if (media.length) {
@@ -88,25 +90,26 @@ export async function uploadDrafts(drafts: Draft[], chatId: string): Promise<Att
   }
   const out: Attachment[] = [];
   let m = 0;
-  for (const d of drafts) {
-    const form = new FormData();
-    form.append('file', new File(d.uri) as unknown as Blob);
+  for (const [i, d] of drafts.entries()) {
+    const file = { uri: d.uri, name: d.name, type: mimeFor(d.name, d.kind === 'image' ? 'image/jpeg' : d.kind === 'video' ? 'video/mp4' : 'application/octet-stream') };
+    const report = (f: number) => onProgress?.(i, f);
     if (d.kind === 'file') {
-      const res = await fetch(`${BASE_URL}/chats/${chatId}/files`, { method: 'POST', headers: authHeader(), body: form });
-      const data = (await res.json().catch(() => null)) as { fileId?: string; message?: string | string[] } | null;
-      if (!res.ok || !data?.fileId) throw new Error(Array.isArray(data?.message) ? String(data?.message[0]) : (data?.message ?? `Не вдалося завантажити «${d.name}»`));
-      out.push({ kind: 'file', url: '', name: d.name, size: d.size, fileId: data.fileId });
+      const res = await postForm(`${BASE_URL}/chats/${chatId}/files`, { headers: authHeader(), file, onProgress: report, signal });
+      const fileId = (res.json as { fileId?: string } | null)?.fileId;
+      if (!res.ok || !fileId) throw new Error(serverMessage(res.json) ?? `Не вдалося завантажити «${d.name}»`);
+      out.push({ kind: 'file', url: '', name: d.name, size: d.size, fileId });
       continue;
     }
     const item = sig!.items[m++]!;
-    form.append('api_key', sig!.apiKey);
-    form.append('timestamp', String(item.timestamp));
-    form.append('public_id', item.publicId);
-    form.append('signature', item.signature);
-    const res = await fetch(item.uploadUrl, { method: 'POST', body: form });
-    const data = (await res.json().catch(() => null)) as { secure_url?: string; error?: { message?: string } } | null;
-    if (!res.ok || !data?.secure_url) throw new Error(data?.error?.message ?? `Не вдалося завантажити «${d.name}»`);
-    out.push({ kind: d.kind, url: data.secure_url, name: d.name, size: d.size });
+    const res = await postForm(item.uploadUrl, {
+      fields: { api_key: sig!.apiKey, timestamp: String(item.timestamp), public_id: item.publicId, signature: item.signature },
+      file,
+      onProgress: report,
+      signal,
+    });
+    const url = (res.json as { secure_url?: string } | null)?.secure_url;
+    if (!res.ok || !url) throw new Error(((res.json as { error?: { message?: string } } | null)?.error?.message) ?? `Не вдалося завантажити «${d.name}»`);
+    out.push({ kind: d.kind, url, name: d.name, size: d.size });
   }
   return out;
 }
