@@ -9,7 +9,7 @@ export type Every = 'weekly' | 'biweekly' | 'monthly';
 
 export const EVERY_OPTIONS: { value: Every; label: string }[] = [
   { value: 'weekly', label: 'Щотижня' },
-  { value: 'biweekly', label: 'Раз на 2 тижні' },
+  { value: 'biweekly', label: '2 тижні' },
   { value: 'monthly', label: 'Щомісяця' },
 ];
 /** Дні тижня від понеділка (значення — як у JS: 0 — неділя) */
