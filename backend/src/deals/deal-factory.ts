@@ -2,17 +2,23 @@ import { Types } from 'mongoose';
 
 import type { Purpose } from '../contract/contract.terms';
 import { type ContractParty, buildTerms, contractHash, contractNumber } from '../contract/contract.terms';
+import { legalComplete, partyLegal, unseal } from '../legal/legal.data';
 import { fullName } from '../rentals/rentals.math';
 import type { PaymentPlan } from './payment-plan';
 
-type PersonDoc = { firstName: string; lastName: string; middleName?: string; phone?: string };
+type PersonDoc = { firstName: string; lastName: string; middleName?: string; phone?: string; legalEnc?: string };
 type CarDoc = { brand: string; model: string; year: number; vin: string; mileage: number; plate?: string; color?: string; fuel?: string };
 
 /** Сторона договору: ПІБ повністю, як у документах (Прізвище Ім'я По батькові), і телефон */
-export const party = (u: PersonDoc): ContractParty => ({
-  name: [u.lastName, u.firstName, u.middleName].filter(Boolean).join(' ') || 'Користувач',
-  phone: u.phone ?? '',
-});
+export const party = (u: PersonDoc, role: 'owner' | 'renter'): ContractParty => {
+  const data = legalComplete(u.legalEnc, role) ? unseal(u.legalEnc) : null;
+  return {
+    name: [u.lastName, u.firstName, u.middleName].filter(Boolean).join(' ') || 'Користувач',
+    phone: u.phone ?? '',
+    // Дані для договору, якщо людина вже їх заповнила: тоді в тексті немає порожніх рядків
+    ...(data ? { legal: partyLegal(data, role) } : {}),
+  };
+};
 
 /** Дані авто для умов договору */
 export const carTerms = (title: string, car: CarDoc) => ({
@@ -60,8 +66,8 @@ export function newDealData(input: {
     number: contractNumber(createdAt, String(_id)),
     createdAt,
     city: input.city,
-    owner: party(input.owner),
-    renter: party(input.renter),
+    owner: party(input.owner, 'owner'),
+    renter: party(input.renter, 'renter'),
     car: carTerms(input.title, input.car),
     startDate: input.startDate,
     endDate: input.endDate,

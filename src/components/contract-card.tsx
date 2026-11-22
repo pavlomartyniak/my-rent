@@ -82,10 +82,12 @@ export function ContractCard({ deal, as }: { deal: Pick<DealView, 'id' | 'status
   }
 
   if (awaiting) {
+    const legal = c.legal ?? { mine: true, other: true };
     const agreed = !!deal.condition?.ready && !!deal.condition?.confirmed;
-    const ready = c.signing.state === 'open' && !c.mySigned && agreed;
+    const ready = c.signing.state === 'open' && !c.mySigned && agreed && legal.mine && legal.other;
     const stateAction = c.signing.state === 'open' && !c.mySigned && !agreed ? stateButton(as, deal.condition) : null;
     const steps: Step[] = [
+      legalStep(legal, other, () => router.push('/legal')),
       ...(deal.condition ? [conditionStep(deal.condition, as, () => router.push({ pathname: '/condition/[id]', params: { id: deal.id } }))] : []),
       { title: 'Договір', text: `№ ${c.number}. Перегляньте його зараз`, done: false, onPress: open },
       {
@@ -162,6 +164,13 @@ function CancelAgreement({ dealId }: { dealId: string }) {
 }
 
 type Step = { title: string; text: string; done: boolean; onPress?: () => void };
+
+/** Крок «Дані для договору»: кожна сторона один раз заповнює документ і адресу, щоб у договорі не було порожніх рядків */
+function legalStep(l: { mine: boolean; other: boolean }, other: string, onPress: () => void): Step {
+  if (!l.mine) return { title: 'Дані для договору', text: 'Документ, РНОКПП, адреса: 2 хвилини, один раз. Без них договір не підписати', done: false, onPress };
+  if (!l.other) return { title: 'Дані для договору', text: `Ви заповнили. Чекаємо дані: ${other}`, done: false, onPress };
+  return { title: 'Дані для договору', text: 'Заповнено обома сторонами', done: true, onPress };
+}
 
 /** Крок «Стан авто» чек-листа: власник фіксує фото й одометр, орендар переглядає й підтверджує */
 function conditionStep(c: NonNullable<DealView['condition']>, as: 'owner' | 'renter', onPress: () => void): Step {

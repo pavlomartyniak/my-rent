@@ -72,6 +72,7 @@ export default function SettingsScreen() {
           subtitle={fullName({ firstName, lastName }) ? [email, phone].filter(Boolean).join(' · ') : 'Додайте ім’я та прізвище'}
           onPress={() => router.push('/profile')}
         />
+        <SettingsRow icon="document-lock-outline" title="Дані для договору" subtitle="Документ, РНОКПП, адреса: вносяться один раз" onPress={() => router.push('/legal')} />
       </SettingsGroup>
 
       <SettingsGroup title="Вигляд">

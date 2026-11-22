@@ -14,8 +14,8 @@ export type ContractView = {
   hash: string;
   terms: {
     city: string;
-    owner: { name: string; phone: string };
-    renter: { name: string; phone: string };
+    owner: { name: string; phone: string; legal?: object };
+    renter: { name: string; phone: string; legal?: object };
     car: { title: string; vin: string; mileage: number; year: number };
     startDate: string;
     endDate: string;

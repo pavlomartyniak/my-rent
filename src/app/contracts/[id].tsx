@@ -42,7 +42,9 @@ export default function ContractScreen() {
 
   const awaiting = data.status === 'awaiting';
   const state = data.signing.state;
-  const canSign = awaiting && !data.mySigned && state === 'open';
+  const legalMine = !!data.terms[role === 'renter' ? 'renter' : 'owner'].legal;
+  const legalOk = !!data.terms.owner.legal && !!data.terms.renter.legal;
+  const canSign = awaiting && !data.mySigned && state === 'open' && legalOk;
 
   async function run(kind: 'cancel', fn: () => Promise<unknown>, failTitle: string) {
     setBusy(kind);
@@ -109,7 +111,21 @@ export default function ContractScreen() {
       <SignatureRow label="Орендодавець" name={data.terms.owner.name} signature={data.signatures.owner} you={role === 'owner'} />
       <SignatureRow label="Орендар" name={data.terms.renter.name} signature={data.signatures.renter} you={role === 'renter'} />
 
-      {canSign ? (
+      {awaiting && !data.mySigned && !legalOk ? (
+        <>
+          <Card style={{ backgroundColor: theme.warningSoft }}>
+            <ThemedText type="smallBold" themeColor="warning">
+              {legalMine ? 'Чекаємо дані другої сторони' : 'Заповніть дані для договору'}
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {legalMine
+                ? 'Ви свої дані вже внесли. Підписання відкриється, коли друга сторона заповнить документ і адресу: тоді в договорі не буде порожніх рядків.'
+                : 'Документ, РНОКПП і адреса вносяться один раз і підставляються в договір, щоб нічого не вписувати від руки. Їх бачить лише друга сторона цієї оренди.'}
+            </ThemedText>
+          </Card>
+          {!legalMine ? <Button title="Заповнити дані" icon="person-circle-outline" onPress={() => router.push('/legal')} /> : null}
+        </>
+      ) : canSign ? (
         <>
           <Card style={{ backgroundColor: theme.positiveSoft }}>
             <ThemedText type="smallBold" themeColor="positive">

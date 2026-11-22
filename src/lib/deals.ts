@@ -19,7 +19,7 @@ export type DealView = {
   /** awaiting — чекаємо підписів під договором, active — договір підписано, terminated — розірвано чи скасовано */
   status: 'awaiting' | 'active' | 'terminated';
   /** Договір: номер і хто підписав; null — оренда створена до появи договорів */
-  contract: { /** none — оренда без договору: сторони лише підтверджують умови в застосунку */ mode: 'full' | 'none'; number: string; signed: { owner: boolean; renter: boolean }; mySigned: boolean; signedAt: string | null; signing: { opensAt: string; closesAt: string; state: 'early' | 'open' | 'late' } } | null;
+  contract: { /** none — оренда без договору: сторони лише підтверджують умови в застосунку */ mode: 'full' | 'none'; number: string; signed: { owner: boolean; renter: boolean }; mySigned: boolean; signedAt: string | null; signing: { opensAt: string; closesAt: string; state: 'early' | 'open' | 'late' }; /** Дані для договору: чи заповнили ви (mine) і друга сторона (other) */ legal?: { mine: boolean; other: boolean } } | null;
   /** Дані авто з умов оренди; null — оренда створена до їх появи */
   car: { plate: string | null; color: string | null; year: number; mileage: number; fuel: string | null; vin: string | null } | null;
   /** Скільки обов'язкових фото стану авто вже є; до активації оренди потрібні всі й показник одометра */

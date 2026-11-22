@@ -409,7 +409,12 @@ export class DealsService {
    * активується: авто стає «В оренді» (чи лишається «Заброньованим» до дати початку).
    */
   async sign(user: AuthUser, id: string, evidence: { ip?: string; userAgent?: string }) {
-    await this.signable(user, id);
+    const { contract } = await this.signable(user, id);
+    // Договір без прогалин: до підпису обидві сторони мають заповнити дані для договору
+    if (!contract.terms.owner.legal || !contract.terms.renter.legal) {
+      const mine = !!contract.terms[user.role as 'owner' | 'renter']?.legal;
+      throw new ConflictException(mine ? `Чекаємо, поки ${user.role === 'owner' ? 'орендар' : 'власник'} заповнить дані для договору` : 'Спершу заповніть дані для договору (Профіль → Документи для договору)');
+    }
     const account = await this.users.findById(user.id).exec();
     return this.commitSignature(user, id, (c) => ({
       ...signContract({ contractHash: c.hash, userId: user.id, role: user.role }),
@@ -842,7 +847,7 @@ export class DealsService {
       status: d.status ?? 'active',
       /** Договір: номер і хто підписав (null — оренда без договору, створена до його появи) */
       contract: d.contract
-        ? { mode: d.contract.mode ?? 'full', number: d.contract.terms.number, signed: { owner: !!d.contract.signatures?.owner, renter: !!d.contract.signatures?.renter }, mySigned: !!d.contract.signatures?.[as], signedAt: d.contract.signedAt ?? null, signing: this.signingView(d.startDate) }
+        ? { mode: d.contract.mode ?? 'full', number: d.contract.terms.number, signed: { owner: !!d.contract.signatures?.owner, renter: !!d.contract.signatures?.renter }, mySigned: !!d.contract.signatures?.[as], signedAt: d.contract.signedAt ?? null, signing: this.signingView(d.startDate), legal: { mine: !!d.contract.terms[as]?.legal, other: !!d.contract.terms[as === 'owner' ? 'renter' : 'owner']?.legal } }
         : null,
       /** План оплати й графік платежів із відповідями сторін (для оренд з договором) */
       paymentPlan: d.contract?.terms.paymentPlan ?? null,

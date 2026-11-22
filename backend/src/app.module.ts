@@ -22,6 +22,7 @@ import { MediaModule } from './media/media.module';
 import { ModerationModule } from './moderation/moderation.module';
 import { ConditionModule } from './condition/condition.module';
 import { InsuranceModule } from './insurance/insurance.module';
+import { LegalModule } from './legal/legal.module';
 import { ProfilesModule } from './profiles/profiles.module';
 import { RemindersModule } from './reminders/reminders.module';
 import { RentalsModule } from './rentals/rentals.module';
@@ -73,6 +74,7 @@ import { WantedModule } from './wanted/wanted.module';
     ModerationModule,
     WantedModule,
     ProfilesModule,
+    LegalModule,
     InsuranceModule,
     ConditionModule,
     DataModule,

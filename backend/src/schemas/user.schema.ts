@@ -4,7 +4,7 @@ import type { HydratedDocument } from 'mongoose';
 import { ABROAD_POLICIES, ACCIDENTS, HANDOVERS, HOSTING_EXPERIENCES, INSURANCES, MILEAGE_LIMITS, REPLY_TIMES, SERVICE_CARES, DEPOSIT_READINESS, LICENSE_CATEGORIES, OCCUPATIONS, RENT_EXPERIENCES, RENT_PURPOSES, RENT_TERMS, ROLES, THEMES, TRANSMISSIONS } from '../common/constants';
 import { jsonOptions } from '../common/json-options';
 
-@Schema(jsonOptions([], ['passwordHash', 'resetCodeHash', 'resetExpires', 'resetAttempts', 'suspended', 'phoneKey']))
+@Schema(jsonOptions([], ['passwordHash', 'resetCodeHash', 'resetExpires', 'resetAttempts', 'suspended', 'phoneKey', 'legalEnc']))
 export class User {
   @Prop({ required: true, unique: true, lowercase: true, trim: true })
   email: string;
@@ -15,6 +15,17 @@ export class User {
   /** Акаунт призупинено модератором: вхід і запити закриті, оголошення приховані */
   @Prop({ type: Boolean, default: false })
   suspended: boolean;
+
+  /** Дані для договору (документ, РНОКПП, адреса): зашифрований JSON, у відповідях API не віддається */
+  @Prop()
+  legalEnc?: string;
+
+  /** Коли й за якою версією політики користувач погодився на обробку цих даних */
+  @Prop()
+  legalConsentAt?: Date;
+
+  @Prop()
+  legalConsentVersion?: number;
 
   /** Код відновлення пароля (хеш), строк дії й кількість невдалих спроб */
   @Prop()

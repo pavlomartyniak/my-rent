@@ -10,17 +10,18 @@ import { formatDate, fromISODate, toISODate } from '@/lib/date';
 import { ThemedText } from '../themed-text';
 import { Icon } from './icon';
 
-type Props = { label: string; value: string; onChange: (iso: string) => void; minimumDate?: Date; /** Помилка поля: червона рамка й текст під ним */ error?: string };
+type Props = { label: string; value: string; onChange: (iso: string) => void; minimumDate?: Date; maximumDate?: Date; /** Порожнє значення: підпис замість дати й дата, з якої відкривається календар */ placeholder?: string; initialDate?: Date; /** Помилка поля: червона рамка й текст під ним */ error?: string };
 
 /**
  * Поле дати у тому ж стилі, що й решта полів. На iOS календар розкривається під полем
  * і згортається після вибору дня, на Android відкривається системний діалог.
  */
-export function DateField({ label, value, onChange, minimumDate, error }: Props) {
+export function DateField({ label, value, onChange, minimumDate, maximumDate, placeholder, initialDate, error }: Props) {
   const theme = useTheme();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [open, setOpen] = useState(false);
-  const date = fromISODate(value);
+  const date = value ? fromISODate(value) : (initialDate ?? new Date());
+  const shown = value ? formatDate(value) : (placeholder ?? 'Оберіть дату');
 
   function onPress() {
     if (Platform.OS === 'ios') {
@@ -31,6 +32,7 @@ export function DateField({ label, value, onChange, minimumDate, error }: Props)
       value: date,
       mode: 'date',
       minimumDate,
+      maximumDate,
       onChange: (_, picked) => picked && onChange(toISODate(picked)),
     });
   }
@@ -43,7 +45,7 @@ export function DateField({ label, value, onChange, minimumDate, error }: Props)
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${label}: ${formatDate(value)}`}
+        accessibilityLabel={`${label}: ${shown}`}
         onPress={onPress}
         style={({ pressed }) => [
           styles.box,
@@ -51,8 +53,8 @@ export function DateField({ label, value, onChange, minimumDate, error }: Props)
           pressed && styles.pressed,
         ]}>
         <Icon name="calendar-outline" size={20} color="accent" />
-        <ThemedText type="default" style={styles.text}>
-          {formatDate(value)}
+        <ThemedText type="default" themeColor={value ? 'text' : 'textSecondary'} style={styles.text}>
+          {shown}
         </ThemedText>
         <Icon name={open ? 'chevron-up' : 'chevron-down'} size={20} color="accent" />
       </Pressable>
@@ -72,6 +74,7 @@ export function DateField({ label, value, onChange, minimumDate, error }: Props)
             themeVariant={scheme}
             accentColor={theme.accent}
             minimumDate={minimumDate}
+            maximumDate={maximumDate}
             style={styles.picker}
             onChange={(_, picked) => {
               if (!picked) return;
