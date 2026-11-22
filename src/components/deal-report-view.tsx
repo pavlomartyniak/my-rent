@@ -7,11 +7,11 @@ import { SummaryCard } from '@/components/summary-card';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
 import { StatInfoSheet, type StatInfo } from '@/components/stat-info-sheet';
-import { Icon } from '@/components/ui/icon';
-import { useTheme } from '@/hooks/use-theme';
+import { Icon, type IconName } from '@/components/ui/icon';
 import { RENT_CATEGORY } from '@/types';
-import { Radius, Spacing, Type } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import type { DealReport } from '@/lib/deals';
+import { useTheme } from '@/hooks/use-theme';
 import { formatMoney, plural } from '@/lib/format';
 import { todayISO } from '@/lib/date';
 
@@ -30,13 +30,12 @@ function periodDays(key: string, start: string, end: string, whole: number) {
 
 /**
  * Звіт однієї оренди: частина розділу «Доходи» (фільтр «Оренда»). Усе за вибраний період в одній картці; кожен показник
- * натискний і відкриває пояснення простими словами. «Баланс платежів» не залежить від періоду, тому стоїть окремою смугою зверху.
+ * натискний і відкриває пояснення простими словами.
  */
 export function DealReportView({ id, data, p, startDate, endDate }: { id: string; data: DealReport; p: { key: string; label: string }; startDate: string; endDate: string }) {
   const theme = useTheme();
   const [info, setInfo] = useState<StatInfo | null>(null);
   const o = data.overview;
-  const balance = o.rentBalance ?? 0;
   const t = data.totals;
   const all = p.key === 'all';
   const rent = all ? o.rentPaid : (data.categories.find((c) => c.category === RENT_CATEGORY)?.amount ?? 0);
@@ -50,86 +49,53 @@ export function DealReportView({ id, data, p, startDate, endDate }: { id: string
     title: 'Сплачено власнику',
     value: formatMoney(rent),
     explain: [
-      'Це гроші, які ви віддали власнику за те, що їздите на його авто. Ніби плата за прокат велосипеда: ви беретесь покататися й платите хазяїну.',
-      `Тут лише ті записи, де ви обрали «${RENT_CATEGORY}». Бензин чи мийка сюди не потрапляють: вони окремо, у «Інших витратах».`,
+      'Скільки ви заплатили власнику за користування авто.',
+      `Враховуються лише записи з категорією «${RENT_CATEGORY}». Паливо, мийка й інші витрати сюди не входять: вони в «Інших витратах».`,
     ],
     rows: [
       { label: `Сплачено власнику ${when}`, value: formatMoney(rent) },
       { label: 'Усі ваші витрати за цей час', value: formatMoney(t.expense) },
     ],
-    example: 'Хочете, щоб тут було точно? Щоразу, коли платите власнику, додавайте запис «Витрата → Оренда авто».',
+    example: `Щоб сума була точною, додавайте запис «Витрата → ${RENT_CATEGORY}» щоразу, коли платите власнику.`,
   };
   const otherInfo: StatInfo = {
     title: 'Інші витрати',
     value: formatMoney(other),
     tone: other > 0 ? 'negative' : undefined,
     explain: [
-      'Це все, на що ви витрачаєте гроші, поки їздите, окрім плати власнику: бензин, мийка, штрафи, ремонт.',
-      'Ці гроші ви витрачаєте самі, власник їх не отримує. Чим вони менші, тим більше лишається вам.',
+      'Усі ваші витрати на авто, крім плати власнику: паливо, мийка, штрафи, ремонт.',
+      'Це гроші, які ви витрачаєте самі. Чим вони менші, тим більший ваш прибуток.',
     ],
     rows: otherRows.map((c) => ({ label: c.category, value: formatMoney(c.amount), tone: 'negative' as const })),
-    example: otherRows.length ? 'Найбільша стаття: ' + otherRows[0]!.category.toLowerCase() + '. Якщо хочете більше заробляти, придивіться до неї першою.' : 'Інших витрат за цей час немає.',
+    example: otherRows.length ? `Найбільша стаття: ${otherRows[0]!.category.toLowerCase()}. Скорочувати витрати найкраще з неї.` : 'За цей час інших витрат немає.',
   };
   const dayInfo: StatInfo = {
     title: 'Прибуток на добу',
     value: formatMoney(perDay),
     tone: perDay >= 0 ? 'positive' : 'negative',
     explain: [
-      'Це скільки грошей ви в середньому лишаєте собі за один день, коли вже заплатили за все: за авто, бензин і решту.',
-      'Рахуємо просто: беремо ваш прибуток і ділимо на кількість днів.',
+      'Скільки ви в середньому заробляєте за один день після всіх витрат.',
+      'Це прибуток за період, поділений на кількість діб оренди в ньому.',
     ],
     rows: [
-      { label: 'Ваш прибуток', value: formatMoney(t.profit), tone: t.profit >= 0 ? 'positive' : 'negative' },
-      { label: 'Днів оренди', value: `${days} ${plural(days, 'доба', 'доби', 'діб')}` },
+      { label: 'Прибуток', value: formatMoney(t.profit), tone: t.profit >= 0 ? 'positive' : 'negative' },
+      { label: 'Діб оренди', value: `${days} ${plural(days, 'доба', 'доби', 'діб')}` },
       { label: 'Прибуток на добу', value: formatMoney(perDay), tone: perDay >= 0 ? 'positive' : 'negative' },
     ],
-    example: perDay >= 0 ? `Тобто кожен день у вас в кишені залишається приблизно ${formatMoney(perDay)}.` : 'Мінус означає, що поки ви витрачаєте більше, ніж заробляєте. Таке буває на початку оренди.',
-  };
-  const balanceInfo: StatInfo = {
-    title: 'Баланс платежів',
-    value: balance === 0 ? 'Все сплачено' : formatMoney(Math.abs(balance)),
-    tone: balance > 0 ? 'negative' : 'positive',
-    explain: [
-      'Власник чекає від вас плату за кожен день оренди. Тут ми порівнюємо дві речі: скільки ви вже мали заплатити до сьогодні і скільки справді заплатили.',
-      balance > 0
-        ? 'Ви заплатили менше, ніж мали. Це борг: власник чекає ще трохи грошей.'
-        : balance < 0
-          ? 'Ви заплатили більше, ніж треба на цей момент. Це переплата: гроші вже лежать у власника наперед, за майбутні дні.'
-          : 'Ви заплатили рівно стільки, скільки треба на сьогодні. Усе гаразд.',
-    ],
-    rows: [
-      { label: 'Мало бути сплачено до сьогодні', value: formatMoney(o.rentDue) },
-      { label: 'Ви вже сплатили', value: formatMoney(o.rentPaid) },
-      { label: balance > 0 ? 'Борг' : balance < 0 ? 'Переплата' : 'Різниця', value: formatMoney(Math.abs(balance)), tone: balance > 0 ? 'negative' : 'positive' },
-    ],
-    example: 'Цей показник завжди рахується за всю оренду, а не за вибраний місяць чи рік.',
+    example: perDay >= 0 ? `У середньому ви заробляєте ${formatMoney(perDay)} на добу.` : 'Мінус означає, що витрати поки більші за заробіток. На початку оренди так буває.',
   };
 
   return (
     <>
-      {balance !== 0 ? (
-        <Pressable accessibilityRole="button" accessibilityLabel={`Баланс платежів: ${balance > 0 ? 'борг' : 'переплата'} ${formatMoney(Math.abs(balance))}. Що це?`} onPress={() => setInfo(balanceInfo)}>
-          <View style={[styles.balance, { backgroundColor: balance > 0 ? theme.negativeSoft : theme.positiveSoft }]}>
-            <View style={styles.flex}>
-              <ThemedText type="smallBold" themeColor={balance > 0 ? 'negative' : 'positive'}>
-                {balance > 0 ? 'Борг власнику' : 'Переплата власнику'} · {formatMoney(Math.abs(balance))}
-              </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {balance > 0 ? 'Ви заплатили менше, ніж мали. Торкніться, щоб дізнатись більше' : 'Ви заплатили наперед. Торкніться, щоб дізнатись більше'}
-              </ThemedText>
-            </View>
-            <Icon name="help-circle-outline" size={22} color={balance > 0 ? 'negative' : 'positive'} />
-          </View>
-        </Pressable>
-      ) : null}
-
       <SummaryCard title={`Прибуток · ${p.label}`} profit={t.profit} income={t.income} expense={t.expense} scope={{ period: p.key, label: p.label, dealId: id }} />
 
-      <View style={styles.grid}>
-        <Stat label="Сплачено власнику" value={formatMoney(rent)} onPress={() => setInfo(rentInfo)} />
-        <Stat label="Інші витрати" value={formatMoney(other)} color={other > 0 ? 'negative' : undefined} onPress={() => setInfo(otherInfo)} />
-        <Stat label="Прибуток на добу" value={formatMoney(perDay)} color={perDay >= 0 ? 'positive' : 'negative'} onPress={() => setInfo(dayInfo)} />
-      </View>
+      <Card style={styles.list}>
+        <StatRow icon="key-outline" label="Сплачено власнику" value={formatMoney(rent)} onPress={() => setInfo(rentInfo)} />
+        <View style={[styles.divider, { backgroundColor: theme.border }]} />
+        <StatRow icon="receipt-outline" label="Інші витрати" value={formatMoney(other)} color={other > 0 ? 'negative' : undefined} onPress={() => setInfo(otherInfo)} />
+        <View style={[styles.divider, { backgroundColor: theme.border }]} />
+        <StatRow icon="trending-up-outline" label="Прибуток на добу" value={formatMoney(perDay)} color={perDay >= 0 ? 'positive' : 'negative'} onPress={() => setInfo(dayInfo)} />
+      </Card>
 
       <Card>
         <BarChart key={p.key} data={data.series} scope={{ dealId: id }} titled />
@@ -144,32 +110,31 @@ export function DealReportView({ id, data, p, startDate, endDate }: { id: string
   );
 }
 
-function Stat({ label, value, note, color, onPress }: { label: string; value: string; note?: string; color?: 'positive' | 'negative'; onPress: () => void }) {
+/** Рядок показника: значок, назва, число й шеврон. Натискається: відкриває пояснення простими словами */
+function StatRow({ icon, label, value, color, onPress }: { icon: IconName; label: string; value: string; color?: 'positive' | 'negative'; onPress: () => void }) {
+  const theme = useTheme();
+  const tint = color === 'negative' ? theme.negativeSoft : color === 'positive' ? theme.positiveSoft : theme.accentSoft;
   return (
-    <Card style={styles.stat} onPress={onPress} label={`${label}: ${value}. Що це?`}>
-      <View style={styles.statHead}>
-        <ThemedText type="small" themeColor="textSecondary" style={styles.flex}>
-          {label}
-        </ThemedText>
-        <Icon name="help-circle-outline" size={16} color="textSecondary" />
+    <Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${value}. Що це?`} onPress={onPress} style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.backgroundSelected }]}>
+      <View style={[styles.iconBox, { backgroundColor: tint }]}>
+        <Icon name={icon} size={20} color={color ?? 'accent'} />
       </View>
-      <ThemedText type="default" style={styles.statValue} themeColor={color} numberOfLines={1} adjustsFontSizeToFit>
+      <ThemedText type="body" style={styles.rowLabel} numberOfLines={2}>
+        {label}
+      </ThemedText>
+      <ThemedText type="headline" themeColor={color} style={styles.rowValue} numberOfLines={1}>
         {value}
       </ThemedText>
-      {note ? (
-        <ThemedText type="smallBold" themeColor={color}>
-          {note}
-        </ThemedText>
-      ) : null}
-    </Card>
+      <Icon name="chevron-forward" size={18} color="textSecondary" />
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', gap: Spacing.two },
-  stat: { flex: 1, gap: Spacing.one, padding: Spacing.three },
-  statHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 4 },
-  flex: { flex: 1 },
-  statValue: { ...Type.headline },
-  balance: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.md },
+  list: { padding: 0, gap: 0, overflow: 'hidden' },
+  divider: { height: StyleSheet.hairlineWidth, marginLeft: Spacing.three + 40 + Spacing.three },
+  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, minHeight: 64, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
+  iconBox: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  rowLabel: { flex: 1 },
+  rowValue: { fontWeight: 700, textAlign: 'right' },
 });
