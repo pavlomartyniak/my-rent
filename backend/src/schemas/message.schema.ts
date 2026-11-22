@@ -25,6 +25,10 @@ export class Message {
   @Prop()
   system?: boolean;
 
+  /** Посилання зі службового повідомлення на екран застосунку (наприклад, звіт про авто) */
+  @Prop({ type: MongooseSchema.Types.Mixed })
+  link?: { kind: string; dealId: string; reportId?: string };
+
   /** Коли текст востаннє змінили (позначка «змінено») */
   @Prop()
   editedAt?: Date;

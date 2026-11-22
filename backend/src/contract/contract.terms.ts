@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+import { describeRequirement } from '../checkin/checkin.rules';
 import type { PartyLegal } from '../legal/legal.data';
 import { type Installment, type PaymentPlan, buildSchedule, planLabel } from '../deals/payment-plan';
 import { rentalDays, totalPrice } from '../rentals/rentals.math';
@@ -32,14 +33,25 @@ export type ContractTerms = {
   purpose?: Purpose;
   /** Застава (гарантійний платіж), грн. Є лише в договорах із заставою, тож відбиток решти договорів не змінюється */
   deposit?: number;
+  /** Регулярний фотозвіт про Авто, який власник увімкнув до підписання (з версії 7): частота, день і перелік фото. Є лише в договорах із вимогою, тож відбиток решти не змінюється */
+  checkin?: { every: 'weekly' | 'biweekly' | 'monthly'; weekday: number; body: boolean; interior: boolean };
 };
 
 export type Purpose = 'personal' | 'passengers' | 'delivery';
 
 export type ContractSection = { title: string; paragraphs: string[] };
 
+/** Пункти про регулярні звіти про стан Авто (з версії 7). Конкретні умови з'являються, якщо власник увімкнув звіт до підписання */
+function checkinParagraphs(t: ContractTerms): string[] {
+  if ((t.templateVersion ?? 1) < 7) return [];
+  const agreed = t.checkin ? `Сторони погодили, що Наймач надсилає звіт ${describeRequirement(t.checkin)}. ` : '';
+  return [
+    `6.8. Звіти про стан Авто. ${agreed}Якщо Наймодавець вимагає, він налаштовує в застосунку Kolo регулярний звіт: частоту (щотижня, раз на два тижні чи щомісяця), день і перелік фото (панель приладів із показником пробігу, кузов, салон). Тоді Наймач знімає Авто камерою застосунку й надсилає звіт із фото та показником пробігу в строк, указаний у застосунку; Наймодавець бачить звіти й може нагадати про них у чаті Kolo. Показник пробігу має відповідати одометру Авто на дату звіту. Звіти, надіслані в застосунку Kolo, Сторони визнають належним підтвердженням пробігу й стану Авто на дату звіту (п. 13.3).`,
+  ];
+}
+
 /** Поточна версія шаблону договору */
-export const TEMPLATE_VERSION = 6;
+export const TEMPLATE_VERSION = 7;
 
 /** Номер вигляду MR-20261025-A1B2C3: дата й кінець ідентифікатора оренди */
 export function contractNumber(createdAt: Date, dealId: string) {
@@ -382,6 +394,7 @@ function buildSectionsV4(t: ContractTerms): ContractSection[] {
         '6.5. Про будь-яку несправність Наймач повідомляє протягом 12 годин.',
         `6.6. Наймодавець забезпечує чинний договір обов’язкового страхування цивільно-правової відповідальності (ОСЦПВ) ${(t.templateVersion ?? 1) >= 6 ? 'за Авто на весь строк найму; копія полісу додана Наймодавцем у застосунку Kolo й доступна Наймачеві на сторінці оренди' : `за Авто на весь строк найму: поліс № ${blank(14)}, страховик ${blank(18)}, дійсний до ${blank(12)}`}. Поліс повинен поширюватися на Наймача як особу, що керує Авто, і допускати заявлену мету використання.`,
         '6.7. Добровільне страхування Авто (КАСКО) здійснюється Наймодавцем за його бажанням (ст. 802 ЦК). Якщо КАСКО є, Наймач дотримується умов поліса, з якими його ознайомлено, а франшизу й відмову страховика через порушення Наймача компенсує Наймач.',
+        ...checkinParagraphs(t),
       ],
     },
     {

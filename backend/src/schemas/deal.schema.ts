@@ -1,4 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import type { CheckinState } from '../checkin/checkin.rules';
 import type { ConditionState } from '../condition/condition.rules';
 import type { PendingCode } from '../contract/contract.otp';
 import type { Signature } from '../contract/contract.signing';
@@ -125,6 +126,10 @@ export class Deal {
    */
   @Prop({ type: MongooseSchema.Types.Mixed })
   condition?: ConditionState;
+
+  /** Регулярний фотозвіт орендаря про авто: налаштування власника, надіслані звіти й час останнього нагадування */
+  @Prop({ type: MongooseSchema.Types.Mixed })
+  checkin?: CheckinState;
 
   /** Власник відповів «оренда триває» на підказку звільнити авто після закінчення оренди */
   @Prop({ default: false })

@@ -25,6 +25,8 @@ export type DealView = {
   /** Скільки обов'язкових фото стану авто вже є; до активації оренди потрібні всі й показник одометра */
   /** ready — власник зафіксував усі обов'язкові фото й одометр; confirmed — орендар переглянув і погодився (без цього підписання закрите) */
   condition: { ready: boolean; confirmed: boolean; have: number; need: number };
+  /** Регулярний фотозвіт про авто: вимагається чи ні й що зараз (немає, ще не скоро, час надсилати, прострочено) */
+  checkin: { enabled: boolean; state: 'none' | 'upcoming' | 'open' | 'overdue'; due: string | null; overdueDays: number };
   /** Пропозиція розірвати оренду, що чекає відповіді; mine — подав її я */
   terminationRequest: { by: 'owner' | 'renter'; at: string; note: string; mine: boolean } | null;
   /** План оплати й графік платежів із відповідями сторін */

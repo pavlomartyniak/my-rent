@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 
+import { type CheckinState, checkinUrls } from '../checkin/checkin.rules';
 import type { AuthUser } from '../common/current-user';
 import { cloudRefFromUrl, MEDIA_PREFIX } from '../media/cloudinary';
 import { MediaService } from '../media/media.service';
@@ -177,7 +178,7 @@ export class ConditionService {
   }
 
   /** Усі посилання на фото стану авто в оренді: щоб прибрати їх із хмари, коли оренду видалено */
-  static urlsOf(deal: { condition?: { handover?: ConditionReport; return?: ConditionReport } }) {
-    return [...(deal.condition?.handover?.photos ?? []), ...(deal.condition?.return?.photos ?? [])].map((p) => p.url);
+  static urlsOf(deal: { condition?: { handover?: ConditionReport; return?: ConditionReport }; checkin?: CheckinState }) {
+    return [...(deal.condition?.handover?.photos ?? []), ...(deal.condition?.return?.photos ?? [])].map((p) => p.url).concat(checkinUrls(deal.checkin));
   }
 }

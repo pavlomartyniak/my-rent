@@ -1,3 +1,4 @@
+import { checkinUrls } from '../checkin/checkin.rules';
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
@@ -102,7 +103,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     const hit = (u: string[]) => ({ $in: u });
     const [cars, deals, rentals, offers, chats, people, withFiles] = await Promise.all([
       this.cars.find({ $or: [{ photoUri: hit(urls) }, { photos: hit(urls) }] }, 'photoUri photos').lean().exec(),
-      this.deals.find({ $or: [{ photoUri: hit(urls) }, { 'condition.handover.photos.url': hit(urls) }, { 'condition.return.photos.url': hit(urls) }] }, 'photoUri condition').lean().exec(),
+      this.deals.find({ $or: [{ photoUri: hit(urls) }, { 'condition.handover.photos.url': hit(urls) }, { 'condition.return.photos.url': hit(urls) }, { 'checkin.reports.photos.url': hit(urls) }] }, 'photoUri condition checkin').lean().exec(),
       this.rentals.find({ 'car.photoUri': hit(urls) }, 'car.photoUri').lean().exec(),
       this.offers.find({ $or: [{ 'car.photoUri': hit(urls) }, { 'car.photos': hit(urls) }] }, 'car.photoUri car.photos').lean().exec(),
       this.conversations.find({ 'context.photoUri': hit(urls) }, 'context.photoUri').lean().exec(),
@@ -115,6 +116,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     for (const d of deals) {
       add(d.photoUri);
       for (const p of [...(d.condition?.handover as { photos?: { url: string }[] } | undefined)?.photos ?? [], ...(d.condition?.return as { photos?: { url: string }[] } | undefined)?.photos ?? []]) add(p.url);
+      checkinUrls(d.checkin as never).forEach(add);
     }
     for (const r of rentals) add(r.car?.photoUri);
     for (const o of offers) [o.car?.photoUri, ...(o.car?.photos ?? [])].forEach(add);
@@ -132,9 +134,10 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
       if (id) ids.add(id);
     };
     for await (const c of this.cars.find({}, 'photoUri photos').lean().cursor()) [c.photoUri, ...(c.photos ?? [])].forEach(add);
-    for await (const d of this.deals.find({}, 'photoUri condition').lean().cursor()) {
+    for await (const d of this.deals.find({}, 'photoUri condition checkin').lean().cursor()) {
       add(d.photoUri);
       for (const p of [...(d.condition?.handover as { photos?: { url: string }[] } | undefined)?.photos ?? [], ...(d.condition?.return as { photos?: { url: string }[] } | undefined)?.photos ?? []]) add(p.url);
+      checkinUrls(d.checkin as never).forEach(add);
     }
     for await (const r of this.rentals.find({}, 'car.photoUri').lean().cursor()) add(r.car?.photoUri);
     for await (const o of this.offers.find({}, 'car.photoUri car.photos').lean().cursor()) [o.car?.photoUri, ...(o.car?.photos ?? [])].forEach(add);

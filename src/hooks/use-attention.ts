@@ -1,9 +1,13 @@
+import { useEffect } from 'react';
+
 import { useReport } from '@/hooks/use-report';
+import { syncCheckinReminders } from '@/lib/notifications';
 import { daysUntil } from '@/lib/date';
 import type { DealView, DepositQuestion, PaymentQuestion } from '@/lib/deals';
 import { formatMoney, plural } from '@/lib/format';
 import type { RentalView } from '@/lib/rentals';
 import { reminderTitle } from '@/types';
+import type { CheckinAttention } from '@/lib/checkin';
 import type { WantedView } from '@/lib/wanted';
 import { useFleet } from '@/store/fleet';
 import type { IconName } from '@/components/ui/icon';
@@ -17,7 +21,8 @@ export type AttentionTarget =
   | { kind: 'tab'; href: string; params?: Record<string, string> }
   | { kind: 'release'; deal: DealView }
   | { kind: 'payment'; dealId: string; n: number }
-  | { kind: 'deposit'; dealId: string };
+  | { kind: 'deposit'; dealId: string }
+  | { kind: 'checkin'; dealId: string };
 
 export type AttentionItem = {
   key: string;
@@ -53,6 +58,13 @@ export function useAttention(role: 'owner' | 'renter' | null) {
   const release = useReport<DealView[]>(owner ? '/deals/awaiting-release' : null, POLL).data ?? [];
   const payments = useReport<PaymentQuestion[]>(role ? '/deals/awaiting-payment' : null, POLL).data ?? [];
   const deposits = useReport<DepositQuestion[]>(role ? '/deals/awaiting-deposit' : null, POLL).data ?? [];
+  const checkins = useReport<CheckinAttention[]>(role ? '/checkin' : null, POLL).data ?? [];
+
+  // Нагадування орендарю про звіт ставимо локально, коли застосунок дізнається строки (ключ не змінюється, доки строки ті самі)
+  const checkinKey = renter ? checkins.map((c) => `${c.dealId}:${c.due}`).join('|') : '';
+  useEffect(() => {
+    if (checkinKey) void syncCheckinReminders(checkinKey.split('|').map((k) => ({ dealId: k.split(':')[0]!, title: 'Звіт про авто', due: k.split(':')[1] === 'null' ? null : (k.split(':')[1] ?? null) })));
+  }, [checkinKey]);
 
   const items: AttentionItem[] = [];
 
@@ -97,6 +109,21 @@ export function useAttention(role: 'owner' | 'renter' | null) {
       count: 1,
       tab: 'home',
       target: { kind: 'deposit', dealId: d.dealId },
+    });
+  }
+  // Регулярний фотозвіт про авто: орендарю «час надіслати», власнику «орендар не надіслав»
+  for (const c of checkins.filter((x) => x.state === 'open' || x.state === 'overdue')) {
+    const late = c.state === 'overdue';
+    items.push({
+      key: `checkin-${c.dealId}`,
+      tone: renter ? (late ? 'urgent' : 'warning') : 'warning',
+      icon: 'camera',
+      title: renter ? (late ? 'Звіт про авто прострочено' : 'Час надіслати звіт про авто') : 'Орендар не надіслав звіт',
+      action: renter ? 'Зробити звіт' : 'Відкрити',
+      text: `${c.title}. ${late ? `Прострочено на ${c.overdueDays} ${plural(c.overdueDays, 'день', 'дні', 'днів')}` : 'Фото панелі приладів і пробіг'}`,
+      count: renter ? 1 : 0,
+      tab: 'home',
+      target: { kind: 'checkin', dealId: c.dealId },
     });
   }
   for (const d of termination) {

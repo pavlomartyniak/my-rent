@@ -59,3 +59,27 @@ export async function cancelNotifications(ids?: string[]) {
   if (!supported || !ids?.length) return;
   await Promise.all(ids.map((id) => Notifications.cancelScheduledNotificationAsync(id)));
 }
+
+/**
+ * Нагадування орендарю про регулярний звіт про авто: за день (10:00) і в день строку (9:00). Ідентифікатор залежить від оренди,
+ * тому повторне планування замінює старе, а не множить сповіщення. Минулі дати пропускаються.
+ */
+export async function syncCheckinReminders(items: { dealId: string; title: string; due: string | null }[]) {
+  if (!supported || !items.length || !(await ensureNotificationPermission())) return;
+  for (const it of items) {
+    if (!it.due) continue;
+    const slots = [
+      { id: `checkin-${it.dealId}-eve`, date: at(it.due, 1, 10), body: 'Завтра час надіслати звіт про авто' },
+      { id: `checkin-${it.dealId}-day`, date: at(it.due, 0, 9), body: 'Сьогодні час надіслати звіт про авто' },
+    ];
+    for (const s of slots) {
+      await Notifications.cancelScheduledNotificationAsync(s.id).catch(() => undefined);
+      if (s.date.getTime() <= Date.now()) continue;
+      await Notifications.scheduleNotificationAsync({
+        identifier: s.id,
+        content: { title: it.title, body: s.body },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: s.date },
+      }).catch(() => undefined);
+    }
+  }
+}

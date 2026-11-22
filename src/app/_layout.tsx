@@ -106,6 +106,8 @@ function Routes() {
           <Stack.Screen name="blocked" options={{ title: 'Заблоковані', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="transactions" options={{ title: 'Записи', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="condition/[id]" options={{ title: 'Стан авто', headerBackTitle: 'Назад' }} />
+          <Stack.Screen name="checkin/[id]" options={{ title: 'Звіти про авто', headerBackTitle: 'Назад' }} />
+          <Stack.Screen name="checkin/report" options={{ title: 'Звіт про авто', presentation: 'modal' }} />
           <Stack.Screen name="user/[id]" options={{ title: 'Профіль', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="car/pick" options={{ headerShown: false, presentation: 'modal' }} />
         </Stack.Protected>

@@ -14,6 +14,7 @@ import { RealtimeService } from '../realtime/realtime.service';
 import { settledAmount } from './deal-payments';
 import { SIGN_DAYS_AFTER, signingState, signingWindow } from '../contract/contract.window';
 import { ConditionService } from '../condition/condition.service';
+import { checkinStatus } from '../checkin/checkin.rules';
 import { handoverAgreed, handoverReady, missingSlots, REQUIRED_SLOTS } from '../condition/condition.rules';
 import { MediaService } from '../media/media.service';
 import { fullName, todayUtc } from '../rentals/rentals.math';
@@ -831,6 +832,12 @@ export class DealsService {
   }
 
   /** Контакти співрозмовника відкриті: оренда вже підтверджена обома сторонами */
+  private checkinView(d: DealDocument) {
+    const enabled = !!d.checkin?.settings?.enabled;
+    const s = checkinStatus(d, d.checkin, todayUtc());
+    return { enabled, state: s.state, due: s.due, overdueDays: s.overdueDays };
+  }
+
   private view(d: DealDocument, as: 'renter' | 'owner', people: Map<string, Person>) {
     const p = people.get(String(as === 'renter' ? d.ownerId : d.renterId));
     const fallback = as === 'renter' ? 'Власник' : 'Орендар';
@@ -855,6 +862,8 @@ export class DealsService {
       // Скільки обов'язкових фото стану авто вже є (до активації оренди їх треба додати всі)
       condition: { ready: handoverReady(d.condition?.handover as never), confirmed: !!d.condition?.renterAck, have: REQUIRED_SLOTS.length - missingSlots(d.condition?.handover as never).length, need: REQUIRED_SLOTS.length },
       deposit: this.depositView(d, as),
+      // Регулярний фотозвіт: чи вимагається і що зараз (немає, ще не скоро, час надсилати, прострочено)
+      checkin: this.checkinView(d),
       settlement: this.settlementView(d),
       // Пропозиція про розірвання, що чекає відповіді; `mine` — чи її подав автор запиту
       terminationRequest: d.terminationRequest ? { by: d.terminationRequest.by, at: d.terminationRequest.at, note: d.terminationRequest.note ?? '', mine: d.terminationRequest.by === as } : null,

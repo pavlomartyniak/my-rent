@@ -473,6 +473,18 @@ export default function ChatScreen() {
                           {item.text}
                         </ThemedText>
                       ) : null}
+                      {item.link?.kind === 'checkin' && !item.deletedAt ? (
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel="Переглянути звіт про авто"
+                          onPress={() => router.push({ pathname: '/checkin/[id]', params: { id: item.link!.dealId } })}
+                          style={[styles.linkBtn, { backgroundColor: item.mine ? 'rgba(255,255,255,0.2)' : theme.backgroundSelected }]}>
+                          <Icon name="camera" size={16} color={item.mine ? theme.onAccent : 'accent'} />
+                          <ThemedText type="smallBold" style={{ color: item.mine ? theme.onAccent : theme.accent }}>
+                            Переглянути звіт
+                          </ThemedText>
+                        </Pressable>
+                      ) : null}
                       <View style={styles.meta}>
                         <ThemedText type="small" style={[styles.time, { color: item.mine ? theme.onAccent : theme.textSecondary, opacity: item.mine ? 0.8 : 1 }]}>
                           {item.editedAt && !item.deletedAt ? 'змінено · ' : ''}
@@ -609,6 +621,7 @@ const styles = StyleSheet.create({
   typing: { flexDirection: 'row', justifyContent: 'flex-start', paddingTop: 2 },
   typingBubble: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, borderRadius: Radius.lg, borderWidth: 1 },
   typingText: { fontStyle: 'italic', fontWeight: 600 },
+  linkBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: Spacing.three, paddingVertical: 8, borderRadius: Radius.pill, marginTop: Spacing.two },
   editBar: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, borderBottomWidth: StyleSheet.hairlineWidth },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.two, paddingHorizontal: Spacing.three, paddingTop: Spacing.two, borderTopWidth: StyleSheet.hairlineWidth },
   input: { flex: 1, minHeight: 44, maxHeight: 130, borderRadius: 22, borderWidth: 1, paddingHorizontal: Spacing.three, paddingTop: 11, paddingBottom: 11, fontSize: Type.body.fontSize },

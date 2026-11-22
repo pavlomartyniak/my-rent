@@ -39,6 +39,8 @@ export type ChatMessage = {
   mine: boolean;
   createdAt: string;
   clientId: string | null;
+  /** Посилання зі службового повідомлення на екран (звіт про авто) */
+  link?: { kind: string; dealId: string; reportId?: string } | null;
   /** Службове повідомлення про домовленість: його не можна змінити чи видалити */
   system?: boolean;
   /** Коли текст змінили («змінено») */

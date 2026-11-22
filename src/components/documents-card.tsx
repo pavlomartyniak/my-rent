@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
+import { formatDate } from '@/lib/date';
 import type { DealView } from '@/lib/deals';
 import type { PolicyInfo } from '@/lib/insurance';
 
@@ -32,7 +33,7 @@ function Badge({ icon, tone }: { icon: IconName; tone: Tone }) {
  * до цього він у чек-листі кроків) і страховий поліс. Поліс видно статусом, а керування файлом (завантажити, замінити,
  * видалити) відкривається нижнім листом: так він завжди на виду, але не займає екран.
  */
-export function DocumentsCard({ carId, deal, as }: { carId: string; deal?: Pick<DealView, 'id' | 'status' | 'condition'>; as: 'owner' | 'renter' }) {
+export function DocumentsCard({ carId, deal, as }: { carId: string; deal?: Pick<DealView, 'id' | 'status' | 'condition' | 'checkin'>; as: 'owner' | 'renter' }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const { data, retry } = useReport<PolicyInfo>(`/insurance/cars/${carId}`, { refetchOnFocus: true, useCache: false, keepPrevious: true });
@@ -50,6 +51,27 @@ export function DocumentsCard({ carId, deal, as }: { carId: string; deal?: Pick<
         onPress={() => router.push({ pathname: '/condition/[id]', params: { id: deal.id } })}
       />,
     );
+  }
+
+  // Регулярний фотозвіт: власник налаштовує, орендар надсилає; видно лише для оренд, що тривають чи чекають підписання
+  if (deal?.checkin && deal.status !== 'terminated') {
+    const c = deal.checkin;
+    const owner = as === 'owner';
+    const tone: Tone = c.state === 'overdue' ? 'warning' : c.state === 'open' ? 'warning' : c.enabled ? 'positive' : 'neutral';
+    const subtitle = !c.enabled
+      ? owner
+        ? 'Не вимагається. Налаштувати регулярний звіт'
+        : 'Власник не вимагає'
+      : c.state === 'overdue'
+        ? `Прострочено на ${c.overdueDays} дн.`
+        : c.state === 'open'
+          ? owner
+            ? 'Чекаємо звіт від орендаря'
+            : 'Час надіслати звіт'
+          : c.due
+            ? `Наступний звіт: ${formatDate(c.due)}`
+            : 'Увімкнено';
+    rows.push(<ListRow key="checkin" title="Звіти про авто" subtitle={subtitle} leading={<Badge icon={c.enabled ? 'camera' : 'camera-outline'} tone={tone} />} onPress={() => router.push({ pathname: '/checkin/[id]', params: { id: deal.id } })} />);
   }
 
   const has = data.hasPolicy;

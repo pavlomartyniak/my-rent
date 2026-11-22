@@ -154,10 +154,10 @@ export class ChatService implements OnModuleInit {
    * Починає розмову автоматично: відкриває чат у контексті щойно створеного запиту чи пропозиції й кидає перше
    * повідомлення від імені автора, щоб сторони одразу могли спілкуватись. Збій чату не повинен ламати сам запит.
    */
-  async autoStart(user: AuthUser, context: OpenChatDto, text: string, clientId: string): Promise<string | null> {
+  async autoStart(user: AuthUser, context: OpenChatDto, text: string, clientId: string, link?: { kind: string; dealId: string; reportId?: string }): Promise<string | null> {
     try {
       const chat = await this.open(user, context);
-      await this.send(user, chat.id, text, clientId, undefined, true);
+      await this.send(user, chat.id, text, clientId, undefined, true, link);
       return chat.id;
     } catch (e) {
       this.log.warn(`Авто-повідомлення не надіслано: ${String(e)}`);
@@ -249,7 +249,7 @@ export class ChatService implements OnModuleInit {
 
   // ---- надсилання й читання ----
 
-  async send(user: AuthUser, id: string, rawText: string, clientId?: string, rawAttachments?: { url?: string; fileId?: string; name: string; size: number }[], system = false) {
+  async send(user: AuthUser, id: string, rawText: string, clientId?: string, rawAttachments?: { url?: string; fileId?: string; name: string; size: number }[], system = false, link?: { kind: string; dealId: string; reportId?: string }) {
     const text = cleanMessage(rawText) ?? '';
     const fileIds = (rawAttachments ?? []).filter((a) => a.fileId).map((a) => a.fileId!);
     if ((rawAttachments ?? []).some((a) => !a.url && !a.fileId)) throw new BadRequestException('Невірне вкладення');
@@ -282,7 +282,7 @@ export class ChatService implements OnModuleInit {
 
     let message: MessageDocument;
     try {
-      message = await this.messages.create({ conversationId: c._id, senderId: user.id, text, attachments: attachments.map((a) => ({ ...a, fileId: a.fileId ? new Types.ObjectId(a.fileId) : undefined })), clientId, ...(system ? { system: true } : {}) });
+      message = await this.messages.create({ conversationId: c._id, senderId: user.id, text, attachments: attachments.map((a) => ({ ...a, fileId: a.fileId ? new Types.ObjectId(a.fileId) : undefined })), clientId, ...(system ? { system: true } : {}), ...(link ? { link } : {}) });
       if (fileIds.length) await this.chatFiles.updateMany({ _id: { $in: fileIds } }, { $set: { messageId: message._id } });
     } catch (e) {
       // Гонка двох однакових відправок: unique-індекс залишає одну, повертаємо її
@@ -514,6 +514,7 @@ export class ChatService implements OnModuleInit {
       createdAt: m.createdAt,
       clientId: m.clientId ?? null,
       system: !!m.system,
+      link: m.link ?? null,
       editedAt: m.editedAt ?? null,
       deletedAt: m.deletedAt ?? null,
     };

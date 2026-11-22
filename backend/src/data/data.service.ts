@@ -102,7 +102,7 @@ export class DataService {
     await this.offers.deleteMany({ $or: [{ ownerId: userId }, { renterId: userId }, { wantedId: { $in: mine.map((w) => w._id) } }] });
     await this.wanted.deleteMany({ renterId: userId });
     // Оренди орендаря (його записи вже видалено в clear)
-    const myDeals = await this.deals.find({ renterId: userId, condition: { $exists: true } }, 'condition').lean().exec();
+    const myDeals = await this.deals.find({ renterId: userId, $or: [{ condition: { $exists: true } }, { checkin: { $exists: true } }] }, 'condition checkin').lean().exec();
     photos.push(...myDeals.flatMap((d) => ConditionService.urlsOf(d as never)));
     await this.deals.deleteMany({ renterId: userId });
     // Чати з усією перепискою: співрозмовник теж їх більше не побачить

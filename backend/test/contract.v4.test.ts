@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { buildSections, buildTerms, TEMPLATE_VERSION, uahWords, V4, type ContractParty } from '../src/contract/contract.terms';
+import { buildSections, buildTerms, contractHash, TEMPLATE_VERSION, uahWords, V4, type ContractParty } from '../src/contract/contract.terms';
 
 const owner: ContractParty = { name: 'Власенко Петро Іванович', phone: '+380501112233' };
 const renter: ContractParty = { name: 'Тестова Олена Петрівна', phone: '+380509998877' };
@@ -91,7 +91,27 @@ describe('шаблон договору версії 4 (посилена ред�
   it('версія в параметрах не змінюється мовчки: договір версії 3 читається за старим текстом', () => {
     const v3 = buildSections({ ...buildTerms(base), templateVersion: 3 });
     assert.ok(v3.some((s) => s.title === '8. Прикінцеві положення'));
-    assert.equal(TEMPLATE_VERSION, 6);
+    assert.equal(TEMPLATE_VERSION, 7);
+  });
+});
+
+describe('звіти про стан авто (версія 7)', () => {
+  it('новий договір має загальний пункт про звіти', () => {
+    assert.match(text(buildTerms(base)), /6\.8\. Звіти про стан Авто/);
+  });
+  it('без вимоги власника конкретних умов у тексті немає', () => {
+    assert.doesNotMatch(text(buildTerms(base)), /Сторони погодили, що Наймач надсилає звіт/);
+  });
+  it('з вимогою власника умови вписані в текст: частота, день і перелік фото', () => {
+    const t = { ...buildTerms(base), checkin: { every: 'weekly' as const, weekday: 1, body: true, interior: false } };
+    assert.match(text(t), /Наймач надсилає звіт щотижня \(понеділок\): панель приладів із пробігом, кузов з усіх боків/);
+  });
+  it('умови звіту змінюють відбиток договору', () => {
+    const plain = buildTerms(base);
+    assert.notEqual(contractHash(plain), contractHash({ ...plain, checkin: { every: 'monthly', weekday: 0, body: false, interior: false } }));
+  });
+  it('договір версії 6 читається за старим текстом без пункту про звіти', () => {
+    assert.doesNotMatch(text({ ...buildTerms(base), templateVersion: 6 }), /6\.8\. Звіти/);
   });
 });
 
