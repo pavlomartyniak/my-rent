@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Colors, Spacing, Type } from '@/constants/theme';
 import '@/lib/notifications';
 import { AuthProvider, useAuth } from '@/store/auth';
+import { KeyboardDoneBar } from '@/components/keyboard-done';
 import { TransactionSheetProvider } from '@/components/transaction-sheet';
 import { ChatProvider } from '@/store/chat';
 import { FleetProvider, useFleet } from '@/store/fleet';
@@ -123,6 +124,7 @@ export default function RootLayout() {
             <ChatProvider>
               <TransactionSheetProvider>
                 <Routes />
+                <KeyboardDoneBar />
               </TransactionSheetProvider>
             </ChatProvider>
           </FleetProvider>

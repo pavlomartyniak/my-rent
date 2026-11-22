@@ -1,14 +1,19 @@
-import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import { Platform, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
 import { Radius, Spacing, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
+import { DONE_BAR_ID } from '../keyboard-done';
 import { ThemedText } from '../themed-text';
 
 type Props = TextInputProps & { label: string; error?: string };
 
+const NUMERIC = ['number-pad', 'decimal-pad', 'numeric', 'phone-pad'];
+
 export function Field({ label, error, style, ...rest }: Props) {
   const theme = useTheme();
+  // Цифрова клавіатура iOS не має кнопки повернення: додаємо над нею панель «Готово»
+  const needsDone = Platform.OS === 'ios' && !rest.multiline && NUMERIC.includes(rest.keyboardType ?? '');
 
   return (
     <View style={styles.wrap}>
@@ -22,6 +27,7 @@ export function Field({ label, error, style, ...rest }: Props) {
           { backgroundColor: theme.backgroundElement, color: theme.text, borderColor: error ? theme.negative : theme.borderStrong },
           style,
         ]}
+        inputAccessoryViewID={needsDone ? DONE_BAR_ID : undefined}
         {...rest}
       />
       {error ? (

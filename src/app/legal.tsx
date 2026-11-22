@@ -110,17 +110,18 @@ export default function LegalScreen() {
 
   return (
     <SafeAreaView edges={['bottom']} style={[styles.root, { backgroundColor: theme.background }]}>
-      <View style={styles.top}>
-        <ThemedText type="caption" themeColor="textSecondary">
-          Крок {step + 1} з {total}
-        </ThemedText>
-        <View style={[styles.track, { backgroundColor: theme.backgroundSelected }]} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: total, now: step + 1 }}>
-          <View style={[styles.fill, { backgroundColor: theme.accent, width: `${((step + 1) / total) * 100}%` }]} />
-        </View>
-      </View>
-
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
-        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        {/* Прогрес всередині прокручування: iOS сам відсуває вміст нижче прозорого хедера модального вікна */}
+        <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" showsVerticalScrollIndicator={false}>
+          <View style={styles.top}>
+            <ThemedText type="caption" themeColor="textSecondary">
+              Крок {step + 1} з {total}
+            </ThemedText>
+            <View style={[styles.track, { backgroundColor: theme.backgroundSelected }]} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: total, now: step + 1 }}>
+              <View style={[styles.fill, { backgroundColor: theme.accent, width: `${((step + 1) / total) * 100}%` }]} />
+            </View>
+          </View>
+
           {current === 'person' ? (
             <>
               <Title text="Хто ви" sub="Ці дані потрібні лише для тексту договору. Їх бачить тільки друга сторона вашої оренди, і лише в самому договорі: не в профілі й не в оголошеннях." />
@@ -130,8 +131,8 @@ export default function LegalScreen() {
                 </ThemedText>
                 <ThemedText type="headline">{fullName || 'Вкажіть імʼя в «Особисті дані»'}</ThemedText>
               </Card>
-              <DateField label="Дата народження" value={d.birthDate} onChange={(birthDate) => set({ birthDate })} placeholder="Оберіть дату" initialDate={new Date(1990, 0, 1)} maximumDate={new Date()} error={err('birthDate')} />
-              <NumberField label="РНОКПП (ідентифікаційний код)" value={d.taxId} onChangeValue={(taxId) => set({ taxId })} maxDigits={10} plain placeholder="10 цифр" error={err('taxId')} />
+              <DateField wheel label="Дата народження" value={d.birthDate} onChange={(birthDate) => set({ birthDate })} placeholder="Оберіть дату" initialDate={new Date(1990, 0, 1)} maximumDate={new Date()} error={err('birthDate')} />
+              <NumberField label="РНОКПП (ідентифікаційний код)" value={d.taxId} onChangeValue={(taxId) => set({ taxId })} maxDigits={10} plain dismissWhenFull placeholder="10 цифр" error={err('taxId')} />
               <Note icon="information-circle-outline" text="РНОКПП потрібен за законом України: без нього договір не матиме повної юридичної сили." />
             </>
           ) : current === 'document' ? (
@@ -145,19 +146,19 @@ export default function LegalScreen() {
                       <Field label="Серія" value={d.docSeries} onChangeText={(t) => set({ docSeries: t.toUpperCase().replace(/[^А-ЯІЇЄҐA-Z]/g, '').slice(0, 2) })} autoCapitalize="characters" placeholder="АА" maxLength={2} error={err('docSeries')} />
                     </View>
                     <View style={styles.flex}>
-                      <NumberField label="Номер" value={d.docNumber} onChangeValue={(docNumber) => set({ docNumber })} maxDigits={6} plain placeholder="6 цифр" error={err('docNumber')} />
+                      <NumberField label="Номер" value={d.docNumber} onChangeValue={(docNumber) => set({ docNumber })} maxDigits={6} plain dismissWhenFull placeholder="6 цифр" error={err('docNumber')} />
                     </View>
                   </View>
                   <Field label="Ким виданий" value={d.docIssuer} onChangeText={(docIssuer) => set({ docIssuer })} placeholder="Наприклад, Галицьким РВ ЛМУ УМВС" error={err('docIssuer')} />
                 </>
               ) : (
                 <>
-                  <NumberField label="Номер ID-картки (запис)" value={d.docNumber} onChangeValue={(docNumber) => set({ docNumber })} maxDigits={9} plain placeholder="9 цифр" error={err('docNumber')} />
-                  <NumberField label="Орган, що видав" value={d.docIssuer} onChangeValue={(docIssuer) => set({ docIssuer })} maxDigits={4} plain placeholder="4 цифри, наприклад 4601" error={err('docIssuer')} />
+                  <NumberField label="Номер ID-картки (запис)" value={d.docNumber} onChangeValue={(docNumber) => set({ docNumber })} maxDigits={9} plain dismissWhenFull placeholder="9 цифр" error={err('docNumber')} />
+                  <NumberField label="Орган, що видав" value={d.docIssuer} onChangeValue={(docIssuer) => set({ docIssuer })} maxDigits={4} plain dismissWhenFull placeholder="4 цифри, наприклад 4601" error={err('docIssuer')} />
                 </>
               )}
-              <DateField label="Дата видачі" value={d.docIssuedAt} onChange={(docIssuedAt) => set({ docIssuedAt })} maximumDate={new Date()} initialDate={new Date(2018, 0, 1)} error={err('docIssuedAt')} />
-              {d.docType === 'id' ? <DateField label="Дійсна до" value={d.docValidUntil} onChange={(docValidUntil) => set({ docValidUntil })} initialDate={new Date()} error={err('docValidUntil')} /> : null}
+              <DateField wheel label="Дата видачі" value={d.docIssuedAt} onChange={(docIssuedAt) => set({ docIssuedAt })} maximumDate={new Date()} initialDate={new Date(2018, 0, 1)} error={err('docIssuedAt')} />
+              {d.docType === 'id' ? <DateField wheel label="Дійсна до" value={d.docValidUntil} onChange={(docValidUntil) => set({ docValidUntil })} initialDate={new Date()} error={err('docValidUntil')} /> : null}
             </>
           ) : current === 'address' ? (
             <>
@@ -169,8 +170,8 @@ export default function LegalScreen() {
               <>
                 <Title text="Посвідчення водія" sub="Перепишіть серію й номер з посвідчення. Категорії ви вже вказали в профілі." />
                 <Field label="Серія й номер" value={d.licenseNumber} onChangeText={(licenseNumber) => set({ licenseNumber: licenseNumber.toUpperCase() })} autoCapitalize="characters" placeholder="ААА 123456" error={err('licenseNumber')} />
-                <DateField label="Дата видачі" value={d.licenseIssuedAt} onChange={(licenseIssuedAt) => set({ licenseIssuedAt })} maximumDate={new Date()} initialDate={new Date(2020, 0, 1)} error={err('licenseIssuedAt')} />
-                <DateField label="Дійсне до" value={d.licenseValidUntil} onChange={(licenseValidUntil) => set({ licenseValidUntil })} initialDate={new Date()} error={err('licenseValidUntil')} />
+                <DateField wheel label="Дата видачі" value={d.licenseIssuedAt} onChange={(licenseIssuedAt) => set({ licenseIssuedAt })} maximumDate={new Date()} initialDate={new Date(2020, 0, 1)} error={err('licenseIssuedAt')} />
+                <DateField wheel label="Дійсне до" value={d.licenseValidUntil} onChange={(licenseValidUntil) => set({ licenseValidUntil })} initialDate={new Date()} error={err('licenseValidUntil')} />
               </>
             ) : (
               <>
@@ -179,7 +180,7 @@ export default function LegalScreen() {
                 {d.ownership === 'proxy' ? (
                   <>
                     <Field label="Номер довіреності" value={d.proxyNumber} onChangeText={(proxyNumber) => set({ proxyNumber })} error={err('proxyNumber')} />
-                    <DateField label="Дата довіреності" value={d.proxyDate} onChange={(proxyDate) => set({ proxyDate })} maximumDate={new Date()} initialDate={new Date()} error={err('proxyDate')} />
+                    <DateField wheel label="Дата довіреності" value={d.proxyDate} onChange={(proxyDate) => set({ proxyDate })} maximumDate={new Date()} initialDate={new Date()} error={err('proxyDate')} />
                     <Field label="Ким посвідчена" value={d.proxyIssuer} onChangeText={(proxyIssuer) => set({ proxyIssuer })} placeholder="Нотаріус, округ" error={err('proxyIssuer')} />
                   </>
                 ) : null}
@@ -258,7 +259,7 @@ function Row({ k, v }: { k: string; v: string }) {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
-  top: { paddingHorizontal: Spacing.four, paddingTop: Spacing.three, gap: Spacing.two },
+  top: { gap: Spacing.two },
   track: { height: 6, borderRadius: 3, overflow: 'hidden' },
   fill: { height: 6, borderRadius: 3 },
   body: { padding: Spacing.four, gap: Spacing.four },
