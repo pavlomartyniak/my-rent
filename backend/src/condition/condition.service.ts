@@ -41,8 +41,8 @@ export class ConditionService {
   ) {}
 
   /** Службове повідомлення в чат оренди від імені того, хто діє. Збій чату не ламає саму дію */
-  private notify(user: AuthUser, dealId: string, kind: string, text: string, link: 'condition' | 'condition-confirm' | 'contract' = 'condition') {
-    void this.chat.autoStart(user, { dealId }, text, `condition-${kind}-${dealId}-${Date.now()}`, { kind: link, dealId });
+  private notify(user: AuthUser, dealId: string, kind: string, text: string, link: 'condition' | 'condition-confirm' | 'contract' = 'condition', step?: string) {
+    void this.chat.autoStart(user, { dealId }, text, `condition-${kind}-${dealId}-${Date.now()}`, { kind: link, dealId, ...(step ? { step } : {}) });
   }
 
   private readyText(report: ConditionReport) {
@@ -143,7 +143,7 @@ export class ConditionService {
     if (damage) {
       const who = role === 'owner' ? 'Власник' : 'Орендар';
       const reconfirm = ackReset ? ' Потрібне повторне підтвердження стану авто.' : '';
-      this.notify(user, dealId, 'damage', `${who} додав зауваження до стану авто (${phase === 'handover' ? 'при передачі' : 'при поверненні'}): «${dto.note!.trim()}».${reconfirm}`, ackReset ? 'condition-confirm' : 'condition');
+      this.notify(user, dealId, 'damage', `${who} додав зауваження до стану авто (${phase === 'handover' ? 'при передачі' : 'при поверненні'}): «${dto.note!.trim()}».${reconfirm}`, ackReset ? 'condition-confirm' : 'condition', ackReset ? 'confirm' : undefined);
     } else {
       this.afterChange(user, deal, phase, role, wasReady, ackReset, report);
     }
@@ -209,7 +209,7 @@ export class ConditionService {
       text += ' Договір готовий: прочитайте його, підписання вже відкрито.';
       await claimFlow(this.deals, id, 'sign-open');
     } else if (state === 'early') text += ` Далі: прочитайте договір. Підписання відкриється ${dmy(signingWindow(deal.startDate).opensAt)}: підпишете його під час зустрічі, коли передаватимете авто.`;
-    this.notify(user, id, 'confirm', text, link);
+    this.notify(user, id, 'confirm', text, link, hasContract && legalBoth && state === 'open' ? 'sign-both' : undefined);
   }
 
   /**
@@ -220,8 +220,8 @@ export class ConditionService {
     const id = String(deal._id);
     const ready = handoverReady(report);
     if (phase === 'handover') {
-      if (ackReset) return this.notify(user, id, 'reset', 'Власник змінив стан авто при передачі: потрібне повторне підтвердження.', 'condition-confirm');
-      if (role === 'owner' && ready && !wasReady) this.notify(user, id, 'ready', `Власник зафіксував стан авто при передачі: ${this.readyText(report)}. Перегляньте й підтвердіть його, щоб відкрилось підписання договору.`, 'condition-confirm');
+      if (ackReset) return this.notify(user, id, 'reset', 'Власник змінив стан авто при передачі: потрібне повторне підтвердження.', 'condition-confirm', 'confirm');
+      if (role === 'owner' && ready && !wasReady) this.notify(user, id, 'ready', `Власник зафіксував стан авто при передачі: ${this.readyText(report)}. Перегляньте й підтвердіть його, щоб відкрилось підписання договору.`, 'condition-confirm', 'confirm');
       return;
     }
     if (ready && !wasReady) this.notify(user, id, 'return-done', `${role === 'owner' ? 'Власник' : 'Орендар'} зафіксував стан авто при поверненні: ${this.readyText(report)}.`);

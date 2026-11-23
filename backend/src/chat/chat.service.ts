@@ -4,6 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { type Model, Types } from 'mongoose';
 
 import type { AuthUser } from '../common/current-user';
+import { handoverReady } from '../condition/condition.rules';
 import { dealStageOf } from '../deals/deal-stage';
 import { fullName, maskedName, todayUtc } from '../rentals/rentals.math';
 import { MediaService } from '../media/media.service';
@@ -154,7 +155,7 @@ export class ChatService implements OnModuleInit {
    * Починає розмову автоматично: відкриває чат у контексті щойно створеного запиту чи пропозиції й кидає перше
    * повідомлення від імені автора, щоб сторони одразу могли спілкуватись. Збій чату не повинен ламати сам запит.
    */
-  async autoStart(user: AuthUser, context: OpenChatDto, text: string, clientId: string, link?: { kind: string; dealId: string; reportId?: string }): Promise<string | null> {
+  async autoStart(user: AuthUser, context: OpenChatDto, text: string, clientId: string, link?: { kind: string; dealId: string; reportId?: string; step?: string }): Promise<string | null> {
     try {
       const chat = await this.open(user, context);
       await this.send(user, chat.id, text, clientId, undefined, true, link);
@@ -202,7 +203,59 @@ export class ChatService implements OnModuleInit {
       .limit(limit + 1)
       .exec();
     const page = items.slice(0, limit);
-    return { items: page.map((m) => this.messageView(m, user.id)), hasMore: items.length > limit };
+    const states = await this.flowStates(page, user);
+    return { items: page.map((m) => ({ ...this.messageView(m, user.id), flow: states.get(String(m._id)) ?? null })), hasMore: items.length > limit };
+  }
+
+  /**
+   * Стан карток-кроків для глядача: done — крок виконано (картка згортається), todo — зараз потрібна дія саме від нього,
+   * wait — дія за другою стороною. Повідомлення без кроку (інформаційні) стану не мають. Рахується за поточним станом оренди.
+   */
+  private async flowStates(page: MessageDocument[], viewer: AuthUser) {
+    const out = new Map<string, 'done' | 'todo' | 'wait'>();
+    const steps = page.filter((m) => m.link?.step && !m.deletedAt);
+    if (!steps.length) return out;
+    const ids = [...new Set(steps.map((m) => m.link!.dealId))];
+    const deals = new Map((await this.deals.find({ _id: { $in: ids } }, 'ownerId renterId status contract condition').lean().exec()).map((d) => [String(d._id), d]));
+    for (const m of steps) {
+      const d = deals.get(m.link!.dealId);
+      if (!d) continue;
+      const roleOf = (id: string): 'owner' | 'renter' => (String(d.ownerId) === id ? 'owner' : 'renter');
+      const me = roleOf(viewer.id);
+      const sender = roleOf(String(m.senderId));
+      const other = sender === 'owner' ? 'renter' : 'owner';
+      const closed = d.status !== 'awaiting';
+      const condition = d.condition as never as { handover?: never; renterAck?: unknown } | undefined;
+      const signatures = (d.contract?.signatures ?? {}) as Record<string, unknown>;
+      const terms = d.contract?.terms as { owner?: { legal?: unknown }; renter?: { legal?: unknown } } | undefined;
+      let actor: 'owner' | 'renter' | 'both' = 'both';
+      let done = closed;
+      switch (m.link!.step) {
+        case 'legal':
+          actor = other;
+          done = closed || !!terms?.[other]?.legal;
+          break;
+        case 'fix':
+          actor = 'owner';
+          done = closed || handoverReady(condition?.handover);
+          break;
+        case 'confirm':
+          actor = 'renter';
+          done = closed || (handoverReady(condition?.handover) && !!condition?.renterAck);
+          break;
+        case 'sign':
+          actor = other;
+          done = closed || !!signatures[other];
+          break;
+        case 'sign-both':
+          done = closed || !!signatures[me];
+          break;
+        default:
+          continue;
+      }
+      out.set(String(m._id), done ? 'done' : actor === 'both' || actor === me ? 'todo' : 'wait');
+    }
+    return out;
   }
 
   /**
@@ -249,7 +302,7 @@ export class ChatService implements OnModuleInit {
 
   // ---- надсилання й читання ----
 
-  async send(user: AuthUser, id: string, rawText: string, clientId?: string, rawAttachments?: { url?: string; fileId?: string; name: string; size: number }[], system = false, link?: { kind: string; dealId: string; reportId?: string }) {
+  async send(user: AuthUser, id: string, rawText: string, clientId?: string, rawAttachments?: { url?: string; fileId?: string; name: string; size: number }[], system = false, link?: { kind: string; dealId: string; reportId?: string; step?: string }) {
     const text = cleanMessage(rawText) ?? '';
     const fileIds = (rawAttachments ?? []).filter((a) => a.fileId).map((a) => a.fileId!);
     if ((rawAttachments ?? []).some((a) => !a.url && !a.fileId)) throw new BadRequestException('Невірне вкладення');

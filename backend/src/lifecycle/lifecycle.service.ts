@@ -90,7 +90,7 @@ export class LifecycleService implements OnModuleInit, OnModuleDestroy {
       if (!d.contract?.terms?.owner?.legal || !d.contract?.terms?.renter?.legal) continue;
       if (d.contract.signatures?.owner || d.contract.signatures?.renter) continue;
       if (!(await claimFlow(this.deals as never, String(d._id), 'sign-open'))) continue;
-      void this.chat.autoStart({ id: String(d.ownerId), role: 'owner' }, { dealId: String(d._id) }, 'Підписання відкрито. Зустріньтесь, передайте авто, ключі й гроші та підпишіть договір кожен зі свого телефону.', `flow-sign-open-${d._id}`, { kind: 'contract', dealId: String(d._id) });
+      void this.chat.autoStart({ id: String(d.ownerId), role: 'owner' }, { dealId: String(d._id) }, 'Підписання відкрито. Зустріньтесь, передайте авто, ключі й гроші та підпишіть договір кожен зі свого телефону.', `flow-sign-open-${d._id}`, { kind: 'contract', dealId: String(d._id), step: 'sign-both' });
     }
   }
 

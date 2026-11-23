@@ -40,7 +40,9 @@ export type ChatMessage = {
   createdAt: string;
   clientId: string | null;
   /** Посилання зі службового повідомлення на екран (звіт про авто) */
-  link?: { kind: string; dealId: string; reportId?: string } | null;
+  link?: { kind: string; dealId: string; reportId?: string; step?: string } | null;
+  /** Для карток-кроків: done — виконано, todo — потрібна ваша дія, wait — дія за другою стороною; null — інформаційна */
+  flow?: 'done' | 'todo' | 'wait' | null;
   /** Службове повідомлення про домовленість: його не можна змінити чи видалити */
   system?: boolean;
   /** Коли текст змінили («змінено») */

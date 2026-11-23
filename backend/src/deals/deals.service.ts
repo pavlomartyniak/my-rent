@@ -482,7 +482,7 @@ export class DealsService {
         done.status === 'active'
           ? `Договір підписано обома сторонами. ${todayUtc() >= done.startDate ? 'Оренда розпочалась.' : `Оренда розпочнеться ${dmy(done.startDate)}.`}`
           : `${user.role === 'owner' ? 'Власник' : 'Орендар'} підписав договір. Тепер ваша черга: відкрийте договір і підпишіть його.`;
-      void this.chat.autoStart(user, { dealId: id }, text, `flow-sign-${id}-${user.role}`, { kind: 'contract', dealId: id });
+      void this.chat.autoStart(user, { dealId: id }, text, `flow-sign-${id}-${user.role}`, { kind: 'contract', dealId: id, ...(done.status === 'active' ? {} : { step: 'sign' }) });
     }
     return this.viewFor(user, result as unknown as DealDocument);
   }

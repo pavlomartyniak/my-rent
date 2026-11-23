@@ -127,6 +127,8 @@ export default function ChatScreen() {
         setTyping(false);
         markRead();
       }
+      // Нова картка-крок зазвичай означає, що попередній виконано: перечитуємо стани карток
+      if (incoming.link) load();
     } else if (e.type === 'read') {
       if (e.by !== role) setChat((c) => (c ? { ...c, otherReadAt: e.at } : c));
     } else if (e.type === 'typing') {
@@ -451,6 +453,9 @@ export default function ChatScreen() {
                       </ThemedText>
                     </View>
                   ) : null}
+                  {item.link && !item.deletedAt && !item.status ? (
+                    <SystemCard item={item} />
+                  ) : (
                   <View style={[styles.line, item.mine ? styles.lineMine : styles.lineTheirs]}>
                     <Pressable
                       disabled={!failed && (!!item.status || (item.mine && (item.system || !!item.deletedAt)))}
@@ -473,7 +478,6 @@ export default function ChatScreen() {
                           {item.text}
                         </ThemedText>
                       ) : null}
-                      {item.link && !item.deletedAt ? <LinkButton link={item.link} mine={item.mine} /> : null}
                       <View style={styles.meta}>
                         <ThemedText type="small" style={[styles.time, { color: item.mine ? theme.onAccent : theme.textSecondary, opacity: item.mine ? 0.8 : 1 }]}>
                           {item.editedAt && !item.deletedAt ? 'змінено · ' : ''}
@@ -483,6 +487,7 @@ export default function ChatScreen() {
                       </View>
                     </Pressable>
                   </View>
+                  )}
                   {failed ? (
                     <ThemedText type="small" themeColor="negative" style={styles.failed}>
                       Не надіслано{item.error ? `: ${item.error}` : ''}. Натисніть на повідомлення, щоб повторити
@@ -610,6 +615,18 @@ const styles = StyleSheet.create({
   typing: { flexDirection: 'row', justifyContent: 'flex-start', paddingTop: 2 },
   typingBubble: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, borderRadius: Radius.lg, borderWidth: 1 },
   typingText: { fontStyle: 'italic', fontWeight: 600 },
+  cardLine: { alignItems: 'center', marginVertical: Spacing.one },
+  sysCard: { width: '92%', borderWidth: 1, borderRadius: Radius.lg, padding: Spacing.three, gap: Spacing.three },
+  sysHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  sysIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  sysTitles: { flex: 1 },
+  sysBrand: { fontWeight: 700, letterSpacing: 0.5 },
+  doneRow: { width: '92%', flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.two, paddingHorizontal: Spacing.three, borderRadius: Radius.md },
+  doneIcon: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  sysPill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.pill },
+  sysPillText: { fontWeight: 700 },
+  sysTime: { alignSelf: 'flex-end', marginTop: -Spacing.one },
+  sysBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 44, borderRadius: Radius.md },
   linkBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: Spacing.three, paddingVertical: 8, borderRadius: Radius.pill, marginTop: Spacing.two },
   editBar: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, borderBottomWidth: StyleSheet.hairlineWidth },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.two, paddingHorizontal: Spacing.three, paddingTop: Spacing.two, borderTopWidth: StyleSheet.hairlineWidth },
@@ -625,33 +642,117 @@ const styles = StyleSheet.create({
   closedText: { textAlign: 'center' },
 });
 
-/** Кнопка зі службового повідомлення: звіт про авто чи стан авто. «Підтвердити» бачить лише той, кому це адресовано (не автор) */
-function LinkButton({ link, mine }: { link: { kind: string; dealId: string }; mine: boolean }) {
+const CARD_KIND: Record<string, { icon: 'camera' | 'shield-checkmark-outline' | 'document-text-outline' | 'person-circle-outline'; title: string }> = {
+  checkin: { icon: 'camera', title: 'Фотозвіт про авто' },
+  condition: { icon: 'shield-checkmark-outline', title: 'Стан авто' },
+  'condition-confirm': { icon: 'shield-checkmark-outline', title: 'Стан авто' },
+  contract: { icon: 'document-text-outline', title: 'Договір' },
+  legal: { icon: 'person-circle-outline', title: 'Дані для договору' },
+};
+
+/**
+ * Автоматичне повідомлення від застосунку про крок оренди. Це не репліка людини, тому воно не в бульбашці зліва чи справа,
+ * а карткою по центру з позначкою «Kolo · автоматично», заголовком кроку, текстом і кнопкою дії. Однакове для обох сторін.
+ */
+function SystemCard({ item }: { item: ChatMessage }) {
   const theme = useTheme();
   const router = useRouter();
-  const condition = link.kind === 'condition' || link.kind === 'condition-confirm';
-  const target =
-    link.kind === 'checkin'
-      ? { path: '/checkin/[id]', icon: 'camera' as const, label: 'Переглянути звіт', a11y: 'Переглянути звіт про авто' }
-      : condition
-        ? { path: '/condition/[id]', icon: 'shield-checkmark-outline' as const, label: link.kind === 'condition-confirm' && !mine ? 'Переглянути та підтвердити' : 'Переглянути стан авто', a11y: 'Відкрити стан авто' }
-        : link.kind === 'contract'
-          ? { path: '/contracts/[id]', icon: 'document-text-outline' as const, label: 'Відкрити договір', a11y: 'Відкрити договір' }
-          : // «Заповніть свої дані» адресоване другій стороні: автору кнопка не потрібна
-            link.kind === 'legal' && !mine
-            ? { path: '/legal', icon: 'person-circle-outline' as const, label: 'Заповнити дані', a11y: 'Заповнити дані для договору' }
-            : null;
-  if (!target) return null;
+  const link = item.link!;
+  const kind = CARD_KIND[link.kind] ?? { icon: 'document-text-outline' as const, title: 'Оренда' };
+  // «Заповніть свої дані» адресоване другій стороні: автору кнопка не потрібна
+  const hasAction = link.kind !== 'legal' || !item.mine;
+  const label =
+    link.kind === 'checkin' ? 'Переглянути звіт'
+    : link.kind === 'condition-confirm' && !item.mine ? 'Переглянути та підтвердити'
+    : link.kind === 'condition' || link.kind === 'condition-confirm' ? 'Переглянути стан авто'
+    : link.kind === 'contract' ? 'Відкрити договір'
+    : 'Заповнити дані';
+  const open = () => {
+    if (link.kind === 'legal') router.push('/legal');
+    else if (link.kind === 'checkin') router.push({ pathname: '/checkin/[id]', params: { id: link.dealId } });
+    else if (link.kind === 'contract') router.push({ pathname: '/contracts/[id]', params: { id: link.dealId } });
+    else router.push({ pathname: '/condition/[id]', params: { id: link.dealId } });
+  };
+  const done = item.flow === 'done';
+  const todo = item.flow === 'todo';
+  const wait = item.flow === 'wait';
+
+  // Виконаний крок: компактний приглушений рядок із зеленою галочкою, історія лишається, але не відволікає
+  if (done) {
+    return (
+      <View style={styles.cardLine}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${kind.title}: виконано. ${item.text}`}
+          onPress={open}
+          style={({ pressed }) => [styles.doneRow, { backgroundColor: theme.backgroundSelected }, pressed && { opacity: 0.7 }]}>
+          <View style={[styles.doneIcon, { backgroundColor: theme.positive }]}>
+            <Icon name="checkmark" size={14} color={theme.onInk} />
+          </View>
+          <View style={styles.sysTitles}>
+            <ThemedText type="smallBold" themeColor="textSecondary">
+              {kind.title} · виконано
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+              {item.text}
+            </ThemedText>
+          </View>
+          <ThemedText type="small" themeColor="textSecondary">
+            {clock(item.createdAt)}
+          </ThemedText>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={target.a11y}
-      onPress={() => (target.path === '/legal' ? router.push('/legal') : router.push({ pathname: target.path as '/checkin/[id]', params: { id: link.dealId } }))}
-      style={[styles.linkBtn, { backgroundColor: mine ? 'rgba(255,255,255,0.2)' : theme.backgroundSelected }]}>
-      <Icon name={target.icon} size={16} color={mine ? theme.onAccent : 'accent'} />
-      <ThemedText type="smallBold" style={{ color: mine ? theme.onAccent : theme.accent }}>
-        {target.label}
-      </ThemedText>
-    </Pressable>
+    <View style={styles.cardLine} accessibilityLabel={`Автоматичне повідомлення від Kolo. ${kind.title}. ${item.text}`}>
+      <View
+        style={[
+          styles.sysCard,
+          todo ? { backgroundColor: theme.accentSoft, borderColor: theme.accent, borderWidth: 1.5 } : { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+        ]}>
+        <View style={styles.sysHead}>
+          <View style={[styles.sysIcon, { backgroundColor: todo ? theme.accent : theme.accentSoft }]}>
+            <Icon name={kind.icon} size={18} color={todo ? theme.onAccent : 'accent'} />
+          </View>
+          <View style={styles.sysTitles}>
+            <ThemedText type="caption" themeColor="textSecondary" style={styles.sysBrand}>
+              KOLO · АВТОМАТИЧНО
+            </ThemedText>
+            <ThemedText type="smallBold">{kind.title}</ThemedText>
+          </View>
+          {todo || wait ? (
+            <View style={[styles.sysPill, { backgroundColor: todo ? theme.accent : theme.backgroundSelected }]}>
+              <ThemedText type="caption" style={[styles.sysPillText, { color: todo ? theme.onAccent : theme.textSecondary }]}>
+                {todo ? 'Потрібна ваша дія' : 'Очікуємо'}
+              </ThemedText>
+            </View>
+          ) : (
+            <ThemedText type="small" themeColor="textSecondary">
+              {clock(item.createdAt)}
+            </ThemedText>
+          )}
+        </View>
+        <ThemedText type="default">{item.text}</ThemedText>
+        {hasAction ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={label}
+            onPress={open}
+            style={({ pressed }) => [styles.sysBtn, { backgroundColor: todo ? theme.accent : theme.accentSoft }, pressed && { opacity: 0.7 }]}>
+            <ThemedText type="smallBold" style={{ color: todo ? theme.onAccent : theme.accent }}>
+              {label}
+            </ThemedText>
+            <Icon name="chevron-forward" size={16} color={todo ? theme.onAccent : 'accent'} />
+          </Pressable>
+        ) : null}
+        {todo || wait ? (
+          <ThemedText type="small" themeColor="textSecondary" style={styles.sysTime}>
+            {clock(item.createdAt)}
+          </ThemedText>
+        ) : null}
+      </View>
+    </View>
   );
 }

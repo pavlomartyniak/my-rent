@@ -38,13 +38,13 @@ export class LegalController {
     for (const it of items) {
       const first = await claimFlow(this.deals, it.id, `legal-${role}`);
       if (!first) continue;
-      const send = (text: string, kind: 'legal' | 'condition' | 'condition-confirm' | 'contract') => void this.chat.autoStart(user, { dealId: it.id }, text, `flow-legal-${it.id}-${role}`, { kind, dealId: it.id });
+      const send = (text: string, kind: 'legal' | 'condition' | 'condition-confirm' | 'contract', step?: string) => void this.chat.autoStart(user, { dealId: it.id }, text, `flow-legal-${it.id}-${role}`, { kind, dealId: it.id, ...(step ? { step } : {}) });
       if (!(it.owner && it.renter)) {
-        send(`${role === 'owner' ? 'Власник' : 'Орендар'} заповнив дані для договору. Заповніть свої: без цього договір не підписати.`, 'legal');
+        send(`${role === 'owner' ? 'Власник' : 'Орендар'} заповнив дані для договору. Заповніть свої: без цього договір не підписати.`, 'legal', 'legal');
       } else if (await claimFlow(this.deals, it.id, 'legal-both')) {
         const c = it.condition;
-        if (!handoverReady(c?.handover as never)) send('Дані для договору заповнено обома сторонами. Далі: власник фіксує стан авто (фото й показник одометра).', 'condition');
-        else if (!handoverAgreed(c as never)) send('Дані для договору заповнено обома сторонами. Далі: орендар переглядає й підтверджує стан авто.', 'condition-confirm');
+        if (!handoverReady(c?.handover as never)) send('Дані для договору заповнено обома сторонами. Далі: власник фіксує стан авто (фото й показник одометра).', 'condition', 'fix');
+        else if (!handoverAgreed(c as never)) send('Дані для договору заповнено обома сторонами. Далі: орендар переглядає й підтверджує стан авто.', 'condition-confirm', 'confirm');
         else send('Дані для договору заповнено обома сторонами. Далі: прочитайте договір, а підпишете його під час зустрічі.', 'contract');
       }
     }
