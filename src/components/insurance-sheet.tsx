@@ -88,7 +88,7 @@ export function InsuranceSheet({ carId, data, visible, onClose, onChanged }: { c
               Файл додано
             </ThemedText>
             <ThemedText type="body" style={styles.name} numberOfLines={2}>
-              {data.name}
+              {safeName(data.name)}
             </ThemedText>
             <ThemedText type="callout" themeColor="textSecondary">
               {formatSize(data.size)}
@@ -128,6 +128,15 @@ export function InsuranceSheet({ carId, data, visible, onClose, onChanged }: { c
       <Button title="Закрити" variant="tertiary" disabled={busy !== null} onPress={onClose} />
     </BottomSheet>
   );
+}
+
+/** Імена файлів, збережені з URL-кодуванням (%D0%9E…), показуємо читабельно */
+function safeName(name: string) {
+  try {
+    return decodeURIComponent(name);
+  } catch {
+    return name;
+  }
 }
 
 const styles = StyleSheet.create({

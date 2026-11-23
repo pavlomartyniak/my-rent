@@ -1,6 +1,6 @@
 'use no memo';
 
-import { Children, Fragment, isValidElement, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Children, cloneElement, Fragment, isValidElement, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,8 +19,13 @@ type Props = {
 const OFFSCREEN = 720;
 
 /** Розгортає фрагменти, щоб знайти перший елемент листа (зазвичай заголовок) */
-function flatten(node: ReactNode): ReactNode[] {
-  return Children.toArray(node).flatMap((c) => (isValidElement<{ children?: ReactNode }>(c) && c.type === Fragment ? flatten(c.props.children) : [c]));
+function flatten(node: ReactNode, prefix = ''): ReactNode[] {
+  // Ключі з Children.toArray унікальні лише в межах свого рівня: у вкладених фрагментах вони збігалися (`.1`), тож додаємо префікс рівня
+  return Children.toArray(node).flatMap((c) => {
+    if (!isValidElement<{ children?: ReactNode }>(c)) return [c];
+    const key = `${prefix}${c.key ?? ''}`;
+    return c.type === Fragment ? flatten(c.props.children, `${key}/`) : [cloneElement(c, { key })];
+  });
 }
 
 type Shared = ReturnType<typeof useSharedValue<number>>;
