@@ -69,3 +69,12 @@ export async function downloadPolicy(carId: string, mime: string) {
 export async function viewPickedPolicy(file: { uri: string; mime?: string | null }) {
   openFileViewer({ uri: file.uri, name: 'Страховий поліс', mime: file.mime ?? 'application/pdf' });
 }
+
+/** Імена файлів, збережені з URL-кодуванням (%D0%9E…), показуємо читабельно */
+export function readableName(name: string) {
+  try {
+    return decodeURIComponent(name);
+  } catch {
+    return name;
+  }
+}

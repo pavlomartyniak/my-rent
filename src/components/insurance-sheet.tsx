@@ -6,7 +6,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { api, ApiError, BASE_URL, getApiToken } from '@/lib/api';
 import { formatSize } from '@/lib/format';
-import { downloadPolicy, type PolicyInfo, pickPolicy, uploadPolicy } from '@/lib/insurance';
+import { downloadPolicy, type PolicyInfo, pickPolicy, readableName, uploadPolicy } from '@/lib/insurance';
 
 import { ThemedText } from './themed-text';
 import { BottomSheet } from './ui/bottom-sheet';
@@ -88,7 +88,7 @@ export function InsuranceSheet({ carId, data, visible, onClose, onChanged }: { c
               Файл додано
             </ThemedText>
             <ThemedText type="body" style={styles.name} numberOfLines={2}>
-              {safeName(data.name)}
+              {readableName(data.name)}
             </ThemedText>
             <ThemedText type="callout" themeColor="textSecondary">
               {formatSize(data.size)}
@@ -128,15 +128,6 @@ export function InsuranceSheet({ carId, data, visible, onClose, onChanged }: { c
       <Button title="Закрити" variant="tertiary" disabled={busy !== null} onPress={onClose} />
     </BottomSheet>
   );
-}
-
-/** Імена файлів, збережені з URL-кодуванням (%D0%9E…), показуємо читабельно */
-function safeName(name: string) {
-  try {
-    return decodeURIComponent(name);
-  } catch {
-    return name;
-  }
 }
 
 const styles = StyleSheet.create({

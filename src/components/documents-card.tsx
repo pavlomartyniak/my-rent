@@ -7,7 +7,7 @@ import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDate } from '@/lib/date';
 import type { DealView } from '@/lib/deals';
-import type { PolicyInfo } from '@/lib/insurance';
+import { type PolicyInfo, readableName } from '@/lib/insurance';
 
 import { InsuranceSheet } from './insurance-sheet';
 import { ThemedText } from './themed-text';
@@ -80,7 +80,7 @@ export function DocumentsCard({ carId, deal, as }: { carId: string; deal?: Pick<
     <ListRow
       key="policy"
       title="Страховий поліс"
-      subtitle={has ? `Завантажено · ${data.name}` : data.canEdit ? 'Не додано. Завантажте PDF чи фото' : as === 'renter' ? 'Власник ще не додав' : 'Не додано'}
+      subtitle={has ? `Завантажено · ${readableName(data.name)}` : data.canEdit ? 'Не додано. Завантажте PDF чи фото' : as === 'renter' ? 'Власник ще не додав' : 'Не додано'}
       leading={<Badge icon={has ? 'shield-checkmark' : 'shield-outline'} tone={has ? 'positive' : data.canEdit ? 'warning' : 'neutral'} />}
       onPress={canOpen ? () => setOpen(true) : undefined}
     />,
