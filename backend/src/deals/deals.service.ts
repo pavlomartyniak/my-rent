@@ -13,6 +13,8 @@ import { buildSections } from '../contract/contract.terms';
 import { RealtimeService } from '../realtime/realtime.service';
 import { settledAmount } from './deal-payments';
 import { SIGN_DAYS_AFTER, signingState, signingWindow } from '../contract/contract.window';
+import { ChatService } from '../chat/chat.service';
+import { dmy } from './flow';
 import { ConditionService } from '../condition/condition.service';
 import { checkinStatus } from '../checkin/checkin.rules';
 import { handoverAgreed, handoverReady, missingSlots, REQUIRED_SLOTS } from '../condition/condition.rules';
@@ -45,6 +47,7 @@ export class DealsService {
     private readonly mail: MailService,
     private readonly config: ConfigService,
     private readonly media: MediaService,
+    private readonly chat: ChatService,
   ) {}
 
   /** Усі оренди орендаря, новіші першими */
@@ -473,6 +476,14 @@ export class DealsService {
     }
     this.pingOther(user, result as unknown as DealDocument);
     if ((result as unknown as DealDocument).status === 'active') this.pingBoth(result as unknown as DealDocument);
+    if (mode === 'full') {
+      const done = result as unknown as DealDocument;
+      const text =
+        done.status === 'active'
+          ? `Договір підписано обома сторонами. ${todayUtc() >= done.startDate ? 'Оренда розпочалась.' : `Оренда розпочнеться ${dmy(done.startDate)}.`}`
+          : `${user.role === 'owner' ? 'Власник' : 'Орендар'} підписав договір. Тепер ваша черга: відкрийте договір і підпишіть його.`;
+      void this.chat.autoStart(user, { dealId: id }, text, `flow-sign-${id}-${user.role}`, { kind: 'contract', dealId: id });
+    }
     return this.viewFor(user, result as unknown as DealDocument);
   }
 

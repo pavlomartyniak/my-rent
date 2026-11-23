@@ -6,6 +6,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 
 import { ChatService } from '../chat/chat.service';
+import { signingState, signingWindow } from '../contract/contract.window';
+import { claimFlow, dmy } from '../deals/flow';
 import { type CheckinState, checkinUrls } from '../checkin/checkin.rules';
 import type { AuthUser } from '../common/current-user';
 import { cloudRefFromUrl, MEDIA_PREFIX } from '../media/cloudinary';
@@ -39,7 +41,7 @@ export class ConditionService {
   ) {}
 
   /** Службове повідомлення в чат оренди від імені того, хто діє. Збій чату не ламає саму дію */
-  private notify(user: AuthUser, dealId: string, kind: string, text: string, link: 'condition' | 'condition-confirm' = 'condition') {
+  private notify(user: AuthUser, dealId: string, kind: string, text: string, link: 'condition' | 'condition-confirm' | 'contract' = 'condition') {
     void this.chat.autoStart(user, { dealId }, text, `condition-${kind}-${dealId}-${Date.now()}`, { kind: link, dealId });
   }
 
@@ -189,8 +191,25 @@ export class ConditionService {
     deal.condition = { ...(deal.condition ?? {}), renterAck: { at: new Date() } };
     deal.markModified('condition');
     await deal.save();
-    this.notify(user, dealId, 'confirm', 'Орендар підтвердив стан авто при передачі. Тепер можна підписати договір.');
+    void this.announceAgreed(user, deal);
     return this.get(user, dealId);
+  }
+
+  /** Стан узгоджено: орендар підтвердив. Далі договір: прочитати й підписати, коли відкриється підписання */
+  private async announceAgreed(user: AuthUser, deal: DealDocument) {
+    const id = String(deal._id);
+    const hasContract = !!deal.contract && deal.contract.mode !== 'none';
+    const link = hasContract ? 'contract' : 'condition';
+    if (!hasContract) return this.notify(user, id, 'confirm', 'Орендар підтвердив стан авто при передачі.', link);
+    const legalBoth = !!deal.contract?.terms?.owner?.legal && !!deal.contract?.terms?.renter?.legal;
+    const state = signingState(todayUtc(), deal.startDate);
+    let text = 'Орендар підтвердив стан авто: стан узгоджено.';
+    if (!legalBoth) text += ' Далі: обом сторонам потрібно заповнити дані для договору, тоді відкриється підписання.';
+    else if (state === 'open') {
+      text += ' Договір готовий: прочитайте його, підписання вже відкрито.';
+      await claimFlow(this.deals, id, 'sign-open');
+    } else if (state === 'early') text += ` Далі: прочитайте договір. Підписання відкриється ${dmy(signingWindow(deal.startDate).opensAt)}: підпишете його під час зустрічі, коли передаватимете авто.`;
+    this.notify(user, id, 'confirm', text, link);
   }
 
   /**

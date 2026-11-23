@@ -127,6 +127,10 @@ export class Deal {
   @Prop({ type: MongooseSchema.Types.Mixed })
   condition?: ConditionState;
 
+  /** Позначки «це повідомлення про крок у чат уже надіслано» (ключ → коли): щоб кожне надсилалось один раз */
+  @Prop({ type: MongooseSchema.Types.Mixed })
+  flow?: Record<string, Date>;
+
   /** Регулярний фотозвіт орендаря про авто: налаштування власника, надіслані звіти й час останнього нагадування */
   @Prop({ type: MongooseSchema.Types.Mixed })
   checkin?: CheckinState;

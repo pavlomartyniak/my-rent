@@ -629,18 +629,24 @@ const styles = StyleSheet.create({
 function LinkButton({ link, mine }: { link: { kind: string; dealId: string }; mine: boolean }) {
   const theme = useTheme();
   const router = useRouter();
+  const condition = link.kind === 'condition' || link.kind === 'condition-confirm';
   const target =
     link.kind === 'checkin'
       ? { path: '/checkin/[id]', icon: 'camera' as const, label: 'Переглянути звіт', a11y: 'Переглянути звіт про авто' }
-      : link.kind === 'condition' || link.kind === 'condition-confirm'
+      : condition
         ? { path: '/condition/[id]', icon: 'shield-checkmark-outline' as const, label: link.kind === 'condition-confirm' && !mine ? 'Переглянути та підтвердити' : 'Переглянути стан авто', a11y: 'Відкрити стан авто' }
-        : null;
+        : link.kind === 'contract'
+          ? { path: '/contracts/[id]', icon: 'document-text-outline' as const, label: 'Відкрити договір', a11y: 'Відкрити договір' }
+          : // «Заповніть свої дані» адресоване другій стороні: автору кнопка не потрібна
+            link.kind === 'legal' && !mine
+            ? { path: '/legal', icon: 'person-circle-outline' as const, label: 'Заповнити дані', a11y: 'Заповнити дані для договору' }
+            : null;
   if (!target) return null;
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={target.a11y}
-      onPress={() => router.push({ pathname: target.path as '/checkin/[id]', params: { id: link.dealId } })}
+      onPress={() => (target.path === '/legal' ? router.push('/legal') : router.push({ pathname: target.path as '/checkin/[id]', params: { id: link.dealId } }))}
       style={[styles.linkBtn, { backgroundColor: mine ? 'rgba(255,255,255,0.2)' : theme.backgroundSelected }]}>
       <Icon name={target.icon} size={16} color={mine ? theme.onAccent : 'accent'} />
       <ThemedText type="smallBold" style={{ color: mine ? theme.onAccent : theme.accent }}>

@@ -4,6 +4,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 
 import { ChatService } from '../chat/chat.service';
+import { signingState } from '../contract/contract.window';
+import { claimFlow } from '../deals/flow';
 import { ConditionService } from '../condition/condition.service';
 import { DealsService } from '../deals/deals.service';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -62,6 +64,7 @@ export class LifecycleService implements OnModuleInit, OnModuleDestroy {
       const started = await this.dealsService.startReserved();
       await this.dealsService.finalizeWithdrawals();
       await this.condition.notifyReturnOpen();
+      await this.notifySigningOpen();
       const ended = await this.endFinishedDeals();
       const wanted = await this.purgeOldWanted();
       const chats = await this.chat.purgeInactive(new Date(Date.now() - FINISHED_RETENTION_DAYS * DAY_MS));
@@ -72,6 +75,22 @@ export class LifecycleService implements OnModuleInit, OnModuleDestroy {
       this.log.warn(`Прибирання не вдалось: ${String(e)}`);
     } finally {
       this.running = false;
+    }
+  }
+
+  /** Підписання відкрилось, а стан авто й дані вже узгоджено: нагадуємо сторонам підписати під час зустрічі (один раз) */
+  private async notifySigningOpen() {
+    const today = todayUtc();
+    const list = await this.deals
+      .find({ status: 'awaiting', 'contract.mode': { $ne: 'none' }, 'condition.renterAck': { $exists: true }, 'flow.sign-open': { $exists: false }, startDate: { $lte: new Date(Date.now() + 3 * DAY_MS).toISOString().slice(0, 10) } })
+      .limit(200)
+      .exec();
+    for (const d of list) {
+      if (signingState(today, d.startDate) !== 'open') continue;
+      if (!d.contract?.terms?.owner?.legal || !d.contract?.terms?.renter?.legal) continue;
+      if (d.contract.signatures?.owner || d.contract.signatures?.renter) continue;
+      if (!(await claimFlow(this.deals as never, String(d._id), 'sign-open'))) continue;
+      void this.chat.autoStart({ id: String(d.ownerId), role: 'owner' }, { dealId: String(d._id) }, 'Підписання відкрито. Зустріньтесь, передайте авто, ключі й гроші та підпишіть договір кожен зі свого телефону.', `flow-sign-open-${d._id}`, { kind: 'contract', dealId: String(d._id) });
     }
   }
 

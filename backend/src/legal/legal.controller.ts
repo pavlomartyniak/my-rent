@@ -3,7 +3,10 @@ import { InjectModel } from '@nestjs/mongoose';
 import { IsBoolean, IsObject } from 'class-validator';
 import type { Model } from 'mongoose';
 
+import { ChatService } from '../chat/chat.service';
 import { type AuthUser, CurrentUser } from '../common/current-user';
+import { handoverAgreed, handoverReady } from '../condition/condition.rules';
+import { claimFlow } from '../deals/flow';
 import { Deal, type DealDocument } from '../schemas/deal.schema';
 import { User, type UserDocument } from '../schemas/user.schema';
 import { syncUnsignedDeals } from './legal.sync';
@@ -23,7 +26,29 @@ export class LegalController {
   constructor(
     @InjectModel(User.name) private readonly users: Model<UserDocument>,
     @InjectModel(Deal.name) private readonly deals: Model<DealDocument>,
+    private readonly chat: ChatService,
   ) {}
+
+  /**
+   * Службові повідомлення в чат оренд, де людина щойно вперше внесла дані: другій стороні пора заповнити свої, а коли заповнили обидві,
+   * названо наступний крок. Повторне редагування даних мовчить.
+   */
+  private async announce(user: AuthUser, items: Awaited<ReturnType<typeof syncUnsignedDeals>>) {
+    const role = user.role as 'owner' | 'renter';
+    for (const it of items) {
+      const first = await claimFlow(this.deals, it.id, `legal-${role}`);
+      if (!first) continue;
+      const send = (text: string, kind: 'legal' | 'condition' | 'condition-confirm' | 'contract') => void this.chat.autoStart(user, { dealId: it.id }, text, `flow-legal-${it.id}-${role}`, { kind, dealId: it.id });
+      if (!(it.owner && it.renter)) {
+        send(`${role === 'owner' ? 'Власник' : 'Орендар'} заповнив дані для договору. Заповніть свої: без цього договір не підписати.`, 'legal');
+      } else if (await claimFlow(this.deals, it.id, 'legal-both')) {
+        const c = it.condition;
+        if (!handoverReady(c?.handover as never)) send('Дані для договору заповнено обома сторонами. Далі: власник фіксує стан авто (фото й показник одометра).', 'condition');
+        else if (!handoverAgreed(c as never)) send('Дані для договору заповнено обома сторонами. Далі: орендар переглядає й підтверджує стан авто.', 'condition-confirm');
+        else send('Дані для договору заповнено обома сторонами. Далі: прочитайте договір, а підпишете його під час зустрічі.', 'contract');
+      }
+    }
+  }
 
   private view(u: UserDocument, role: string) {
     const data: LegalData | null = unseal(u.legalEnc);
@@ -57,7 +82,8 @@ export class LegalController {
       .findByIdAndUpdate(user.id, { legalEnc: seal(data), legalConsentAt: new Date(), legalConsentVersion: LEGAL_CONSENT_VERSION }, { returnDocument: 'after' })
       .exec();
     if (!u) throw new BadRequestException('Користувача не знайдено');
-    await syncUnsignedDeals(this.deals, user.id, user.role as 'owner' | 'renter', u.legalEnc);
+    const synced = await syncUnsignedDeals(this.deals, user.id, user.role as 'owner' | 'renter', u.legalEnc);
+    void this.announce(user, synced);
     return this.view(u, user.role);
   }
 
