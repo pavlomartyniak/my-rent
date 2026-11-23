@@ -49,16 +49,28 @@ export default function LegalScreen() {
   const [saving, setSaving] = useState(false);
   const [touched, setTouched] = useState(false);
   const [saved, setSaved] = useState(false);
+  // Усе заповнено: показуємо огляд даних із «Змінити» (overview); незаповнене проходить покроково (wizard); виправлення одного розділу — edit
+  const [mode, setMode] = useState<'overview' | 'wizard' | 'edit'>('wizard');
+  // Збережені дані: до них повертаємось, якщо виправлення скасовано
+  const [orig, setOrig] = useState<LegalData | null>(null);
 
   useEffect(() => {
     getLegal()
       .then((s) => {
-        setD(s.data ?? EMPTY_LEGAL);
+        const data = s.data ?? EMPTY_LEGAL;
+        setD(data);
+        setOrig(data);
         setConsent(s.consent);
         setSaved(s.saved);
+        if (s.saved && s.complete) setMode('overview');
+        else if (s.saved) {
+          // Збережено частково (наприклад, до появи нових полів): починаємо з першого кроку, де чогось бракує
+          const bad = (['person', 'document', 'address', 'extra'] as LegalStep[]).findIndex((st) => !stepOk(data, role === 'renter' ? 'renter' : 'owner', st));
+          if (bad > 0) setStep(bad);
+        }
       })
       .catch((e) => setLoadError(e instanceof Error ? e.message : 'Не вдалося завантажити'));
-  }, []);
+  }, [role]);
 
   if (!d) return <ReportStatus loading={!loadError} error={loadError} onRetry={() => router.replace('/legal')} />;
 
@@ -74,7 +86,34 @@ export default function LegalScreen() {
   const valid = current ? stepOk(d, kind, current) : consent && Object.keys(legalProblems(d, kind)).length === 0;
   const fullName = [lastName, firstName, middleName].filter(Boolean).join(' ');
 
+  function cancelEdit() {
+    setD(orig);
+    setServerErrors({});
+    setTouched(false);
+    setMode('overview');
+  }
+
   async function next() {
+    if (current && mode === 'edit') {
+      if (!valid) return setTouched(true);
+      setSaving(true);
+      try {
+        const res = await saveLegal(d!);
+        setD(res.data);
+        setOrig(res.data);
+        setTouched(false);
+        setMode('overview');
+      } catch (e) {
+        const fields = e instanceof ApiError ? (e.fields as Partial<Record<keyof LegalData, string>> | undefined) : undefined;
+        if (fields) {
+          setServerErrors(fields);
+          setTouched(true);
+        } else Alert.alert('Не вдалося зберегти', e instanceof Error ? e.message : 'Спробуйте ще раз');
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
     if (current) {
       if (!valid) return setTouched(true);
       setTouched(false);
@@ -117,16 +156,24 @@ export default function LegalScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? undefined : undefined} style={styles.flex}>
         {/* Прогрес всередині прокручування: iOS сам відсуває вміст нижче прозорого хедера модального вікна */}
         <ScrollView contentInsetAdjustmentBehavior="automatic" automaticallyAdjustKeyboardInsets contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" showsVerticalScrollIndicator={false}>
-          <View style={styles.top}>
-            <ThemedText type="caption" themeColor="textSecondary">
-              Крок {step + 1} з {total}
-            </ThemedText>
-            <View style={[styles.track, { backgroundColor: theme.backgroundSelected }]} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: total, now: step + 1 }}>
-              <View style={[styles.fill, { backgroundColor: theme.accent, width: `${((step + 1) / total) * 100}%` }]} />
+          {mode === 'wizard' ? (
+            <View style={styles.top}>
+              <ThemedText type="caption" themeColor="textSecondary">
+                Крок {step + 1} з {total}
+              </ThemedText>
+              <View style={[styles.track, { backgroundColor: theme.backgroundSelected }]} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: total, now: step + 1 }}>
+                <View style={[styles.fill, { backgroundColor: theme.accent, width: `${((step + 1) / total) * 100}%` }]} />
+              </View>
             </View>
-          </View>
+          ) : null}
 
-          {current === 'person' ? (
+          {mode === 'overview' ? (
+            <>
+              <Title text="Ваші дані для договору" sub="Усе заповнено. Ці дані підставляються в договори оренди: друкувати й вписувати від руки нічого не треба." />
+              <Summary d={d} kind={kind} fullName={fullName} onEdit={(st) => { setStep(steps.indexOf(st)); setTouched(false); setMode('edit'); }} />
+              <Note icon="lock-closed-outline" text="Дані зберігаються зашифрованими. Їх бачить лише друга сторона вашої оренди, і лише в самому договорі." />
+            </>
+          ) : current === 'person' ? (
             <>
               <Title text="Хто ви" sub="Ці дані потрібні лише для тексту договору. Їх бачить тільки друга сторона вашої оренди, і лише в самому договорі: не в профілі й не в оголошеннях." />
               <Card style={styles.name}>
@@ -213,15 +260,52 @@ export default function LegalScreen() {
           ) : (
             <>
               <Title text="Перевірте й збережіть" sub="Усе правильно? Дані підставляться в договір, друкувати й вписувати від руки нічого не доведеться." />
-              {/* Усі дані показані повністю: це ваші дані, вони потрібні, щоб перевірити їх перед збереженням */}
+              <Summary d={d} kind={kind} fullName={fullName} onEdit={(st) => setStep(steps.indexOf(st))} />
+              <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: consent }} onPress={() => setConsent(!consent)} style={styles.consent}>
+                <View style={[styles.box, { borderColor: consent ? theme.accent : theme.borderStrong, backgroundColor: consent ? theme.accent : 'transparent' }]}>{consent ? <Icon name="checkmark" size={16} color={theme.onAccent} /> : null}</View>
+                <ThemedText type="callout" style={styles.flex}>
+                  Погоджуюсь, щоб Kolo зберігало ці дані зашифрованими й підставило їх у договір оренди. Їх бачить лише друга сторона цієї оренди. Видалити дані можна в будь-який час у «Профілі».
+                </ThemedText>
+              </Pressable>
+              <Note icon="lock-closed-outline" text="Ми не передаємо ці дані третім особам і не використовуємо в рекламі." />
+            </>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      {pickers > 0 ? null : mode === 'overview' ? (
+        <View style={styles.footer}>
+          <Button title="Готово" onPress={() => router.back()} />
+          <Button title="Видалити мої дані" variant="tertiary" disabled={saving} onPress={remove} />
+        </View>
+      ) : mode === 'edit' ? (
+        <View style={styles.footer}>
+          <Button title="Зберегти" loading={saving} disabled={saving} onPress={() => void next()} />
+          <Button title="Скасувати" variant="tertiary" disabled={saving} onPress={cancelEdit} />
+        </View>
+      ) : (
+        <View style={styles.footer}>
+          <Button title={current ? 'Далі' : 'Зберегти'} loading={saving} disabled={!!current ? false : !valid} disabledReason={!current && !valid ? why : undefined} onPress={() => void next()} />
+          {step > 0 ? <Button title="Назад" variant="tertiary" disabled={saving} onPress={() => setStep(step - 1)} /> : null}
+          {step === 0 && saved ? <Button title="Видалити мої дані" variant="tertiary" disabled={saving} onPress={remove} /> : null}
+        </View>
+      )}
+    </SafeAreaView>
+  );
+}
+
+/** Усі дані повністю, по розділах, з «Змінити» біля кожного: це ваші дані, їх можна перевірити й виправити */
+function Summary({ d, kind, fullName, onEdit }: { d: LegalData; kind: 'owner' | 'renter'; fullName: string; onEdit: (step: LegalStep) => void }) {
+  return (
+    <>
               <Card style={styles.summary}>
-                <Group title="Особа" onEdit={() => setStep(steps.indexOf('person'))} />
+                <Group title="Особа" onEdit={() => onEdit('person')} />
                 <Row k="ПІБ" v={fullName || '—'} />
                 <Row k="Дата народження" v={formatDate(d.birthDate)} />
                 <Row k="РНОКПП" v={d.taxId} />
               </Card>
               <Card style={styles.summary}>
-                <Group title="Документ" onEdit={() => setStep(steps.indexOf('document'))} />
+                <Group title="Документ" onEdit={() => onEdit('document')} />
                 <Row k="Тип" v={d.docType === 'passport' ? 'Паспорт (книжечка)' : 'ID-картка'} />
                 {d.docType === 'passport' ? <Row k="Серія й номер" v={`${d.docSeries} ${d.docNumber}`} /> : <Row k="Номер (запис)" v={d.docNumber} />}
                 <Row k={d.docType === 'passport' ? 'Ким виданий' : 'Орган, що видав'} v={d.docIssuer} />
@@ -229,7 +313,7 @@ export default function LegalScreen() {
                 {d.docType === 'id' ? <Row k="Дійсна до" v={formatDate(d.docValidUntil)} /> : null}
               </Card>
               <Card style={styles.summary}>
-                <Group title="Адреса проживання" onEdit={() => setStep(steps.indexOf('address'))} />
+                <Group title="Адреса проживання" onEdit={() => onEdit('address')} />
                 <Row k="Область" v={d.region} />
                 <Row k="Місто чи село" v={d.city} />
                 <Row k="Вулиця" v={d.street} />
@@ -237,7 +321,7 @@ export default function LegalScreen() {
                 {d.apartment ? <Row k="Квартира" v={d.apartment} /> : null}
               </Card>
               <Card style={styles.summary}>
-                <Group title={kind === 'renter' ? 'Посвідчення водія' : 'Підстава володіння'} onEdit={() => setStep(steps.indexOf('extra'))} />
+                <Group title={kind === 'renter' ? 'Посвідчення водія' : 'Підстава володіння'} onEdit={() => onEdit('extra')} />
                 {kind === 'renter' ? (
                   <>
                     <Row k="Серія й номер" v={formatLicense(d.licenseNumber)} />
@@ -254,26 +338,7 @@ export default function LegalScreen() {
                   </>
                 )}
               </Card>
-              <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: consent }} onPress={() => setConsent(!consent)} style={styles.consent}>
-                <View style={[styles.box, { borderColor: consent ? theme.accent : theme.borderStrong, backgroundColor: consent ? theme.accent : 'transparent' }]}>{consent ? <Icon name="checkmark" size={16} color={theme.onAccent} /> : null}</View>
-                <ThemedText type="callout" style={styles.flex}>
-                  Погоджуюсь, щоб Kolo зберігало ці дані зашифрованими й підставило їх у договір оренди. Їх бачить лише друга сторона цієї оренди. Видалити дані можна в будь-який час у «Профілі».
-                </ThemedText>
-              </Pressable>
-              <Note icon="lock-closed-outline" text="Ми не передаємо ці дані третім особам і не використовуємо в рекламі." />
-            </>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-
-      {pickers > 0 ? null : (
-      <View style={styles.footer}>
-        <Button title={current ? 'Далі' : 'Зберегти'} loading={saving} disabled={!!current ? false : !valid} disabledReason={!current && !valid ? why : undefined} onPress={() => void next()} />
-        {step > 0 ? <Button title="Назад" variant="tertiary" disabled={saving} onPress={() => setStep(step - 1)} /> : null}
-        {step === 0 && saved ? <Button title="Видалити мої дані" variant="tertiary" disabled={saving} onPress={remove} /> : null}
-      </View>
-      )}
-    </SafeAreaView>
+    </>
   );
 }
 
