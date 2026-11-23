@@ -1,13 +1,14 @@
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PhotoViewer } from '@/components/photo-viewer';
 import { ReportStatus } from '@/components/report-status';
 import { UploadBar, UploadRing } from '@/components/upload-progress';
 import { ThemedText } from '@/components/themed-text';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Field } from '@/components/ui/field';
@@ -16,7 +17,7 @@ import { NumberField } from '@/components/ui/number-field';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Segmented } from '@/components/ui/segmented';
-import { Radius, Spacing, Type } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useReport } from '@/hooks/use-report';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError } from '@/lib/api';
@@ -48,6 +49,7 @@ export default function ConditionScreen() {
   const [km, setKm] = useState('');
   const [damage, setDamage] = useState<{ uri: string } | null>(null);
   const [note, setNote] = useState('');
+  const [editOdo, setEditOdo] = useState(false);
 
   const phase: Phase = phaseLabel === PHASES[0] ? 'handover' : 'return';
 
@@ -62,6 +64,8 @@ export default function ConditionScreen() {
 
   const report = phase === 'handover' ? data.handover : data.return;
   const canEdit = phase === 'handover' ? data.handover.canEdit : data.return.canEdit;
+  // Показник можна вказати, коли його ще нема, або змінити свій
+  const odoEditable = canEdit && (!report.odometer || report.odometer.byMe);
   const canDamage = phase === 'handover' ? data.handover.canAddDamage : data.return.canEdit;
   const required = data.slots.filter((s) => s.required);
   const have = phase === 'handover' ? required.length - data.handover.missing.length : 0;
@@ -225,18 +229,36 @@ export default function ConditionScreen() {
       <SectionHeader title="Показник одометра" />
       <Card style={styles.odo}>
         {report.odometer ? (
-          <ThemedText type="default" style={{ fontWeight: 600 }}>
-            {report.odometer.km.toLocaleString('uk-UA')} км · {report.odometer.by === 'owner' ? 'вказав власник' : 'вказав орендар'}, {formatDate(report.odometer.at.slice(0, 10))}
-          </ThemedText>
+          <View style={styles.odoValue}>
+            <View style={[styles.odoIcon, { backgroundColor: theme.accentSoft }]}>
+              <Icon name="speedometer-outline" size={24} color="accent" />
+            </View>
+            <View style={styles.flex}>
+              <ThemedText type="title">{report.odometer.km.toLocaleString('uk-UA')} км</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {report.odometer.by === 'owner' ? 'Вказав власник' : 'Вказав орендар'} · {formatDate(report.odometer.at.slice(0, 10))}
+              </ThemedText>
+            </View>
+            {odoEditable && !editOdo ? <Button title="Змінити" variant="soft" compact onPress={() => setEditOdo(true)} /> : null}
+          </View>
         ) : (
           <ThemedText type="small" themeColor="textSecondary">
             {phase === 'handover' ? (renter ? 'Власник ще не вказав пробіг.' : 'Вкажіть пробіг з панелі приладів: це обов’язково.') : 'Вкажіть пробіг при поверненні.'}
           </ThemedText>
         )}
-        {canEdit && (!report.odometer || report.odometer.byMe) ? (
+        {odoEditable && (!report.odometer || editOdo) ? (
           <>
-            <NumberField label="Пробіг, км" value={km} onChangeValue={setKm} maxDigits={7} placeholder={report.odometer ? String(report.odometer.km) : '120 000'} />
-            <Button title={busy === 'odo' ? 'Зберігаємо…' : report.odometer ? 'Змінити показник' : 'Зберегти показник'} variant="secondary" disabled={!km || busy === 'odo'} onPress={() => void run('odo', async () => { await saveOdometer(String(id), phase, Number(km)); setKm(''); })} />
+            <NumberField label="Пробіг, км" value={km} onChangeValue={setKm} maxDigits={7} placeholder={report.odometer ? String(report.odometer.km) : '120 000'} autoFocus={editOdo} />
+            <View style={styles.odoActions}>
+              {report.odometer ? <Button title="Скасувати" variant="tertiary" style={styles.flex} onPress={() => { setEditOdo(false); setKm(''); }} /> : null}
+              <Button
+                title={busy === 'odo' ? 'Зберігаємо…' : 'Зберегти показник'}
+                variant={report.odometer ? 'primary' : 'secondary'}
+                style={styles.flex}
+                disabled={!km || busy === 'odo'}
+                onPress={() => void run('odo', async () => { await saveOdometer(String(id), phase, Number(km)); setKm(''); setEditOdo(false); })}
+              />
+            </View>
           </>
         ) : null}
       </Card>
@@ -270,7 +292,7 @@ export default function ConditionScreen() {
         </ThemedText>
       ) : null}
 
-      <DamageModal visible={!!damage} note={note} onNote={setNote} onCancel={() => setDamage(null)} onSubmit={() => void submitDamage()} />
+      <DamageModal visible={!!damage} uri={damage?.uri} note={note} onNote={setNote} onCancel={() => setDamage(null)} onSubmit={() => void submitDamage()} />
       {viewer ? <PhotoViewer photos={viewer.urls} startIndex={viewer.index} onClose={() => setViewer(null)} /> : null}
     </Screen>
 
@@ -297,26 +319,18 @@ export default function ConditionScreen() {
 }
 
 /** Опис пошкодження перед завантаженням фото */
-function DamageModal({ visible, note, onNote, onCancel, onSubmit }: { visible: boolean; note: string; onNote: (v: string) => void; onCancel: () => void; onSubmit: () => void }) {
-  const theme = useTheme();
-  const insets = useSafeAreaInsets();
+function DamageModal({ visible, uri, note, onNote, onCancel, onSubmit }: { visible: boolean; uri?: string; note: string; onNote: (v: string) => void; onCancel: () => void; onSubmit: () => void }) {
+  // Спільний нижній лист сам піднімається над клавіатурою, тож кнопка «Додати» завжди видна
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <Pressable style={styles.backdrop} onPress={onCancel}>
-        <Pressable style={[styles.sheet, { backgroundColor: theme.backgroundElement, paddingBottom: Math.max(insets.bottom, Spacing.three) }]} onPress={() => {}}>
-          <ThemedText type="default" style={{ ...Type.headline }}>
-            Опишіть пошкодження
-          </ThemedText>
-          <Field label="Що й де" value={note} onChangeText={onNote} multiline maxLength={300} placeholder="Подряпина на передньому лівому крилі, ~10 см" style={{ minHeight: 90, paddingTop: 12, textAlignVertical: 'top' }} autoFocus />
-          <Button title="Додати" disabled={!note.trim()} onPress={onSubmit} />
-          <Pressable accessibilityRole="button" onPress={onCancel} style={{ alignItems: 'center', paddingVertical: Spacing.two }}>
-            <ThemedText type="default" themeColor="textSecondary">
-              Скасувати
-            </ThemedText>
-          </Pressable>
-        </Pressable>
-      </Pressable>
-    </Modal>
+    <BottomSheet visible={visible} onClose={onCancel}>
+      <ThemedText type="subtitle" accessibilityRole="header">
+        Опишіть пошкодження
+      </ThemedText>
+      {uri ? <Image source={{ uri }} style={styles.damagePreview} contentFit="cover" accessibilityLabel="Фото пошкодження" /> : null}
+      <Field label="Що й де" value={note} onChangeText={onNote} multiline maxLength={300} placeholder="Подряпина на передньому лівому крилі, ~10 см" style={{ minHeight: 90, paddingTop: 12, textAlignVertical: 'top' }} autoFocus />
+      <Button title="Додати" disabled={!note.trim()} onPress={onSubmit} />
+      <Button title="Скасувати" variant="tertiary" onPress={onCancel} />
+    </BottomSheet>
   );
 }
 
@@ -328,11 +342,13 @@ const styles = StyleSheet.create({
   empty: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
   label: { paddingHorizontal: 8, paddingVertical: 6 },
   odo: { gap: Spacing.three },
+  odoValue: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  odoIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  odoActions: { flexDirection: 'row', gap: Spacing.two },
   root: { flex: 1 },
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: Spacing.three, gap: Spacing.two, borderTopWidth: StyleSheet.hairlineWidth },
   footNote: { textAlign: 'center' },
   damage: { flexDirection: 'row', gap: Spacing.three, alignItems: 'center' },
+  damagePreview: { width: '100%', height: 160, borderRadius: Radius.md },
   damagePhoto: { width: 64, height: 64, borderRadius: Radius.sm },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: Spacing.four, gap: Spacing.three },
 });
