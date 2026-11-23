@@ -110,6 +110,7 @@ function Routes() {
           <Stack.Screen name="checkin/report" options={{ title: 'Звіт про авто', presentation: 'modal' }} />
           <Stack.Screen name="user/[id]" options={{ title: 'Профіль', headerBackTitle: 'Назад' }} />
           <Stack.Screen name="car/pick" options={{ headerShown: false, presentation: 'modal' }} />
+          <Stack.Screen name="file" options={{ title: 'Файл', headerBackTitle: 'Назад' }} />
         </Stack.Protected>
       </Stack>
     </>
