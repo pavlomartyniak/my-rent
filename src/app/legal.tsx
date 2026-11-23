@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ReportStatus } from '@/components/report-status';
@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ChoiceChips } from '@/components/ui/choice-chips';
+import { AddressFields } from '@/components/address-fields';
 import { DateField } from '@/components/ui/date-field';
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
@@ -16,7 +17,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/date';
-import { deleteLegal, EMPTY_LEGAL, getLegal, type LegalData, legalProblems, type LegalStep, mask, saveLegal, STEP_FIELDS, stepOk } from '@/lib/contract-data';
+import { deleteLegal, EMPTY_LEGAL, formatLicense, getLegal, type LegalData, legalProblems, type LegalStep, saveLegal, STEP_FIELDS, stepOk, toCyrillic, typeLicense } from '@/lib/contract-data';
 import { useFleet } from '@/store/fleet';
 
 const DOC_TYPES = [
@@ -39,6 +40,9 @@ export default function LegalScreen() {
   const kind = role === 'renter' ? 'renter' : 'owner';
   const [d, setD] = useState<LegalData | null>(null);
   const [consent, setConsent] = useState(false);
+  // Скільки календарів зараз відкрито: поки є відкритий, нижні кнопки «Далі» й «Назад» сховані, щоб не плутати їх із «Готово»
+  const [pickers, setPickers] = useState(0);
+  const onPicker = useCallback((open: boolean) => setPickers((n) => Math.max(0, n + (open ? 1 : -1))), []);
   const [loadError, setLoadError] = useState<string | undefined>();
   const [step, setStep] = useState(0);
   const [serverErrors, setServerErrors] = useState<Partial<Record<keyof LegalData, string>>>({});
@@ -110,9 +114,9 @@ export default function LegalScreen() {
 
   return (
     <SafeAreaView edges={['bottom']} style={[styles.root, { backgroundColor: theme.background }]}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? undefined : undefined} style={styles.flex}>
         {/* Прогрес всередині прокручування: iOS сам відсуває вміст нижче прозорого хедера модального вікна */}
-        <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" showsVerticalScrollIndicator={false}>
+        <ScrollView contentInsetAdjustmentBehavior="automatic" automaticallyAdjustKeyboardInsets contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" showsVerticalScrollIndicator={false}>
           <View style={styles.top}>
             <ThemedText type="caption" themeColor="textSecondary">
               Крок {step + 1} з {total}
@@ -131,7 +135,7 @@ export default function LegalScreen() {
                 </ThemedText>
                 <ThemedText type="headline">{fullName || 'Вкажіть імʼя в «Особисті дані»'}</ThemedText>
               </Card>
-              <DateField wheel label="Дата народження" value={d.birthDate} onChange={(birthDate) => set({ birthDate })} placeholder="Оберіть дату" initialDate={new Date(1990, 0, 1)} maximumDate={new Date()} error={err('birthDate')} />
+              <DateField wheel onOpenChange={onPicker} label="Дата народження" value={d.birthDate} onChange={(birthDate) => set({ birthDate })} placeholder="Оберіть дату" initialDate={new Date(1990, 0, 1)} maximumDate={new Date()} error={err('birthDate')} />
               <NumberField label="РНОКПП (ідентифікаційний код)" value={d.taxId} onChangeValue={(taxId) => set({ taxId })} maxDigits={10} plain dismissWhenFull placeholder="10 цифр" error={err('taxId')} />
               <Note icon="information-circle-outline" text="РНОКПП потрібен за законом України: без нього договір не матиме повної юридичної сили." />
             </>
@@ -143,7 +147,7 @@ export default function LegalScreen() {
                 <>
                   <View style={styles.row}>
                     <View style={styles.series}>
-                      <Field label="Серія" value={d.docSeries} onChangeText={(t) => set({ docSeries: t.toUpperCase().replace(/[^А-ЯІЇЄҐA-Z]/g, '').slice(0, 2) })} autoCapitalize="characters" placeholder="АА" maxLength={2} error={err('docSeries')} />
+                      <Field label="Серія" value={d.docSeries} onChangeText={(t) => set({ docSeries: toCyrillic(t).replace(/[^А-ЩЬЮЯЄІЇҐ]/g, '').slice(0, 2) })} autoCapitalize="characters" placeholder="АА" maxLength={2} error={err('docSeries')} />
                     </View>
                     <View style={styles.flex}>
                       <NumberField label="Номер" value={d.docNumber} onChangeValue={(docNumber) => set({ docNumber })} maxDigits={6} plain dismissWhenFull placeholder="6 цифр" error={err('docNumber')} />
@@ -157,21 +161,41 @@ export default function LegalScreen() {
                   <NumberField label="Орган, що видав" value={d.docIssuer} onChangeValue={(docIssuer) => set({ docIssuer })} maxDigits={4} plain dismissWhenFull placeholder="4 цифри, наприклад 4601" error={err('docIssuer')} />
                 </>
               )}
-              <DateField wheel label="Дата видачі" value={d.docIssuedAt} onChange={(docIssuedAt) => set({ docIssuedAt })} maximumDate={new Date()} initialDate={new Date(2018, 0, 1)} error={err('docIssuedAt')} />
-              {d.docType === 'id' ? <DateField wheel label="Дійсна до" value={d.docValidUntil} onChange={(docValidUntil) => set({ docValidUntil })} initialDate={new Date()} error={err('docValidUntil')} /> : null}
+              <DateField wheel onOpenChange={onPicker} label="Дата видачі" value={d.docIssuedAt} onChange={(docIssuedAt) => set({ docIssuedAt })} maximumDate={new Date()} initialDate={new Date(2018, 0, 1)} error={err('docIssuedAt')} />
+              {d.docType === 'id' ? <DateField wheel onOpenChange={onPicker} label="Дійсна до" value={d.docValidUntil} onChange={(docValidUntil) => set({ docValidUntil })} initialDate={new Date()} error={err('docValidUntil')} /> : null}
             </>
           ) : current === 'address' ? (
             <>
-              <Title text="Адреса проживання" sub="Повна адреса, як у договорі: місто, вулиця, будинок, квартира." />
-              <Field label="Адреса" value={d.address} onChangeText={(address) => set({ address })} multiline placeholder="м. Львів, вул. Зелена, 5, кв. 12" style={{ minHeight: 96, paddingTop: 12, textAlignVertical: 'top' }} error={err('address')} />
+              <Title text="Адреса проживання" sub="Де ви живете зараз: так її запишемо в договорі. Область і місто оберіть зі списку." />
+              <AddressFields
+                value={{ region: d.region, city: d.city, street: d.street, building: d.building, apartment: d.apartment }}
+                onChange={(changes) => set(changes)}
+                errors={{ region: err('region'), city: err('city'), street: err('street'), building: err('building'), apartment: err('apartment') }}
+              />
             </>
           ) : current === 'extra' ? (
             kind === 'renter' ? (
               <>
                 <Title text="Посвідчення водія" sub="Перепишіть серію й номер з посвідчення. Категорії ви вже вказали в профілі." />
-                <Field label="Серія й номер" value={d.licenseNumber} onChangeText={(licenseNumber) => set({ licenseNumber: licenseNumber.toUpperCase() })} autoCapitalize="characters" placeholder="ААА 123456" error={err('licenseNumber')} />
-                <DateField wheel label="Дата видачі" value={d.licenseIssuedAt} onChange={(licenseIssuedAt) => set({ licenseIssuedAt })} maximumDate={new Date()} initialDate={new Date(2020, 0, 1)} error={err('licenseIssuedAt')} />
-                <DateField wheel label="Дійсне до" value={d.licenseValidUntil} onChange={(licenseValidUntil) => set({ licenseValidUntil })} initialDate={new Date()} error={err('licenseValidUntil')} />
+                <Field
+                  label="Серія й номер"
+                  value={d.licenseNumber}
+                  onChangeText={(text) => {
+                    const t = typeLicense(text);
+                    set({ licenseNumber: t.text });
+                    // Введено все (літери серії й 6 цифр): клавіатура більше не потрібна
+                    if (t.full) Keyboard.dismiss();
+                  }}
+                  // Серія набрана: клавіатура сама стає цифровою
+                  keyboardType={typeLicense(d.licenseNumber).lettersDone ? 'number-pad' : 'default'}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  maxLength={10}
+                  placeholder="ААА 123456"
+                  error={err('licenseNumber')}
+                />
+                <DateField wheel onOpenChange={onPicker} label="Дата видачі" value={d.licenseIssuedAt} onChange={(licenseIssuedAt) => set({ licenseIssuedAt })} maximumDate={new Date()} initialDate={new Date(2020, 0, 1)} error={err('licenseIssuedAt')} />
+                <DateField wheel onOpenChange={onPicker} label="Дійсне до" value={d.licenseValidUntil} onChange={(licenseValidUntil) => set({ licenseValidUntil })} initialDate={new Date()} error={err('licenseValidUntil')} />
               </>
             ) : (
               <>
@@ -180,7 +204,7 @@ export default function LegalScreen() {
                 {d.ownership === 'proxy' ? (
                   <>
                     <Field label="Номер довіреності" value={d.proxyNumber} onChangeText={(proxyNumber) => set({ proxyNumber })} error={err('proxyNumber')} />
-                    <DateField wheel label="Дата довіреності" value={d.proxyDate} onChange={(proxyDate) => set({ proxyDate })} maximumDate={new Date()} initialDate={new Date()} error={err('proxyDate')} />
+                    <DateField wheel onOpenChange={onPicker} label="Дата довіреності" value={d.proxyDate} onChange={(proxyDate) => set({ proxyDate })} maximumDate={new Date()} initialDate={new Date()} error={err('proxyDate')} />
                     <Field label="Ким посвідчена" value={d.proxyIssuer} onChangeText={(proxyIssuer) => set({ proxyIssuer })} placeholder="Нотаріус, округ" error={err('proxyIssuer')} />
                   </>
                 ) : null}
@@ -189,13 +213,46 @@ export default function LegalScreen() {
           ) : (
             <>
               <Title text="Перевірте й збережіть" sub="Усе правильно? Дані підставляться в договір, друкувати й вписувати від руки нічого не доведеться." />
+              {/* Усі дані показані повністю: це ваші дані, вони потрібні, щоб перевірити їх перед збереженням */}
               <Card style={styles.summary}>
+                <Group title="Особа" onEdit={() => setStep(steps.indexOf('person'))} />
                 <Row k="ПІБ" v={fullName || '—'} />
                 <Row k="Дата народження" v={formatDate(d.birthDate)} />
-                <Row k="РНОКПП" v={mask(d.taxId)} />
-                <Row k="Документ" v={`${d.docType === 'passport' ? `Паспорт ${d.docSeries}` : 'ID-картка'} ${mask(d.docNumber, 3)}`} />
-                <Row k="Адреса" v={d.address} />
-                {kind === 'renter' ? <Row k="Посвідчення водія" v={mask(d.licenseNumber.replace(/\s/g, ''), 3)} /> : <Row k="Підстава" v={d.ownership === 'owner' ? 'Власник авто' : `Довіреність № ${d.proxyNumber}`} />}
+                <Row k="РНОКПП" v={d.taxId} />
+              </Card>
+              <Card style={styles.summary}>
+                <Group title="Документ" onEdit={() => setStep(steps.indexOf('document'))} />
+                <Row k="Тип" v={d.docType === 'passport' ? 'Паспорт (книжечка)' : 'ID-картка'} />
+                {d.docType === 'passport' ? <Row k="Серія й номер" v={`${d.docSeries} ${d.docNumber}`} /> : <Row k="Номер (запис)" v={d.docNumber} />}
+                <Row k={d.docType === 'passport' ? 'Ким виданий' : 'Орган, що видав'} v={d.docIssuer} />
+                <Row k="Дата видачі" v={formatDate(d.docIssuedAt)} />
+                {d.docType === 'id' ? <Row k="Дійсна до" v={formatDate(d.docValidUntil)} /> : null}
+              </Card>
+              <Card style={styles.summary}>
+                <Group title="Адреса проживання" onEdit={() => setStep(steps.indexOf('address'))} />
+                <Row k="Область" v={d.region} />
+                <Row k="Місто чи село" v={d.city} />
+                <Row k="Вулиця" v={d.street} />
+                <Row k="Будинок" v={d.building} />
+                {d.apartment ? <Row k="Квартира" v={d.apartment} /> : null}
+              </Card>
+              <Card style={styles.summary}>
+                <Group title={kind === 'renter' ? 'Посвідчення водія' : 'Підстава володіння'} onEdit={() => setStep(steps.indexOf('extra'))} />
+                {kind === 'renter' ? (
+                  <>
+                    <Row k="Серія й номер" v={formatLicense(d.licenseNumber)} />
+                    <Row k="Дата видачі" v={formatDate(d.licenseIssuedAt)} />
+                    <Row k="Дійсне до" v={formatDate(d.licenseValidUntil)} />
+                  </>
+                ) : d.ownership === 'owner' ? (
+                  <Row k="Підстава" v="Власник авто за свідоцтвом про реєстрацію" />
+                ) : (
+                  <>
+                    <Row k="Довіреність №" v={d.proxyNumber} />
+                    <Row k="Дата" v={formatDate(d.proxyDate)} />
+                    <Row k="Ким посвідчена" v={d.proxyIssuer} />
+                  </>
+                )}
               </Card>
               <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: consent }} onPress={() => setConsent(!consent)} style={styles.consent}>
                 <View style={[styles.box, { borderColor: consent ? theme.accent : theme.borderStrong, backgroundColor: consent ? theme.accent : 'transparent' }]}>{consent ? <Icon name="checkmark" size={16} color={theme.onAccent} /> : null}</View>
@@ -209,11 +266,13 @@ export default function LegalScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
+      {pickers > 0 ? null : (
       <View style={styles.footer}>
         <Button title={current ? 'Далі' : 'Зберегти'} loading={saving} disabled={!!current ? false : !valid} disabledReason={!current && !valid ? why : undefined} onPress={() => void next()} />
         {step > 0 ? <Button title="Назад" variant="tertiary" disabled={saving} onPress={() => setStep(step - 1)} /> : null}
         {step === 0 && saved ? <Button title="Видалити мої дані" variant="tertiary" disabled={saving} onPress={remove} /> : null}
       </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -243,6 +302,21 @@ function Note({ icon, text }: { icon: 'information-circle-outline' | 'lock-close
   );
 }
 
+function Group({ title, onEdit }: { title: string; onEdit: () => void }) {
+  return (
+    <View style={styles.groupHead}>
+      <ThemedText type="smallBold" themeColor="textSecondary" style={styles.flex}>
+        {title.toUpperCase()}
+      </ThemedText>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Змінити: ${title}`} onPress={onEdit} hitSlop={8}>
+        <ThemedText type="smallBold" themeColor="accent">
+          Змінити
+        </ThemedText>
+      </Pressable>
+    </View>
+  );
+}
+
 function Row({ k, v }: { k: string; v: string }) {
   return (
     <View style={styles.sumRow}>
@@ -268,6 +342,7 @@ const styles = StyleSheet.create({
   name: { gap: 2 },
   note: { flexDirection: 'row', gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md, alignItems: 'flex-start' },
   summary: { gap: Spacing.two },
+  groupHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
   sumRow: { flexDirection: 'row', gap: Spacing.three },
   sumKey: { width: 120 },
   sumVal: { flex: 1, fontWeight: 600 },

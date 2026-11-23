@@ -1,5 +1,5 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
@@ -10,16 +10,21 @@ import { formatDate, fromISODate, toISODate } from '@/lib/date';
 import { ThemedText } from '../themed-text';
 import { Icon } from './icon';
 
-type Props = { label: string; value: string; onChange: (iso: string) => void; minimumDate?: Date; maximumDate?: Date; /** Порожнє значення: підпис замість дати й дата, з якої відкривається календар */ placeholder?: string; initialDate?: Date; /** Колесо вибору (день, місяць, рік) замість календаря: швидше для дат народження й документів */ wheel?: boolean; /** Помилка поля: червона рамка й текст під ним */ error?: string };
+type Props = { label: string; value: string; onChange: (iso: string) => void; minimumDate?: Date; maximumDate?: Date; /** Порожнє значення: підпис замість дати й дата, з якої відкривається календар */ placeholder?: string; initialDate?: Date; /** Колесо вибору (день, місяць, рік) замість календаря: швидше для дат народження й документів */ wheel?: boolean; /** Помилка поля: червона рамка й текст під ним */ error?: string; /** Календар відкрито чи закрито: екран може на цей час сховати свої нижні кнопки, щоб їх не плутали з «Готово» */ onOpenChange?: (open: boolean) => void };
 
 /**
  * Поле дати у тому ж стилі, що й решта полів. На iOS календар розкривається під полем
  * і згортається кнопкою «Готово», на Android відкривається системний діалог.
  */
-export function DateField({ label, value, onChange, minimumDate, maximumDate, placeholder, initialDate, wheel, error }: Props) {
+export function DateField({ label, value, onChange, minimumDate, maximumDate, placeholder, initialDate, wheel, error, onOpenChange }: Props) {
   const theme = useTheme();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open || !onOpenChange) return;
+    onOpenChange(true);
+    return () => onOpenChange(false);
+  }, [open, onOpenChange]);
   const date = value ? fromISODate(value) : (initialDate ?? new Date());
   const shown = value ? formatDate(value) : (placeholder ?? 'Оберіть дату');
 

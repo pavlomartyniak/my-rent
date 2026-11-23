@@ -1,3 +1,4 @@
+import type { ComponentRef, Ref } from 'react';
 import { Platform, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
 import { Radius, Spacing, Type } from '@/constants/theme';
@@ -6,7 +7,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { DONE_BAR_ID } from '../keyboard-done';
 import { ThemedText } from '../themed-text';
 
-type Props = TextInputProps & { label: string; error?: string };
+type Props = TextInputProps & { label: string; error?: string; ref?: Ref<ComponentRef<typeof TextInput>> };
 
 const NUMERIC = ['number-pad', 'decimal-pad', 'numeric', 'phone-pad'];
 
@@ -28,6 +29,8 @@ export function Field({ label, error, style, ...rest }: Props) {
           style,
         ]}
         inputAccessoryViewID={needsDone ? DONE_BAR_ID : undefined}
+        // Клавіша повернення в однорядковому полі ховає клавіатуру (підпис «Готово»); у багаторядковому вона додає новий рядок
+        returnKeyType={rest.multiline ? undefined : 'done'}
         {...rest}
       />
       {error ? (
