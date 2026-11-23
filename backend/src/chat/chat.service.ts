@@ -270,6 +270,12 @@ export class ChatService implements OnModuleInit {
           actor = other;
           done = closed || !!signatures[other];
           break;
+        case 'sign-each':
+          // Одна картка підписання: показує, хто вже підписав; живе, доки не підписали обидві сторони
+          done = closed || (!!signatures.owner && !!signatures.renter);
+          actor = signatures[me] ? (me === 'owner' ? 'renter' : 'owner') : me;
+          parties = { owner: !!signatures.owner, renter: !!signatures.renter };
+          break;
         case 'sign-both':
           done = closed || !!signatures[me];
           break;

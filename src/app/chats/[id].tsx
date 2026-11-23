@@ -653,7 +653,7 @@ const CARD_KIND: Record<string, { icon: 'camera' | 'shield-checkmark-outline' | 
 };
 
 /** Легкий статус сторін із галочками: хто вже заповнив дані для договору. Ваша сторона підписана «ви» */
-function Parties({ parties }: { parties: { owner: boolean; renter: boolean } }) {
+function Parties({ parties, verb }: { parties: { owner: boolean; renter: boolean }; verb: { yes: string; no: string } }) {
   const { role } = useFleet();
   const rows = [
     { key: 'owner', label: 'Власник', ok: parties.owner },
@@ -666,7 +666,7 @@ function Parties({ parties }: { parties: { owner: boolean; renter: boolean } }) 
           <Icon name={r.ok ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={r.ok ? 'positive' : 'textSecondary'} />
           <ThemedText type="small" themeColor={r.ok ? 'text' : 'textSecondary'} style={styles.flex}>
             {r.label}
-            {role === r.key ? ' (ви)' : ''} · {r.ok ? 'заповнено' : 'ще не заповнено'}
+            {role === r.key ? ' (ви)' : ''} · {r.ok ? verb.yes : verb.no}
           </ThemedText>
         </View>
       ))}
@@ -751,8 +751,8 @@ function SystemCard({ item }: { item: ChatMessage }) {
         <ThemedText type="callout" style={styles.sysText}>
           {item.text}
         </ThemedText>
-        {item.parties ? <Parties parties={item.parties} /> : null}
-        {hasAction ? (
+        {item.parties ? <Parties parties={item.parties} verb={link.step === 'sign-each' ? { yes: 'підписав', no: 'ще не підписав' } : { yes: 'заповнено', no: 'ще не заповнено' }} /> : null}
+        {hasAction && (todo || !item.parties) ? (
           <View style={styles.sysActions}>
             <Pressable
               accessibilityRole="button"

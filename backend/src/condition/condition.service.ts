@@ -206,10 +206,10 @@ export class ConditionService {
     let text = 'Орендар підтвердив стан авто: стан узгоджено.';
     if (!legalBoth) text += ' Далі: обом сторонам потрібно заповнити дані для договору, тоді відкриється підписання.';
     else if (state === 'open') {
-      text += ' Договір готовий: прочитайте його, підписання вже відкрито.';
+      text = 'Стан авто узгоджено. Підписання договору відкрито: кожна сторона підписує зі свого телефону під час зустрічі, коли передаються авто, ключі й гроші.';
       await claimFlow(this.deals, id, 'sign-open');
     } else if (state === 'early') text += ` Далі: прочитайте договір. Підписання відкриється ${dmy(signingWindow(deal.startDate).opensAt)}: підпишете його під час зустрічі, коли передаватимете авто.`;
-    this.notify(user, id, 'confirm', text, link, hasContract && legalBoth && state === 'open' ? 'sign-both' : undefined);
+    this.notify(user, id, 'confirm', text, link, hasContract && legalBoth && state === 'open' ? 'sign-each' : undefined);
   }
 
   /**

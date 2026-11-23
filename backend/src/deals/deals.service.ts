@@ -478,11 +478,12 @@ export class DealsService {
     if ((result as unknown as DealDocument).status === 'active') this.pingBoth(result as unknown as DealDocument);
     if (mode === 'full') {
       const done = result as unknown as DealDocument;
-      const text =
-        done.status === 'active'
-          ? `Договір підписано обома сторонами. ${todayUtc() >= done.startDate ? 'Оренда розпочалась.' : `Оренда розпочнеться ${dmy(done.startDate)}.`}`
-          : `${user.role === 'owner' ? 'Власник' : 'Орендар'} підписав договір. Тепер ваша черга: відкрийте договір і підпишіть його.`;
-      void this.chat.autoStart(user, { dealId: id }, text, `flow-sign-${id}-${user.role}`, { kind: 'contract', dealId: id, ...(done.status === 'active' ? {} : { step: 'sign' }) });
+      if (done.status === 'active') {
+        const text = `Договір підписано обома сторонами. ${todayUtc() >= done.startDate ? 'Оренда розпочалась.' : `Оренда розпочнеться ${dmy(done.startDate)}.`}`;
+        void this.chat.autoStart(user, { dealId: id }, text, `flow-sign-${id}-${user.role}`, { kind: 'contract', dealId: id });
+      }
+      // Картка підписання сама показує, хто вже підписав: нове повідомлення про кожен підпис не потрібне, лише тихе оновлення карток
+      this.chat.flowChanged([String(done.ownerId), String(done.renterId)], id);
     }
     return this.viewFor(user, result as unknown as DealDocument);
   }
