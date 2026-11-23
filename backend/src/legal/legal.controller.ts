@@ -36,12 +36,11 @@ export class LegalController {
   private async announce(user: AuthUser, items: Awaited<ReturnType<typeof syncUnsignedDeals>>) {
     const role = user.role as 'owner' | 'renter';
     for (const it of items) {
-      const first = await claimFlow(this.deals, it.id, `legal-${role}`);
-      if (!first) continue;
+      // Картка «Крок 1» сама показує, хто вже заповнив: окремого повідомлення про кожне заповнення нема, лише тихий сигнал оновити картки
+      this.chat.flowChanged([it.ownerId, it.renterId], it.id);
       const send = (text: string, kind: 'legal' | 'condition' | 'condition-confirm' | 'contract', step?: string) => void this.chat.autoStart(user, { dealId: it.id }, text, `flow-legal-${it.id}-${role}`, { kind, dealId: it.id, ...(step ? { step } : {}) });
-      if (!(it.owner && it.renter)) {
-        send(`${role === 'owner' ? 'Власник' : 'Орендар'} заповнив дані для договору. Заповніть свої: без цього договір не підписати.`, 'legal', 'legal');
-      } else if (await claimFlow(this.deals, it.id, 'legal-both')) {
+      if (!(it.owner && it.renter)) continue;
+      if (await claimFlow(this.deals, it.id, 'legal-both')) {
         const c = it.condition;
         if (!handoverReady(c?.handover as never)) send('Дані для договору заповнено обома сторонами. Далі: власник фіксує стан авто (фото й показник одометра).', 'condition', 'fix');
         else if (!handoverAgreed(c as never)) send('Дані для договору заповнено обома сторонами. Далі: орендар переглядає й підтверджує стан авто.', 'condition-confirm', 'confirm');

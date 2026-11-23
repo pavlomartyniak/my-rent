@@ -109,7 +109,7 @@ export default function ChatScreen() {
       router.back();
       return;
     }
-    if (e.type === 'resume') {
+    if (e.type === 'resume' || e.type === 'flow') {
       load();
       return;
     }
@@ -616,17 +616,19 @@ const styles = StyleSheet.create({
   typingBubble: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, borderRadius: Radius.lg, borderWidth: 1 },
   typingText: { fontStyle: 'italic', fontWeight: 600 },
   cardLine: { alignItems: 'center', marginVertical: Spacing.one },
-  sysCard: { width: '92%', borderWidth: 1, borderRadius: Radius.lg, padding: Spacing.three, gap: Spacing.three },
+  sysCard: { width: '92%', borderWidth: 1, borderRadius: Radius.lg, paddingVertical: 14, paddingHorizontal: Spacing.three, paddingLeft: 18, gap: 10, overflow: 'hidden' },
+  sysStripe: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },
   sysHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  sysIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  sysIcon: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   sysTitles: { flex: 1 },
-  sysBrand: { fontWeight: 700, letterSpacing: 0.5 },
   doneRow: { width: '92%', flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.two, paddingHorizontal: Spacing.three, borderRadius: Radius.md },
   doneIcon: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  sysPill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.pill },
-  sysPillText: { fontWeight: 700 },
-  sysTime: { alignSelf: 'flex-end', marginTop: -Spacing.one },
-  sysBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 44, borderRadius: Radius.md },
+  sysBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 38, paddingHorizontal: 14, borderRadius: Radius.pill },
+  sysText: { lineHeight: 21 },
+  parties: { gap: 6 },
+  partyRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  sysActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, flexWrap: 'wrap' },
+  sysWait: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   linkBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: Spacing.three, paddingVertical: 8, borderRadius: Radius.pill, marginTop: Spacing.two },
   editBar: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, borderBottomWidth: StyleSheet.hairlineWidth },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.two, paddingHorizontal: Spacing.three, paddingTop: Spacing.two, borderTopWidth: StyleSheet.hairlineWidth },
@@ -650,9 +652,31 @@ const CARD_KIND: Record<string, { icon: 'camera' | 'shield-checkmark-outline' | 
   legal: { icon: 'person-circle-outline', title: 'Дані для договору' },
 };
 
+/** Легкий статус сторін із галочками: хто вже заповнив дані для договору. Ваша сторона підписана «ви» */
+function Parties({ parties }: { parties: { owner: boolean; renter: boolean } }) {
+  const { role } = useFleet();
+  const rows = [
+    { key: 'owner', label: 'Власник', ok: parties.owner },
+    { key: 'renter', label: 'Орендар', ok: parties.renter },
+  ] as const;
+  return (
+    <View style={styles.parties}>
+      {rows.map((r) => (
+        <View key={r.key} style={styles.partyRow}>
+          <Icon name={r.ok ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={r.ok ? 'positive' : 'textSecondary'} />
+          <ThemedText type="small" themeColor={r.ok ? 'text' : 'textSecondary'} style={styles.flex}>
+            {r.label}
+            {role === r.key ? ' (ви)' : ''} · {r.ok ? 'заповнено' : 'ще не заповнено'}
+          </ThemedText>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 /**
  * Автоматичне повідомлення від застосунку про крок оренди. Це не репліка людини, тому воно не в бульбашці зліва чи справа,
- * а карткою по центру з позначкою «Kolo · автоматично», заголовком кроку, текстом і кнопкою дії. Однакове для обох сторін.
+ * а карткою по центру. Виконаний крок згортається в компактний рядок із галочкою, активний виділений смужкою й залитою кнопкою.
  */
 function SystemCard({ item }: { item: ChatMessage }) {
   const theme = useTheme();
@@ -705,52 +729,57 @@ function SystemCard({ item }: { item: ChatMessage }) {
     );
   }
 
+  // Спокійна нейтральна картка: акцент лише там, де потрібна дія (тонка смужка зліва й залита кнопка), решта приглушена
   return (
     <View style={styles.cardLine} accessibilityLabel={`Автоматичне повідомлення від Kolo. ${kind.title}. ${item.text}`}>
-      <View
-        style={[
-          styles.sysCard,
-          todo ? { backgroundColor: theme.accentSoft, borderColor: theme.accent, borderWidth: 1.5 } : { backgroundColor: theme.backgroundElement, borderColor: theme.border },
-        ]}>
+      <View style={[styles.sysCard, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+        {todo ? <View style={[styles.sysStripe, { backgroundColor: theme.accent }]} /> : null}
         <View style={styles.sysHead}>
-          <View style={[styles.sysIcon, { backgroundColor: todo ? theme.accent : theme.accentSoft }]}>
-            <Icon name={kind.icon} size={18} color={todo ? theme.onAccent : 'accent'} />
+          <View style={[styles.sysIcon, { backgroundColor: theme.accentSoft }]}>
+            <Icon name={kind.icon} size={14} color="accent" />
           </View>
           <View style={styles.sysTitles}>
-            <ThemedText type="caption" themeColor="textSecondary" style={styles.sysBrand}>
-              KOLO · АВТОМАТИЧНО
-            </ThemedText>
             <ThemedText type="smallBold">{kind.title}</ThemedText>
+            <ThemedText type="caption" themeColor="textSecondary">
+              Kolo · автоматично
+            </ThemedText>
           </View>
-          {todo || wait ? (
-            <View style={[styles.sysPill, { backgroundColor: todo ? theme.accent : theme.backgroundSelected }]}>
-              <ThemedText type="caption" style={[styles.sysPillText, { color: todo ? theme.onAccent : theme.textSecondary }]}>
-                {todo ? 'Потрібна ваша дія' : 'Очікуємо'}
-              </ThemedText>
-            </View>
-          ) : (
-            <ThemedText type="small" themeColor="textSecondary">
-              {clock(item.createdAt)}
-            </ThemedText>
-          )}
-        </View>
-        <ThemedText type="default">{item.text}</ThemedText>
-        {hasAction ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={label}
-            onPress={open}
-            style={({ pressed }) => [styles.sysBtn, { backgroundColor: todo ? theme.accent : theme.accentSoft }, pressed && { opacity: 0.7 }]}>
-            <ThemedText type="smallBold" style={{ color: todo ? theme.onAccent : theme.accent }}>
-              {label}
-            </ThemedText>
-            <Icon name="chevron-forward" size={16} color={todo ? theme.onAccent : 'accent'} />
-          </Pressable>
-        ) : null}
-        {todo || wait ? (
-          <ThemedText type="small" themeColor="textSecondary" style={styles.sysTime}>
+          <ThemedText type="caption" themeColor="textSecondary">
             {clock(item.createdAt)}
           </ThemedText>
+        </View>
+        <ThemedText type="callout" style={styles.sysText}>
+          {item.text}
+        </ThemedText>
+        {item.parties ? <Parties parties={item.parties} /> : null}
+        {hasAction ? (
+          <View style={styles.sysActions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={label}
+              onPress={open}
+              style={({ pressed }) => [styles.sysBtn, { backgroundColor: todo ? theme.accent : theme.backgroundSelected }, pressed && { opacity: 0.7 }]}>
+              <ThemedText type="smallBold" style={{ color: todo ? theme.onAccent : theme.text }}>
+                {label}
+              </ThemedText>
+              <Icon name="chevron-forward" size={14} color={todo ? theme.onAccent : 'textSecondary'} />
+            </Pressable>
+            {wait && !item.parties ? (
+              <View style={styles.sysWait}>
+                <Icon name="time-outline" size={14} color="textSecondary" />
+                <ThemedText type="caption" themeColor="textSecondary">
+                  Очікуємо другу сторону
+                </ThemedText>
+              </View>
+            ) : null}
+          </View>
+        ) : wait && !item.parties ? (
+          <View style={styles.sysWait}>
+            <Icon name="time-outline" size={14} color="textSecondary" />
+            <ThemedText type="caption" themeColor="textSecondary">
+              Очікуємо другу сторону
+            </ThemedText>
+          </View>
         ) : null}
       </View>
     </View>

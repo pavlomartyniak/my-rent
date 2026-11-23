@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { type ComponentRef, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -12,6 +12,7 @@ import { AddressFields } from '@/components/address-fields';
 import { DateField } from '@/components/ui/date-field';
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
+import { haptic } from '@/lib/haptics';
 import { NumberField } from '@/components/ui/number-field';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -48,6 +49,13 @@ export default function LegalScreen() {
   const [serverErrors, setServerErrors] = useState<Partial<Record<keyof LegalData, string>>>({});
   const [saving, setSaving] = useState(false);
   const [touched, setTouched] = useState(false);
+  // Що не так на цьому кроці: показується над кнопкою, поки користувач не виправить; екран при цьому сам прокручується до першого такого поля
+  const [invalidNote, setInvalidNote] = useState<string | null>(null);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const anchors = useRef<Record<string, ComponentRef<typeof View> | null>>({});
+  const register = useCallback((id: string, node: ComponentRef<typeof View> | null) => {
+    anchors.current[id] = node;
+  }, []);
   const [saved, setSaved] = useState(false);
   // Усе заповнено: показуємо огляд даних із «Змінити» (overview); незаповнене проходить покроково (wizard); виправлення одного розділу — edit
   const [mode, setMode] = useState<'overview' | 'wizard' | 'edit'>('wizard');
@@ -81,7 +89,20 @@ export default function LegalScreen() {
   const set = (patch: Partial<LegalData>) => {
     setD({ ...d, ...patch });
     setServerErrors({});
+    setInvalidNote(null);
   };
+  /** «Далі» при незаповненому: показуємо помилки, коротко пояснюємо що не так і прокручуємо до першого невалідного поля (воно може бути нижче за екран) */
+  function flagInvalid() {
+    setTouched(true);
+    const keys = current ? STEP_FIELDS[current] : [];
+    const bad = keys.find((k) => problems[k]);
+    haptic.warning();
+    if (!bad) return;
+    setInvalidNote(problems[bad] ?? 'Перевірте поля');
+    const node = anchors.current[bad];
+    const inner = (scrollRef.current as unknown as { getInnerViewRef?: () => View | null } | null)?.getInnerViewRef?.();
+    if (node && inner) node.measureLayout(inner as never, (_x: number, y: number) => scrollRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true }), () => undefined);
+  }
   const err = (k: keyof LegalData) => (touched ? problems[k] : undefined);
   const valid = current ? stepOk(d, kind, current) : consent && Object.keys(legalProblems(d, kind)).length === 0;
   const fullName = [lastName, firstName, middleName].filter(Boolean).join(' ');
@@ -95,7 +116,7 @@ export default function LegalScreen() {
 
   async function next() {
     if (current && mode === 'edit') {
-      if (!valid) return setTouched(true);
+      if (!valid) return flagInvalid();
       setSaving(true);
       try {
         const res = await saveLegal(d!);
@@ -115,8 +136,9 @@ export default function LegalScreen() {
       return;
     }
     if (current) {
-      if (!valid) return setTouched(true);
+      if (!valid) return flagInvalid();
       setTouched(false);
+      setInvalidNote(null);
       return setStep(step + 1);
     }
     setSaving(true);
@@ -155,7 +177,7 @@ export default function LegalScreen() {
     <SafeAreaView edges={['bottom']} style={[styles.root, { backgroundColor: theme.background }]}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? undefined : undefined} style={styles.flex}>
         {/* Прогрес всередині прокручування: iOS сам відсуває вміст нижче прозорого хедера модального вікна */}
-        <ScrollView contentInsetAdjustmentBehavior="automatic" automaticallyAdjustKeyboardInsets contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" showsVerticalScrollIndicator={false}>
+        <ScrollView ref={scrollRef} contentInsetAdjustmentBehavior="automatic" automaticallyAdjustKeyboardInsets contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" showsVerticalScrollIndicator={false}>
           {mode === 'wizard' ? (
             <View style={styles.top}>
               <ThemedText type="caption" themeColor="textSecondary">
@@ -182,8 +204,8 @@ export default function LegalScreen() {
                 </ThemedText>
                 <ThemedText type="headline">{fullName || 'Вкажіть імʼя в «Особисті дані»'}</ThemedText>
               </Card>
-              <DateField onOpenChange={onPicker} label="Дата народження" value={d.birthDate} onChange={(birthDate) => set({ birthDate })} placeholder="Оберіть дату" initialDate={new Date(1990, 0, 1)} maximumDate={new Date()} error={err('birthDate')} />
-              <NumberField label="РНОКПП (ідентифікаційний код)" value={d.taxId} onChangeValue={(taxId) => set({ taxId })} maxDigits={10} plain dismissWhenFull placeholder="10 цифр" error={err('taxId')} />
+              <Anchor ids={['birthDate']} register={register}><DateField onOpenChange={onPicker} label="Дата народження" value={d.birthDate} onChange={(birthDate) => set({ birthDate })} placeholder="Оберіть дату" initialDate={new Date(1990, 0, 1)} maximumDate={new Date()} error={err('birthDate')} /></Anchor>
+              <Anchor ids={['taxId']} register={register}><NumberField label="РНОКПП (ідентифікаційний код)" value={d.taxId} onChangeValue={(taxId) => set({ taxId })} maxDigits={10} plain dismissWhenFull placeholder="10 цифр" error={err('taxId')} /></Anchor>
               <Note icon="information-circle-outline" text="РНОКПП потрібен за законом України: без нього договір не матиме повної юридичної сили." />
             </>
           ) : current === 'document' ? (
@@ -194,36 +216,39 @@ export default function LegalScreen() {
                 <>
                   <View style={styles.row}>
                     <View style={styles.series}>
-                      <Field label="Серія" value={d.docSeries} onChangeText={(t) => set({ docSeries: toCyrillic(t).replace(/[^А-ЩЬЮЯЄІЇҐ]/g, '').slice(0, 2) })} autoCapitalize="characters" placeholder="АА" maxLength={2} error={err('docSeries')} />
+                      <Anchor ids={['docSeries']} register={register}><Field label="Серія" value={d.docSeries} onChangeText={(t) => set({ docSeries: toCyrillic(t).replace(/[^А-ЩЬЮЯЄІЇҐ]/g, '').slice(0, 2) })} autoCapitalize="characters" placeholder="АА" maxLength={2} error={err('docSeries')} /></Anchor>
                     </View>
                     <View style={styles.flex}>
-                      <NumberField label="Номер" value={d.docNumber} onChangeValue={(docNumber) => set({ docNumber })} maxDigits={6} plain dismissWhenFull placeholder="6 цифр" error={err('docNumber')} />
+                      <Anchor ids={['docNumber']} register={register}><NumberField label="Номер" value={d.docNumber} onChangeValue={(docNumber) => set({ docNumber })} maxDigits={6} plain dismissWhenFull placeholder="6 цифр" error={err('docNumber')} /></Anchor>
                     </View>
                   </View>
-                  <Field label="Ким виданий" value={d.docIssuer} onChangeText={(docIssuer) => set({ docIssuer })} placeholder="Наприклад, Галицьким РВ ЛМУ УМВС" error={err('docIssuer')} />
+                  <Anchor ids={['docIssuer']} register={register}><Field label="Ким виданий" value={d.docIssuer} onChangeText={(docIssuer) => set({ docIssuer })} placeholder="Наприклад, Галицьким РВ ЛМУ УМВС" error={err('docIssuer')} /></Anchor>
                 </>
               ) : (
                 <>
-                  <NumberField label="Номер ID-картки (запис)" value={d.docNumber} onChangeValue={(docNumber) => set({ docNumber })} maxDigits={9} plain dismissWhenFull placeholder="9 цифр" error={err('docNumber')} />
-                  <NumberField label="Орган, що видав" value={d.docIssuer} onChangeValue={(docIssuer) => set({ docIssuer })} maxDigits={4} plain dismissWhenFull placeholder="4 цифри, наприклад 4601" error={err('docIssuer')} />
+                  <Anchor ids={['docNumber']} register={register}><NumberField label="Номер ID-картки (запис)" value={d.docNumber} onChangeValue={(docNumber) => set({ docNumber })} maxDigits={9} plain dismissWhenFull placeholder="9 цифр" error={err('docNumber')} /></Anchor>
+                  <Anchor ids={['docIssuer']} register={register}><NumberField label="Орган, що видав" value={d.docIssuer} onChangeValue={(docIssuer) => set({ docIssuer })} maxDigits={4} plain dismissWhenFull placeholder="4 цифри, наприклад 4601" error={err('docIssuer')} /></Anchor>
                 </>
               )}
-              <DateField onOpenChange={onPicker} label="Дата видачі" value={d.docIssuedAt} onChange={(docIssuedAt) => set({ docIssuedAt })} maximumDate={new Date()} initialDate={new Date(2018, 0, 1)} error={err('docIssuedAt')} />
-              {d.docType === 'id' ? <DateField onOpenChange={onPicker} label="Дійсна до" value={d.docValidUntil} onChange={(docValidUntil) => set({ docValidUntil })} initialDate={new Date()} error={err('docValidUntil')} /> : null}
+              <Anchor ids={['docIssuedAt']} register={register}><DateField onOpenChange={onPicker} label="Дата видачі" value={d.docIssuedAt} onChange={(docIssuedAt) => set({ docIssuedAt })} maximumDate={new Date()} initialDate={new Date(2018, 0, 1)} error={err('docIssuedAt')} /></Anchor>
+              {d.docType === 'id' ? <Anchor ids={['docValidUntil']} register={register}><DateField onOpenChange={onPicker} label="Дійсна до" value={d.docValidUntil} onChange={(docValidUntil) => set({ docValidUntil })} initialDate={new Date()} error={err('docValidUntil')} /></Anchor> : null}
             </>
           ) : current === 'address' ? (
             <>
               <Title text="Адреса проживання" sub="Де ви живете зараз: так її запишемо в договорі. Область і місто оберіть зі списку." />
+              <Anchor ids={['region', 'city', 'street', 'building', 'apartment']} register={register}>
               <AddressFields
                 value={{ region: d.region, city: d.city, street: d.street, building: d.building, apartment: d.apartment }}
                 onChange={(changes) => set(changes)}
                 errors={{ region: err('region'), city: err('city'), street: err('street'), building: err('building'), apartment: err('apartment') }}
               />
+              </Anchor>
             </>
           ) : current === 'extra' ? (
             kind === 'renter' ? (
               <>
                 <Title text="Посвідчення водія" sub="Перепишіть серію й номер з посвідчення. Категорії ви вже вказали в профілі." />
+                <Anchor ids={['licenseNumber']} register={register}>
                 <Field
                   label="Серія й номер"
                   value={d.licenseNumber}
@@ -241,8 +266,9 @@ export default function LegalScreen() {
                   placeholder="ААА 123456"
                   error={err('licenseNumber')}
                 />
-                <DateField onOpenChange={onPicker} label="Дата видачі" value={d.licenseIssuedAt} onChange={(licenseIssuedAt) => set({ licenseIssuedAt })} maximumDate={new Date()} initialDate={new Date(2020, 0, 1)} error={err('licenseIssuedAt')} />
-                <DateField onOpenChange={onPicker} label="Дійсне до" value={d.licenseValidUntil} onChange={(licenseValidUntil) => set({ licenseValidUntil })} initialDate={new Date()} error={err('licenseValidUntil')} />
+                </Anchor>
+                <Anchor ids={['licenseIssuedAt']} register={register}><DateField onOpenChange={onPicker} label="Дата видачі" value={d.licenseIssuedAt} onChange={(licenseIssuedAt) => set({ licenseIssuedAt })} maximumDate={new Date()} initialDate={new Date(2020, 0, 1)} error={err('licenseIssuedAt')} /></Anchor>
+                <Anchor ids={['licenseValidUntil']} register={register}><DateField onOpenChange={onPicker} label="Дійсне до" value={d.licenseValidUntil} onChange={(licenseValidUntil) => set({ licenseValidUntil })} initialDate={new Date()} error={err('licenseValidUntil')} /></Anchor>
               </>
             ) : (
               <>
@@ -251,9 +277,9 @@ export default function LegalScreen() {
                 {d.ownership === 'proxy' ? (
                   <>
                     <Note icon="information-circle-outline" text="Довіреність потрібна, якщо авто записане на іншу особу (родича, компанію), а ви здаєте його від її імені. Номер, дату й нотаріуса знайдіть у самій довіреності." />
-                    <Field label="Номер довіреності" value={d.proxyNumber} onChangeText={(proxyNumber) => set({ proxyNumber })} error={err('proxyNumber')} />
-                    <DateField onOpenChange={onPicker} label="Дата довіреності" value={d.proxyDate} onChange={(proxyDate) => set({ proxyDate })} maximumDate={new Date()} initialDate={new Date()} error={err('proxyDate')} />
-                    <Field label="Ким посвідчена" value={d.proxyIssuer} onChangeText={(proxyIssuer) => set({ proxyIssuer })} placeholder="Нотаріус, округ" error={err('proxyIssuer')} />
+                    <Anchor ids={['proxyNumber']} register={register}><Field label="Номер довіреності" value={d.proxyNumber} onChangeText={(proxyNumber) => set({ proxyNumber })} error={err('proxyNumber')} /></Anchor>
+                    <Anchor ids={['proxyDate']} register={register}><DateField onOpenChange={onPicker} label="Дата довіреності" value={d.proxyDate} onChange={(proxyDate) => set({ proxyDate })} maximumDate={new Date()} initialDate={new Date()} error={err('proxyDate')} /></Anchor>
+                    <Anchor ids={['proxyIssuer']} register={register}><Field label="Ким посвідчена" value={d.proxyIssuer} onChangeText={(proxyIssuer) => set({ proxyIssuer })} placeholder="Нотаріус, округ" error={err('proxyIssuer')} /></Anchor>
                   </>
                 ) : (
                   <Note icon="information-circle-outline" text="Авто записане на вас: у договір потрапить рядок «власник за свідоцтвом про реєстрацію». Більше нічого вводити не потрібно." />
@@ -283,17 +309,45 @@ export default function LegalScreen() {
         </View>
       ) : mode === 'edit' ? (
         <View style={styles.footer}>
+          <InvalidNote text={invalidNote} />
           <Button title="Зберегти" loading={saving} disabled={saving} onPress={() => void next()} />
           <Button title="Скасувати" variant="tertiary" disabled={saving} onPress={cancelEdit} />
         </View>
       ) : (
         <View style={styles.footer}>
+          <InvalidNote text={invalidNote} />
           <Button title={current ? 'Далі' : 'Зберегти'} loading={saving} disabled={!!current ? false : !valid} disabledReason={!current && !valid ? why : undefined} onPress={() => void next()} />
           {step > 0 ? <Button title="Назад" variant="tertiary" disabled={saving} onPress={() => setStep(step - 1)} /> : null}
           {step === 0 && saved ? <Button title="Видалити мої дані" variant="tertiary" disabled={saving} onPress={remove} /> : null}
         </View>
       )}
     </SafeAreaView>
+  );
+}
+
+/** Запам'ятовує, де на екрані стоїть поле, щоб при помилці прокрутити саме до нього */
+function Anchor({ ids, register, children }: { ids: string[]; register: (id: string, node: ComponentRef<typeof View> | null) => void; children: ReactNode }) {
+  return (
+    <View
+      collapsable={false}
+      ref={(v) => {
+        for (const id of ids) register(id, v);
+      }}>
+      {children}
+    </View>
+  );
+}
+
+/** Коротке пояснення над кнопкою, що саме не пройшло перевірку */
+function InvalidNote({ text }: { text: string | null }) {
+  if (!text) return null;
+  return (
+    <View style={styles.invalid} accessibilityLiveRegion="polite">
+      <Icon name="alert-circle" size={18} color="negative" />
+      <ThemedText type="small" themeColor="negative" style={styles.flex}>
+        {text}
+      </ThemedText>
+    </View>
   );
 }
 
@@ -399,6 +453,7 @@ function Row({ k, v }: { k: string; v: string }) {
 }
 
 const styles = StyleSheet.create({
+  invalid: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 },
   root: { flex: 1 },
   flex: { flex: 1 },
   top: { gap: Spacing.two },

@@ -43,6 +43,8 @@ export type ChatMessage = {
   link?: { kind: string; dealId: string; reportId?: string; step?: string } | null;
   /** Для карток-кроків: done — виконано, todo — потрібна ваша дія, wait — дія за другою стороною; null — інформаційна */
   flow?: 'done' | 'todo' | 'wait' | null;
+  /** Для картки «Дані для договору»: хто з сторін уже заповнив */
+  parties?: { owner: boolean; renter: boolean } | null;
   /** Службове повідомлення про домовленість: його не можна змінити чи видалити */
   system?: boolean;
   /** Коли текст змінили («змінено») */
@@ -68,6 +70,7 @@ export type ChatEvent =
   | { type: 'read'; conversationId: string; by: 'owner' | 'renter'; at: string }
   | { type: 'typing'; conversationId: string; userId: string }
   | { type: 'removed'; conversationId: string }
+  | { type: 'flow'; dealId: string }
   | { type: 'resume' };
 
 /** Контекст, з якого відкривається чат: запит, пропозиція або оренда */

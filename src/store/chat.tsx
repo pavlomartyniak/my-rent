@@ -63,6 +63,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       emit({ type: 'read', ...p });
       refreshUnread();
     });
+    socket.on('flow', (p: { dealId: string }) => emit({ type: 'flow', dealId: p.dealId }));
     socket.on('typing', (p: { conversationId: string; userId: string }) => emit({ type: 'typing', ...p }));
     // Сервер повідомляє, що змінились запити, пропозиції, оренди чи авто: короткою паузою збираємо серію подій в одне оновлення
     let refresh: ReturnType<typeof setTimeout> | null = null;

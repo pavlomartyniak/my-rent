@@ -174,7 +174,12 @@ export class ChatService implements OnModuleInit {
     const deal = await this.deals.findById(dealId, 'contract status').lean().exec();
     const terms = deal?.contract?.terms as { owner?: { legal?: unknown }; renter?: { legal?: unknown } } | undefined;
     if (!deal || deal.contract?.mode === 'none' || (terms?.owner?.legal && terms?.renter?.legal)) return;
-    await this.autoStart(user, context, 'Крок 1. Кожна сторона один раз вносить дані для договору (документ, РНОКПП, адреса): це 2 хвилини. Поки їх немає, договір підписати не можна.', `auto-legal-${dealId}`, { kind: 'legal', dealId, step: 'legal-each' });
+    await this.autoStart(user, context, 'Кожна сторона один раз вносить дані для договору (документ, РНОКПП, адреса): це 2 хвилини. Без цього договір підписати не можна.', `auto-legal-${dealId}`, { kind: 'legal', dealId, step: 'legal-each' });
+  }
+
+  /** Сторони оренди мають перечитати картки кроків (наприклад, друга сторона внесла дані): тихий сигнал без нового повідомлення */
+  flowChanged(userIds: string[], dealId: string) {
+    this.gateway.emitTo(userIds, 'flow', { dealId });
   }
 
   // ---- список й історія ----
@@ -215,7 +220,7 @@ export class ChatService implements OnModuleInit {
       .exec();
     const page = items.slice(0, limit);
     const states = await this.flowStates(page, user);
-    return { items: page.map((m) => ({ ...this.messageView(m, user.id), flow: states.get(String(m._id)) ?? null })), hasMore: items.length > limit };
+    return { items: page.map((m) => ({ ...this.messageView(m, user.id), flow: states.get(String(m._id))?.state ?? null, parties: states.get(String(m._id))?.parties ?? null })), hasMore: items.length > limit };
   }
 
   /**
@@ -223,7 +228,7 @@ export class ChatService implements OnModuleInit {
    * wait — дія за другою стороною. Повідомлення без кроку (інформаційні) стану не мають. Рахується за поточним станом оренди.
    */
   private async flowStates(page: MessageDocument[], viewer: AuthUser) {
-    const out = new Map<string, 'done' | 'todo' | 'wait'>();
+    const out = new Map<string, { state: 'done' | 'todo' | 'wait'; parties?: { owner: boolean; renter: boolean } }>();
     const steps = page.filter((m) => m.link?.step && !m.deletedAt);
     if (!steps.length) return out;
     const ids = [...new Set(steps.map((m) => m.link!.dealId))];
@@ -241,13 +246,17 @@ export class ChatService implements OnModuleInit {
       const terms = d.contract?.terms as { owner?: { legal?: unknown }; renter?: { legal?: unknown } } | undefined;
       let actor: 'owner' | 'renter' | 'both' = 'both';
       let done = closed;
+      let parties: { owner: boolean; renter: boolean } | undefined;
       switch (m.link!.step) {
         case 'legal':
           actor = other;
           done = closed || !!terms?.[other]?.legal;
           break;
         case 'legal-each':
-          done = closed || !!terms?.[me]?.legal;
+          // Картка живе, поки не заповнили обидві сторони: той, хто вже заповнив, бачить статус і очікує другу сторону
+          done = closed || (!!terms?.owner?.legal && !!terms?.renter?.legal);
+          actor = terms?.[me]?.legal ? (me === 'owner' ? 'renter' : 'owner') : me;
+          parties = { owner: !!terms?.owner?.legal, renter: !!terms?.renter?.legal };
           break;
         case 'fix':
           actor = 'owner';
@@ -267,7 +276,7 @@ export class ChatService implements OnModuleInit {
         default:
           continue;
       }
-      out.set(String(m._id), done ? 'done' : actor === 'both' || actor === me ? 'todo' : 'wait');
+      out.set(String(m._id), { state: done ? 'done' : actor === 'both' || actor === me ? 'todo' : 'wait', ...(parties ? { parties } : {}) });
     }
     return out;
   }
