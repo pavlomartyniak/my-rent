@@ -21,6 +21,9 @@ import { useAuth } from '@/store/auth';
 import { useFleet } from '@/store/fleet';
 import { useThemePreference, type ThemePreference } from '@/store/theme';
 
+/** ТИМЧАСОВО (розробка): швидке перемикання між двома тестовими акаунтами. Видалити разом із блоком у розмітці нижче */
+const TEST_ACCOUNTS = { 'test1@gmail.com': 'test2@gmail.com', 'test2@gmail.com': 'test1@gmail.com' } as const;
+
 const THEMES: { label: string; value: ThemePreference }[] = [
   { label: 'Як у телефоні', value: 'system' },
   { label: 'Світла', value: 'light' },
@@ -30,7 +33,16 @@ const THEMES: { label: string; value: ThemePreference }[] = [
 export default function SettingsScreen() {
   const router = useRouter();
   const { role, email, firstName, lastName, phone, photoUri, cars, clearAll, setTheme, deleteAccount } = useFleet();
-  const { signOut } = useAuth();
+  const { signOut, login } = useAuth();
+  const [switching, setSwitching] = useState(false);
+  const switchTarget = __DEV__ ? TEST_ACCOUNTS[email as keyof typeof TEST_ACCOUNTS] : undefined;
+  async function switchAccount() {
+    if (!switchTarget) return;
+    setSwitching(true);
+    const error = await login(switchTarget, '12345678');
+    setSwitching(false);
+    if (error) Alert.alert('Не вдалося перемкнути акаунт', error);
+  }
   const { preference } = useThemePreference();
   const owner = role === 'owner';
   // Видаляти дані й акаунт можна лише без чинної оренди: спершу її узгоджують із другою стороною й закривають
@@ -121,6 +133,8 @@ export default function SettingsScreen() {
           onPress={() => Linking.openURL(`mailto:${LEGAL_CONTACT}`).catch(() => Alert.alert('Напишіть нам', LEGAL_CONTACT))}
         />
       </SettingsGroup>
+
+      {switchTarget ? <Button title={`Перемкнутись на ${switchTarget}`} icon="swap-horizontal-outline" loading={switching} onPress={() => void switchAccount()} /> : null}
 
       <Button title="Вийти з акаунту" icon="log-out-outline" variant="secondary" onPress={() => confirm('Вийти з акаунту?', 'Ваші дані залишаться на сервері. Щоб повернутись, увійдіть із тим самим email і паролем.', 'Вийти', () => void signOut())} />
 
