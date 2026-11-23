@@ -73,7 +73,7 @@ export function permissions(deal: DealLike, today: string, now: Date) {
 }
 
 /** Підтвердження орендарем стану авто при передачі: після нього відкривається підписання */
-export type ConditionState = { handover?: ConditionReport; return?: ConditionReport; renterAck?: { at: Date } };
+export type ConditionState = { handover?: ConditionReport; return?: ConditionReport; renterAck?: { at: Date }; /** Коли в чат надіслано повідомлення, що відкрилась фіксація при поверненні (один раз) */ returnNotifiedAt?: Date };
 
 /**
  * Стан авто при передачі узгоджено: власник зафіксував усі фото й одометр, а орендар переглянув їх і погодився. Лише тоді
@@ -94,3 +94,6 @@ export function canChange(phase: Phase, slot: string, perms: ReturnType<typeof p
   if (perms.handoverEdit) return role === 'owner' || slot === 'damage';
   return perms.handoverLateDamage && slot === 'damage';
 }
+
+/** Скільки фото (без пошкоджень) у звіті */
+export const regularPhotos = (report: ConditionReport | undefined) => (report?.photos ?? []).filter((p) => p.slot !== 'damage').length;

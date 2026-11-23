@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 
+import { ChatService } from '../chat/chat.service';
 import { type CheckinState, checkinUrls } from '../checkin/checkin.rules';
 import type { AuthUser } from '../common/current-user';
 import { cloudRefFromUrl, MEDIA_PREFIX } from '../media/cloudinary';
@@ -20,6 +21,7 @@ import {
   MAX_DAMAGE_PHOTOS,
   missingSlots,
   type Phase,
+  regularPhotos,
   permissions,
   PHASES,
   REQUIRED_SLOTS,
@@ -33,7 +35,17 @@ export class ConditionService {
     @InjectModel(Deal.name) private readonly deals: Model<Deal>,
     private readonly config: ConfigService,
     private readonly media: MediaService,
+    private readonly chat: ChatService,
   ) {}
+
+  /** Службове повідомлення в чат оренди від імені того, хто діє. Збій чату не ламає саму дію */
+  private notify(user: AuthUser, dealId: string, kind: string, text: string, link: 'condition' | 'condition-confirm' = 'condition') {
+    void this.chat.autoStart(user, { dealId }, text, `condition-${kind}-${dealId}-${Date.now()}`, { kind: link, dealId });
+  }
+
+  private readyText(report: ConditionReport) {
+    return `${regularPhotos(report)} фото, пробіг ${(report.odometer?.km ?? 0).toLocaleString('uk-UA')} км`;
+  }
 
   private async partyDeal(user: AuthUser, dealId: string) {
     const deal = await this.deals.findOne({ _id: dealId, $or: [{ ownerId: user.id }, { renterId: user.id }] }).exec();
@@ -109,6 +121,7 @@ export class ConditionService {
     if (damage && !(dto.note ?? '').trim()) throw new BadRequestException('Опишіть пошкодження');
 
     const report = this.reportOf(deal, phase);
+    const wasReady = handoverReady(report);
     let replaced: string | undefined;
     if (damage) {
       if (report.photos.filter((p) => p.slot === 'damage').length >= MAX_DAMAGE_PHOTOS) throw new ConflictException(`Можна додати до ${MAX_DAMAGE_PHOTOS} фото пошкоджень`);
@@ -123,8 +136,15 @@ export class ConditionService {
       const photo: ConditionPhoto = { id: dto.slot, slot: dto.slot, url: dto.url, by: role, at: new Date(), ...(dto.note?.trim() ? { note: dto.note.trim() } : {}) };
       report.photos.push(photo);
     }
-    await this.save(deal, phase, report, role);
+    const ackReset = await this.save(deal, phase, report, role);
     if (replaced) void this.media.release([replaced]);
+    if (damage) {
+      const who = role === 'owner' ? 'Власник' : 'Орендар';
+      const reconfirm = ackReset ? ' Потрібне повторне підтвердження стану авто.' : '';
+      this.notify(user, dealId, 'damage', `${who} додав зауваження до стану авто (${phase === 'handover' ? 'при передачі' : 'при поверненні'}): «${dto.note!.trim()}».${reconfirm}`, ackReset ? 'condition-confirm' : 'condition');
+    } else {
+      this.afterChange(user, deal, phase, role, wasReady, ackReset, report);
+    }
     return this.get(user, dealId);
   }
 
@@ -135,9 +155,11 @@ export class ConditionService {
     if (!photo) throw new NotFoundException('Фото не знайдено');
     if (photo.by !== role) throw new ConflictException('Видалити можна лише своє фото');
     if (!canChange(phase, photo.slot, this.perms(deal), role)) throw new ConflictException('Зараз фото змінювати не можна');
+    const wasReady = handoverReady(report);
     report.photos = report.photos.filter((p) => p.id !== photoId);
-    await this.save(deal, phase, report, role);
+    const ackReset = await this.save(deal, phase, report, role);
     void this.media.release([photo.url]);
+    if (photo.slot !== 'damage') this.afterChange(user, deal, phase, role, wasReady, ackReset, report);
     return this.get(user, dealId);
   }
 
@@ -147,8 +169,10 @@ export class ConditionService {
     if (!canChange(phase, 'dashboard', this.perms(deal), role)) throw new ConflictException('Зараз показник одометра змінювати не можна');
     const report = this.reportOf(deal, phase);
     if (report.odometer && report.odometer.by !== role) throw new ConflictException('Показник одометра вже вказала друга сторона');
+    const wasReady = handoverReady(report);
     report.odometer = { km, by: role, at: new Date() };
-    await this.save(deal, phase, report, role);
+    const ackReset = await this.save(deal, phase, report, role);
+    this.afterChange(user, deal, phase, role, wasReady, ackReset, report);
     return this.get(user, dealId);
   }
 
@@ -165,16 +189,49 @@ export class ConditionService {
     deal.condition = { ...(deal.condition ?? {}), renterAck: { at: new Date() } };
     deal.markModified('condition');
     await deal.save();
+    this.notify(user, dealId, 'confirm', 'Орендар підтвердив стан авто при передачі. Тепер можна підписати договір.');
     return this.get(user, dealId);
   }
 
+  /**
+   * Повідомлення в чат після зміни фото чи одометра: власник скинув підтвердження орендаря (потрібне нове), звіт передачі став повним
+   * (час переглянути й підтвердити) або звіт при поверненні став повним. Проміжні зміни мовчать, щоб не засмічувати чат.
+   */
+  private afterChange(user: AuthUser, deal: DealDocument, phase: Phase, role: 'owner' | 'renter', wasReady: boolean, ackReset: boolean, report: ConditionReport) {
+    const id = String(deal._id);
+    const ready = handoverReady(report);
+    if (phase === 'handover') {
+      if (ackReset) return this.notify(user, id, 'reset', 'Власник змінив стан авто при передачі: потрібне повторне підтвердження.', 'condition-confirm');
+      if (role === 'owner' && ready && !wasReady) this.notify(user, id, 'ready', `Власник зафіксував стан авто при передачі: ${this.readyText(report)}. Перегляньте й підтвердіть його, щоб відкрилось підписання договору.`, 'condition-confirm');
+      return;
+    }
+    if (ready && !wasReady) this.notify(user, id, 'return-done', `${role === 'owner' ? 'Власник' : 'Орендар'} зафіксував стан авто при поверненні: ${this.readyText(report)}.`);
+  }
+
+  /** Раз на прохід: оренди, де відкрилась фіксація при поверненні, а повідомлення ще не надсилали. Повертає, скільком надіслано */
+  async notifyReturnOpen(): Promise<number> {
+    const candidates = await this.deals.find({ status: { $in: ['active', 'terminated'] }, 'condition.returnNotifiedAt': { $exists: false }, endDate: { $lte: new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10) } }).limit(200).exec();
+    let sent = 0;
+    for (const deal of candidates) {
+      if (!this.perms(deal).returnEdit) continue;
+      const claimed = await this.deals.updateOne({ _id: deal._id, 'condition.returnNotifiedAt': { $exists: false } }, { $set: { 'condition.returnNotifiedAt': new Date() } }).exec();
+      if (!claimed.modifiedCount) continue;
+      this.notify({ id: String(deal.ownerId), role: 'owner' }, String(deal._id), 'return-open', `Відкрилась фіксація стану авто при поверненні (до ${deal.endDate.split('-').reverse().join('.')} і ще 14 днів після). Зробіть фото й вкажіть пробіг: це спільний доказ для обох сторін.`);
+      sent += 1;
+    }
+    return sent;
+  }
+
   /** Зберігає звіт. Зміна власником фото чи одометра при передачі скидає підтвердження орендаря: він погоджувався з іншим станом */
-  private async save(deal: DealDocument, phase: Phase, report: ConditionReport, role?: 'owner' | 'renter') {
+  /** Повертає, чи скинуто підтвердження орендаря */
+  private async save(deal: DealDocument, phase: Phase, report: ConditionReport, role?: 'owner' | 'renter'): Promise<boolean> {
     const keep = { ...(deal.condition ?? {}) };
     if (phase === 'handover' && role === 'owner') delete keep.renterAck;
+    const ackReset = !!deal.condition?.renterAck && !keep.renterAck;
     deal.condition = { ...keep, [phase]: report };
     deal.markModified('condition');
     await deal.save();
+    return ackReset;
   }
 
   /** Усі посилання на фото стану авто в оренді: щоб прибрати їх із хмари, коли оренду видалено */

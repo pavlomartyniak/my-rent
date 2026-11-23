@@ -473,18 +473,7 @@ export default function ChatScreen() {
                           {item.text}
                         </ThemedText>
                       ) : null}
-                      {item.link?.kind === 'checkin' && !item.deletedAt ? (
-                        <Pressable
-                          accessibilityRole="button"
-                          accessibilityLabel="Переглянути звіт про авто"
-                          onPress={() => router.push({ pathname: '/checkin/[id]', params: { id: item.link!.dealId } })}
-                          style={[styles.linkBtn, { backgroundColor: item.mine ? 'rgba(255,255,255,0.2)' : theme.backgroundSelected }]}>
-                          <Icon name="camera" size={16} color={item.mine ? theme.onAccent : 'accent'} />
-                          <ThemedText type="smallBold" style={{ color: item.mine ? theme.onAccent : theme.accent }}>
-                            Переглянути звіт
-                          </ThemedText>
-                        </Pressable>
-                      ) : null}
+                      {item.link && !item.deletedAt ? <LinkButton link={item.link} mine={item.mine} /> : null}
                       <View style={styles.meta}>
                         <ThemedText type="small" style={[styles.time, { color: item.mine ? theme.onAccent : theme.textSecondary, opacity: item.mine ? 0.8 : 1 }]}>
                           {item.editedAt && !item.deletedAt ? 'змінено · ' : ''}
@@ -635,3 +624,28 @@ const styles = StyleSheet.create({
   closed: { paddingHorizontal: Spacing.three, paddingTop: Spacing.three, borderTopWidth: StyleSheet.hairlineWidth },
   closedText: { textAlign: 'center' },
 });
+
+/** Кнопка зі службового повідомлення: звіт про авто чи стан авто. «Підтвердити» бачить лише той, кому це адресовано (не автор) */
+function LinkButton({ link, mine }: { link: { kind: string; dealId: string }; mine: boolean }) {
+  const theme = useTheme();
+  const router = useRouter();
+  const target =
+    link.kind === 'checkin'
+      ? { path: '/checkin/[id]', icon: 'camera' as const, label: 'Переглянути звіт', a11y: 'Переглянути звіт про авто' }
+      : link.kind === 'condition' || link.kind === 'condition-confirm'
+        ? { path: '/condition/[id]', icon: 'shield-checkmark-outline' as const, label: link.kind === 'condition-confirm' && !mine ? 'Переглянути та підтвердити' : 'Переглянути стан авто', a11y: 'Відкрити стан авто' }
+        : null;
+  if (!target) return null;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={target.a11y}
+      onPress={() => router.push({ pathname: target.path as '/checkin/[id]', params: { id: link.dealId } })}
+      style={[styles.linkBtn, { backgroundColor: mine ? 'rgba(255,255,255,0.2)' : theme.backgroundSelected }]}>
+      <Icon name={target.icon} size={16} color={mine ? theme.onAccent : 'accent'} />
+      <ThemedText type="smallBold" style={{ color: mine ? theme.onAccent : theme.accent }}>
+        {target.label}
+      </ThemedText>
+    </Pressable>
+  );
+}

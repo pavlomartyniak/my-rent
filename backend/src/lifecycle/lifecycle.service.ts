@@ -4,6 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 
 import { ChatService } from '../chat/chat.service';
+import { ConditionService } from '../condition/condition.service';
 import { DealsService } from '../deals/deals.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { FINISHED_RETENTION_DAYS } from '../common/constants';
@@ -35,6 +36,7 @@ export class LifecycleService implements OnModuleInit, OnModuleDestroy {
     @InjectModel(WantedRequest.name) private readonly wanted: Model<WantedRequest>,
     private readonly chat: ChatService,
     private readonly dealsService: DealsService,
+    private readonly condition: ConditionService,
     private readonly realtime: RealtimeService,
     private readonly config: ConfigService,
   ) {}
@@ -59,6 +61,7 @@ export class LifecycleService implements OnModuleInit, OnModuleDestroy {
       const expired = await this.dealsService.expireUnsigned();
       const started = await this.dealsService.startReserved();
       await this.dealsService.finalizeWithdrawals();
+      await this.condition.notifyReturnOpen();
       const ended = await this.endFinishedDeals();
       const wanted = await this.purgeOldWanted();
       const chats = await this.chat.purgeInactive(new Date(Date.now() - FINISHED_RETENTION_DAYS * DAY_MS));
