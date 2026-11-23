@@ -203,12 +203,6 @@ export default function ContractScreen() {
 
       <Button title="Переглянути PDF" icon="document-text-outline" variant="secondary" disabled={busy === 'pdf'} onPress={() => void pdf()} />
 
-      <Card>
-        <ThemedText type="small" themeColor="textSecondary">
-          Особисті дані (РНОКПП, паспорт чи ID-картка, адреса, посвідчення водія, страховий поліс) застосунок не збирає. У тексті для них є рядки _____: за бажанням завантажте PDF, роздрукуйте його, впишіть дані й підпишіть. Чи посвідчувати договір нотаріально, сторони вирішують самі.
-        </ThemedText>
-      </Card>
-
       {data.sections.map((s) => (
         <Card key={s.title}>
           <ThemedText type="default" style={styles.bold}>

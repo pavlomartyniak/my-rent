@@ -163,12 +163,13 @@ function CancelAgreement({ dealId }: { dealId: string }) {
   );
 }
 
-type Step = { title: string; text: string; done: boolean; onPress?: () => void };
+/** waiting — крок чекає на другу сторону: від користувача зараз нічого не потрібно */
+type Step = { title: string; text: string; done: boolean; onPress?: () => void; waiting?: boolean };
 
 /** Крок «Дані для договору»: кожна сторона один раз заповнює документ і адресу, щоб у договорі не було порожніх рядків */
 function legalStep(l: { mine: boolean; other: boolean }, other: string, onPress: () => void): Step {
   if (!l.mine) return { title: 'Дані для договору', text: 'Документ, РНОКПП, адреса: 2 хвилини, один раз. Без них договір не підписати', done: false, onPress };
-  if (!l.other) return { title: 'Дані для договору', text: `Ви заповнили. Чекаємо дані: ${other}`, done: false, onPress };
+  if (!l.other) return { title: 'Дані для договору', text: `Ви заповнили. Чекаємо дані: ${other}`, done: false, onPress, waiting: true };
   return { title: 'Дані для договору', text: 'Заповнено обома сторонами', done: true, onPress };
 }
 
@@ -187,7 +188,8 @@ function conditionStep(c: NonNullable<DealView['condition']>, as: 'owner' | 'ren
         : c.ready
           ? 'Перегляньте фото власника й підтвердьте стан'
           : `Власник фіксує стан авто: ${c.have} з ${c.need}`;
-  return { title: 'Стан авто', text, done, onPress };
+  const waiting = !done && (as === 'owner' ? c.ready : !c.ready);
+  return { title: 'Стан авто', text, done, onPress, waiting };
 }
 
 /** Дія, якої від цієї сторони чекає стан авто: власнику зробити фото, орендарю підтвердити; інакше нічого */
@@ -202,6 +204,7 @@ function stateButton(as: 'owner' | 'renter', c: DealView['condition'] | undefine
 function Steps({ title, steps }: { title: string; steps: Step[] }) {
   const theme = useTheme();
   const doneCount = steps.filter((s) => s.done).length;
+  const currentIndex = steps.findIndex((x) => !x.done);
   return (
     <View style={[styles.steps, { borderColor: theme.border, backgroundColor: theme.backgroundElement }]}>
       <View style={styles.stepsHead}>
@@ -212,31 +215,80 @@ function Steps({ title, steps }: { title: string; steps: Step[] }) {
           {doneCount} з {steps.length}
         </ThemedText>
       </View>
-      {steps.map((st, i) => {
-        const body = (
-          <View style={styles.step}>
-            <View style={[styles.dot, { backgroundColor: st.done ? theme.positive : theme.accentSoft }]}>
-              {st.done ? <Icon name="checkmark" size={16} color={theme.onInk} /> : <ThemedText type="caption" themeColor="accent" style={styles.dotText}>{i + 1}</ThemedText>}
+      {/* Прогрес сегментами: пройдені зелені, поточний фіолетовий */}
+      <View style={styles.progress} accessibilityElementsHidden importantForAccessibility="no">
+        {steps.map((st, i) => (
+          <View key={st.title} style={[styles.segment, { backgroundColor: st.done ? theme.positive : i === currentIndex ? theme.accent : theme.border }]} />
+        ))}
+      </View>
+      {/* Стрічка кроків: вертикальна лінія з'єднує кола, поточний крок має ореол, наступні приглушені */}
+      <View>
+        {steps.map((st, i) => {
+          const current = i === currentIndex;
+          const upcoming = !st.done && !current;
+          const last = i === steps.length - 1;
+          const body = (
+            <View style={[styles.step, upcoming && styles.stepUpcoming]}>
+              <View style={styles.rail}>
+                <View style={styles.dotWrap}>
+                  {current && !st.waiting ? <View style={[styles.halo, { backgroundColor: theme.accentSoft }]} /> : null}
+                  <View
+                    style={[
+                      styles.dot,
+                      st.done
+                        ? { backgroundColor: theme.positive }
+                        : current && !st.waiting
+                          ? { backgroundColor: theme.accent }
+                          : current
+                            ? { borderWidth: 2, borderColor: theme.accent, backgroundColor: theme.backgroundElement }
+                            : { backgroundColor: theme.backgroundSelected },
+                    ]}>
+                    {st.done ? (
+                      <Icon name="checkmark" size={16} color={theme.onInk} />
+                    ) : current && st.waiting ? (
+                      <Icon name="time-outline" size={16} color="accent" />
+                    ) : (
+                      <ThemedText type="caption" style={[styles.dotText, { color: current ? theme.onAccent : theme.textSecondary }]}>
+                        {i + 1}
+                      </ThemedText>
+                    )}
+                  </View>
+                </View>
+                {!last ? <View style={[styles.line, { backgroundColor: st.done ? theme.positive : theme.border }]} /> : null}
+              </View>
+              <View style={[styles.text, !last && styles.textGap]}>
+                <View style={styles.titleRow}>
+                  <ThemedText type="body" style={[styles.stepTitle, current && styles.stepTitleCurrent]}>
+                    {st.title}
+                  </ThemedText>
+                  {current ? (
+                    <View style={[styles.pill, { backgroundColor: st.waiting ? theme.backgroundSelected : theme.accentSoft }]}>
+                      <ThemedText type="caption" themeColor={st.waiting ? 'textSecondary' : 'accent'} style={styles.pillText}>
+                        {st.waiting ? 'Очікуємо' : 'Зараз'}
+                      </ThemedText>
+                    </View>
+                  ) : null}
+                </View>
+                <ThemedText type="callout" themeColor={st.done ? 'positive' : current && !st.waiting ? 'text' : 'textSecondary'}>
+                  {st.text}
+                </ThemedText>
+              </View>
+              {st.onPress ? (
+                <View style={styles.chevron}>
+                  <Icon name="chevron-forward" size={18} color="textSecondary" />
+                </View>
+              ) : null}
             </View>
-            <View style={styles.text}>
-              <ThemedText type="body" style={styles.stepTitle}>
-                {st.title}
-              </ThemedText>
-              <ThemedText type="callout" themeColor={st.done ? 'positive' : 'textSecondary'}>
-                {st.text}
-              </ThemedText>
-            </View>
-            {st.onPress ? <Icon name="chevron-forward" size={18} color="textSecondary" /> : null}
-          </View>
-        );
-        return st.onPress ? (
-          <Pressable key={st.title} accessibilityRole="button" accessibilityLabel={`${st.title}. ${st.text}`} onPress={st.onPress}>
-            {body}
-          </Pressable>
-        ) : (
-          <View key={st.title}>{body}</View>
-        );
-      })}
+          );
+          return st.onPress ? (
+            <Pressable key={st.title} accessibilityRole="button" accessibilityLabel={`${st.title}. ${st.text}`} onPress={st.onPress}>
+              {body}
+            </Pressable>
+          ) : (
+            <View key={st.title}>{body}</View>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -248,11 +300,24 @@ const styles = StyleSheet.create({
   box: { gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md, borderWidth: 0 },
   cancel: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   flow: { gap: Spacing.three },
-  steps: { borderWidth: 1, borderRadius: Radius.md, padding: Spacing.three, gap: Spacing.two },
+  steps: { borderWidth: 1, borderRadius: Radius.md, padding: Spacing.three, gap: Spacing.three },
   stepsHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
   stepsTitle: { flex: 1 },
-  step: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, minHeight: 52, paddingVertical: Spacing.one },
-  dot: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  progress: { flexDirection: 'row', gap: 4 },
+  segment: { flex: 1, height: 4, borderRadius: 2 },
+  step: { flexDirection: 'row', gap: Spacing.three },
+  stepUpcoming: { opacity: 0.55 },
+  rail: { width: 36, alignItems: 'center' },
+  dotWrap: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  halo: { position: 'absolute', width: 36, height: 36, borderRadius: 18 },
+  line: { flex: 1, width: 2, borderRadius: 1, marginVertical: 2 },
+  dot: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   dotText: { fontWeight: 700 },
+  textGap: { paddingBottom: Spacing.three },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, minHeight: 36 },
+  pill: { paddingHorizontal: 10, paddingVertical: 2, borderRadius: Radius.pill },
+  pillText: { fontWeight: 700 },
+  chevron: { alignSelf: 'flex-start', marginTop: 9 },
+  stepTitleCurrent: { fontWeight: 700 },
   stepTitle: { fontWeight: 600 },
 });
