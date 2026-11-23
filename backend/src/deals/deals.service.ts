@@ -359,6 +359,8 @@ export class DealsService {
       signedAt: c.signedAt ?? null,
       mySigned: !!c.signatures?.[user.role],
       signing: this.signingView(deal.startDate),
+      // Підписання відкривається лише після узгодженого стану авто: екран веде до нього, а не до підпису
+      condition: { ready: handoverReady(deal.condition?.handover as never), confirmed: !!deal.condition?.renterAck },
       carId: String(deal.carId),
       withdrawal: this.withdrawalView(deal),
       payments: this.paymentsView(deal, user.role === 'renter' ? 'renter' : 'owner'),

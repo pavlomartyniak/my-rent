@@ -27,6 +27,8 @@ export type ContractView = {
   status: 'awaiting' | 'active' | 'terminated';
   signedAt: string | null;
   mySigned: boolean;
+  /** Стан авто при передачі: власник зафіксував усе (ready), орендар підтвердив (confirmed). Без цього підписати не можна */
+  condition?: { ready: boolean; confirmed: boolean };
   /** Вікно підписання: договір підписують під час зустрічі, тож воно відкривається за добу до початку оренди */
   signing: { opensAt: string; closesAt: string; state: 'early' | 'open' | 'late' };
   /** Одностороння відмова від договору, якщо була: хто, чому, коли отримано й коли договір буде розірвано (через 12 год після отримання) */

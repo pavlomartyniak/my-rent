@@ -194,7 +194,7 @@ function conditionStep(c: NonNullable<DealView['condition']>, as: 'owner' | 'ren
 function stateButton(as: 'owner' | 'renter', c: DealView['condition'] | undefined): { title: string; icon: 'camera-outline' | 'checkmark-circle-outline' } | null {
   if (!c) return null;
   if (as === 'owner' && !c.ready) return { title: 'Зробити фото стану авто', icon: 'camera-outline' };
-  if (as === 'renter' && c.ready && !c.confirmed) return { title: 'Переглянути й підтвердити стан авто', icon: 'checkmark-circle-outline' };
+  if (as === 'renter' && c.ready && !c.confirmed) return { title: 'Підтвердити стан авто', icon: 'checkmark-circle-outline' };
   return null;
 }
 

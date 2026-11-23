@@ -44,7 +44,10 @@ export default function ContractScreen() {
   const state = data.signing.state;
   const legalMine = !!data.terms[role === 'renter' ? 'renter' : 'owner'].legal;
   const legalOk = !!data.terms.owner.legal && !!data.terms.renter.legal;
-  const canSign = awaiting && !data.mySigned && state === 'open' && legalOk;
+  // Старий сервер без цього поля: рішення лишається за ним (він не пустить підписати без узгодженого стану)
+  const stateAgreed = data.condition ? data.condition.ready && data.condition.confirmed : true;
+  const canSign = awaiting && !data.mySigned && state === 'open' && legalOk && stateAgreed;
+  const needState = awaiting && !data.mySigned && state === 'open' && legalOk && !stateAgreed;
 
   async function run(kind: 'cancel', fn: () => Promise<unknown>, failTitle: string) {
     setBusy(kind);
@@ -124,6 +127,30 @@ export default function ContractScreen() {
             </ThemedText>
           </Card>
           {!legalMine ? <Button title="Заповнити дані" icon="person-circle-outline" onPress={() => router.push('/legal')} /> : null}
+        </>
+      ) : needState ? (
+        <>
+          <Card style={{ backgroundColor: theme.warningSoft }}>
+            <ThemedText type="smallBold" themeColor="warning">
+              Спершу узгодьте стан авто
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {!data.condition?.ready
+                ? role === 'owner'
+                  ? 'Зробіть фото кузова й салону та вкажіть пробіг. Після цього орендар підтвердить стан, і підписання відкриється.'
+                  : 'Власник ще фіксує стан авто. Коли він додасть усі фото й пробіг, ви зможете їх переглянути й підтвердити.'
+                : role === 'owner'
+                  ? 'Чекаємо, поки орендар перегляне фото й підтвердить стан авто. Після цього відкриється підписання.'
+                  : 'Перегляньте фото власника й підтвердьте стан авто. Після цього відкриється підписання.'}
+            </ThemedText>
+          </Card>
+          {(role === 'owner' && !data.condition?.ready) || (role === 'renter' && data.condition?.ready) ? (
+            <Button
+              title={role === 'owner' ? 'Зробити фото стану авто' : 'Підтвердити стан авто'}
+              icon={role === 'owner' ? 'camera-outline' : 'checkmark-circle-outline'}
+              onPress={() => router.push({ pathname: '/condition/[id]', params: { id: data.dealId } })}
+            />
+          ) : null}
         </>
       ) : canSign ? (
         <>
