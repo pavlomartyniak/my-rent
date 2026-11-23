@@ -166,6 +166,17 @@ export class ChatService implements OnModuleInit {
     }
   }
 
+  /**
+   * Після прийняття домовленості: картка «Крок 1» обом сторонам із проханням заповнити дані для договору. Без неї люди не знали б,
+   * що з цього починається підписання. Не надсилається, коли в договорі вже є дані обох (їх уже вносили раніше).
+   */
+  async announceLegalNeeded(user: AuthUser, context: OpenChatDto, dealId: string) {
+    const deal = await this.deals.findById(dealId, 'contract status').lean().exec();
+    const terms = deal?.contract?.terms as { owner?: { legal?: unknown }; renter?: { legal?: unknown } } | undefined;
+    if (!deal || deal.contract?.mode === 'none' || (terms?.owner?.legal && terms?.renter?.legal)) return;
+    await this.autoStart(user, context, 'Крок 1. Кожна сторона один раз вносить дані для договору (документ, РНОКПП, адреса): це 2 хвилини. Поки їх немає, договір підписати не можна.', `auto-legal-${dealId}`, { kind: 'legal', dealId, step: 'legal-each' });
+  }
+
   // ---- список й історія ----
 
   async list(user: AuthUser) {
@@ -234,6 +245,9 @@ export class ChatService implements OnModuleInit {
         case 'legal':
           actor = other;
           done = closed || !!terms?.[other]?.legal;
+          break;
+        case 'legal-each':
+          done = closed || !!terms?.[me]?.legal;
           break;
         case 'fix':
           actor = 'owner';

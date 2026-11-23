@@ -660,7 +660,7 @@ function SystemCard({ item }: { item: ChatMessage }) {
   const link = item.link!;
   const kind = CARD_KIND[link.kind] ?? { icon: 'document-text-outline' as const, title: 'Оренда' };
   // «Заповніть свої дані» адресоване другій стороні: автору кнопка не потрібна
-  const hasAction = link.kind !== 'legal' || !item.mine;
+  const hasAction = link.kind !== 'legal' || link.step === 'legal-each' || !item.mine;
   const label =
     link.kind === 'checkin' ? 'Переглянути звіт'
     : link.kind === 'condition-confirm' && !item.mine ? 'Переглянути та підтвердити'

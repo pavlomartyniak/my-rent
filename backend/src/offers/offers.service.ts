@@ -253,6 +253,7 @@ export class OffersService {
     this.realtime.changed([renterId], 'wanted', 'deals', 'offers');
     // Повідомлення в чат: домовленість прийнято, договір сформовано
     await this.chat.autoStart({ id: renterId, role: 'renter' }, { offerId: String(accepted!._id) }, acceptedMessage({ startDate: wantedDoc!.startDate }), `auto-accept-${accepted!._id}`).catch(() => null);
+    await this.chat.announceLegalNeeded({ id: renterId, role: 'renter' }, { offerId: String(accepted!._id) }, createdDeal).catch(() => null);
     // Відповідь одразу містить оренду з договором: застосунок пропонує його переглянути
     return this.view(accepted!, 'renter', wantedDoc!, await this.people([accepted!.ownerId]), { dealId: createdDeal, dealStage: 'signing', contract: true });
   }
