@@ -7,6 +7,7 @@ import { escapeRegex, normalize } from '../common/normalize';
 import { maskedName } from '../rentals/rentals.math';
 import { Car, type CarDocument } from '../schemas/car.schema';
 import { ModerationService } from '../moderation/moderation.service';
+import { describeRequirement } from '../checkin/checkin.rules';
 import { RentalRequest } from '../schemas/rental-request.schema';
 import { User } from '../schemas/user.schema';
 
@@ -31,6 +32,8 @@ function publicView(car: CarDocument, owner: { name: string; photoUri: string | 
     pricePerDay: listing.pricePerDay,
     deposit: listing.deposit ?? 0,
     description: listing.description,
+    // Вимога фотозвіту: орендар бачить її до запиту
+    checkin: listing.checkin ? { ...listing.checkin, requirement: describeRequirement(listing.checkin) } : null,
     owner: owner.name,
     ownerPhotoUri: owner.photoUri,
     ownerId: String(car.userId),

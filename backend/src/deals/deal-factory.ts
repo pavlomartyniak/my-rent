@@ -7,7 +7,8 @@ import { fullName } from '../rentals/rentals.math';
 import type { PaymentPlan } from './payment-plan';
 
 type PersonDoc = { firstName: string; lastName: string; middleName?: string; phone?: string; legalEnc?: string };
-type CarDoc = { brand: string; model: string; year: number; vin: string; mileage: number; plate?: string; color?: string; fuel?: string };
+type CarDoc = { brand: string; model: string; year: number; vin: string; mileage: number; plate?: string; color?: string; fuel?: string; listing?: { checkin?: ListingCheckin } };
+type ListingCheckin = { every: 'weekly' | 'biweekly' | 'monthly'; weekday: number; body: boolean; interior: boolean };
 
 /** Сторона договору: ПІБ повністю, як у документах (Прізвище Ім'я По батькові), і телефон */
 export const party = (u: PersonDoc, role: 'owner' | 'renter'): ContractParty => {
@@ -76,6 +77,9 @@ export function newDealData(input: {
     paymentPlan: input.paymentPlan,
     purpose: input.purpose ?? 'personal',
   });
+  // Вимога фотозвіту з оголошення авто діє в оренді з першого дня: вона вже в договорі й налаштуваннях, власник може змінити її в оренді
+  const wanted = input.car.listing?.checkin;
+  if (wanted) terms.checkin = { every: wanted.every, weekday: wanted.weekday, body: wanted.body, interior: wanted.interior };
   return {
     _id,
     renterId: input.renterId,
@@ -92,5 +96,6 @@ export function newDealData(input: {
     status: 'awaiting',
     contract: { terms, hash: contractHash(terms), signatures: {}, ...(input.noContract ? { mode: 'none' as const } : {}) },
     payments: terms.payments.map((p) => ({ n: p.n, renterPaid: 0, ownerReceived: 0 })),
+    ...(wanted ? { checkin: { settings: { enabled: true, every: wanted.every, weekday: wanted.weekday, body: wanted.body, interior: wanted.interior, since: new Date().toISOString().slice(0, 10) } } } : {}),
   };
 }

@@ -104,6 +104,15 @@ export default function RentalRequestScreen() {
       <DateField label="Початок оренди" value={start} onChange={changeStart} minimumDate={new Date()} />
       <DateField label="Завершення оренди" value={end} onChange={setEnd} minimumDate={fromISODate(start)} />
 
+      {car.checkin ? (
+        <Card>
+          <ThemedText type="headline">Фотозвіт про авто</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            Власник вимагає звіт {car.checkin.requirement}. Фото знімаєте в застосунку. Умова потрапить у договір.
+          </ThemedText>
+        </Card>
+      ) : null}
+
       <Card>
         <ThemedText type="headline">Розрахунок</ThemedText>
         <InfoRows>

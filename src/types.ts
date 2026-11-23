@@ -32,7 +32,7 @@ export type Car = {
   /** Усі фото авто (до 10); перше — обкладинка, дублюється в photoUri */
   photos?: string[];
   /** Оголошення про оренду; воно видиме орендарям, поки published=true і авто вільне */
-  listing?: { published: boolean; city: string; pricePerDay: number; deposit?: number; description: string };
+  listing?: { published: boolean; city: string; pricePerDay: number; deposit?: number; description: string; checkin?: { every: 'weekly' | 'biweekly' | 'monthly'; weekday: number; body: boolean; interior: boolean } };
   /** Чи займає авто одне з місць для публікації (їх MAX_LISTINGS на власника); без значення — ще не публікувалось */
   listingUnlock?: 'free' | 'paid';
 };

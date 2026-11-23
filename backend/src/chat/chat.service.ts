@@ -5,6 +5,7 @@ import { type Model, Types } from 'mongoose';
 
 import type { AuthUser } from '../common/current-user';
 import { handoverReady } from '../condition/condition.rules';
+import { claimFlow } from '../deals/flow';
 import { dealStageOf } from '../deals/deal-stage';
 import { fullName, maskedName, todayUtc } from '../rentals/rentals.math';
 import { MediaService } from '../media/media.service';
@@ -173,7 +174,13 @@ export class ChatService implements OnModuleInit {
   async announceLegalNeeded(user: AuthUser, context: OpenChatDto, dealId: string) {
     const deal = await this.deals.findById(dealId, 'contract status').lean().exec();
     const terms = deal?.contract?.terms as { owner?: { legal?: unknown }; renter?: { legal?: unknown } } | undefined;
-    if (!deal || deal.contract?.mode === 'none' || (terms?.owner?.legal && terms?.renter?.legal)) return;
+    if (!deal || deal.contract?.mode === 'none') return;
+    if (terms?.owner?.legal && terms?.renter?.legal) {
+      // Дані обох уже є (внесені раніше): крок 1 пропускаємо й одразу називаємо наступний, щоб людям було зрозуміло, що робити
+      await claimFlow(this.deals as never, dealId, 'legal-both');
+      await this.autoStart(user, context, 'Дані для договору вже заповнені обома сторонами. Далі: власник фіксує стан авто (фото й показник одометра), а орендар переглядає й підтверджує його.', `auto-legal-${dealId}`, { kind: 'condition', dealId, step: 'fix' });
+      return;
+    }
     await this.autoStart(user, context, 'Кожна сторона один раз вносить дані для договору (документ, РНОКПП, адреса): це 2 хвилини. Без цього договір підписати не можна.', `auto-legal-${dealId}`, { kind: 'legal', dealId, step: 'legal-each' });
   }
 

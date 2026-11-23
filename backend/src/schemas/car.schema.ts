@@ -29,6 +29,10 @@ export class CarListing {
 
   @Prop()
   publishedAt?: Date;
+
+  /** Вимога регулярного фотозвіту про авто за замовчуванням: копіюється в оренду при прийнятті домовленості */
+  @Prop({ type: MongooseSchema.Types.Mixed })
+  checkin?: { every: 'weekly' | 'biweekly' | 'monthly'; weekday: number; body: boolean; interior: boolean };
 }
 export const CarListingSchema = SchemaFactory.createForClass(CarListing);
 

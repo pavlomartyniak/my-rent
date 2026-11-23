@@ -6,7 +6,9 @@ import type { Model } from 'mongoose';
 import { ChatService } from '../chat/chat.service';
 import { type AuthUser, CurrentUser } from '../common/current-user';
 import { handoverAgreed, handoverReady } from '../condition/condition.rules';
+import { signingState } from '../contract/contract.window';
 import { claimFlow } from '../deals/flow';
+import { todayUtc } from '../rentals/rentals.math';
 import { Deal, type DealDocument } from '../schemas/deal.schema';
 import { User, type UserDocument } from '../schemas/user.schema';
 import { syncUnsignedDeals } from './legal.sync';
@@ -44,7 +46,10 @@ export class LegalController {
         const c = it.condition;
         if (!handoverReady(c?.handover as never)) send('Дані для договору заповнено обома сторонами. Далі: власник фіксує стан авто (фото й показник одометра).', 'condition', 'fix');
         else if (!handoverAgreed(c as never)) send('Дані для договору заповнено обома сторонами. Далі: орендар переглядає й підтверджує стан авто.', 'condition-confirm', 'confirm');
-        else send('Дані для договору заповнено обома сторонами. Далі: прочитайте договір, а підпишете його під час зустрічі.', 'contract');
+        else if (signingState(todayUtc(), it.startDate) === 'open' && (await claimFlow(this.deals, it.id, 'sign-open'))) {
+          // Стан узгоджено, дані заповнено, підписання відкрите: одразу картка підписання зі статусом сторін
+          send('Підписання договору відкрито: кожна сторона підписує зі свого телефону під час зустрічі, коли передаються авто, ключі й гроші.', 'contract', 'sign-each');
+        } else send('Дані для договору заповнено обома сторонами. Далі: прочитайте договір, підписання відкриється ближче до зустрічі.', 'contract');
       }
     }
   }

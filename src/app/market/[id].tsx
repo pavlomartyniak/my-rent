@@ -106,6 +106,22 @@ export default function MarketCarScreen() {
             </View>
           </View>
 
+          {car.checkin ? (
+            <View style={[styles.deposit, { backgroundColor: theme.backgroundSelected }]}>
+              <View style={[styles.depositIcon, { backgroundColor: theme.backgroundElement }]}>
+                <Icon name="camera-outline" size={22} color="accent" />
+              </View>
+              <View style={styles.flex}>
+                <ThemedText type="default" style={styles.bold}>
+                  Власник вимагає фотозвіт
+                </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {car.checkin.requirement.charAt(0).toUpperCase() + car.checkin.requirement.slice(1)}. Фото знімаєте в застосунку
+                </ThemedText>
+              </View>
+            </View>
+          ) : null}
+
           <Pressable accessibilityRole="button" accessibilityLabel={`Власник ${car.owner}. Відкрити профіль`} onPress={() => openProfile(car.ownerId)} style={styles.owner}>
             <Avatar uri={car.ownerPhotoUri} name={car.owner} size={44} />
             <View style={{ flex: 1, gap: 2 }}>

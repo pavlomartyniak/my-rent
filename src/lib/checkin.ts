@@ -23,6 +23,9 @@ export const WEEKDAY_OPTIONS = [
   { value: 0, label: 'Нд' },
 ];
 
+/** Вимога фотозвіту в оголошенні авто: копіюється в оренду при прийнятті запиту */
+export type ListingCheckin = { every: Every; weekday: number; body: boolean; interior: boolean; requirement?: string };
+
 export type CheckinSettings = { enabled: boolean; every: Every; weekday: number; body: boolean; interior: boolean };
 
 export type CheckinReport = { id: string; due: string; at: string; km: number; deltaKm: number | null; photos: { slot: string; label: string; url: string }[] };

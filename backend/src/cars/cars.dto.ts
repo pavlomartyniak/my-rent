@@ -1,6 +1,8 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, Max, MaxLength, Min } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, Max, MaxLength, Min, ValidateNested } from 'class-validator';
+
+import { EVERY } from '../checkin/checkin.rules';
 
 import { CAR_STATUSES, FUEL_TYPES, MAX_PHOTOS } from '../common/constants';
 import { IsIsoDay } from '../common/is-iso-day';
@@ -83,6 +85,24 @@ export class CreateCarDto {
 
 export class UpdateCarDto extends PartialType(CreateCarDto) {}
 
+/** Вимога фотозвіту в оголошенні: щоб орендар знав про неї до запиту, а власник не забув налаштувати її в оренді */
+export class ListingCheckinDto {
+  @IsIn(EVERY)
+  every: string;
+
+  /** 0 — неділя … 6 — субота */
+  @IsInt()
+  @Min(0)
+  @Max(6)
+  weekday: number;
+
+  @IsBoolean()
+  body: boolean;
+
+  @IsBoolean()
+  interior: boolean;
+}
+
 /** Оголошення про оренду: що бачать орендарі */
 export class ListingDto {
   @Trim()
@@ -110,4 +130,10 @@ export class ListingDto {
   @IsString()
   @MaxLength(1000, { message: 'Опис занадто довгий' })
   description?: string;
+
+  /** Без значення — звіт не вимагається */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ListingCheckinDto)
+  checkin?: ListingCheckinDto;
 }

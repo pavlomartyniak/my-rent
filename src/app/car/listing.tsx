@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 
+import { ListingCheckinField } from '@/components/listing-checkin';
 import { CityField } from '@/components/place-field';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import { Field } from '@/components/ui/field';
 import { NumberField } from '@/components/ui/number-field';
 import { Screen } from '@/components/ui/screen';
 import { api, ApiError } from '@/lib/api';
+import type { ListingCheckin } from '@/lib/checkin';
 import { useFleet } from '@/store/fleet';
 import { MAX_LISTINGS } from '@/types';
 
@@ -27,6 +29,7 @@ export default function ListingScreen() {
   const [price, setPrice] = useState(car?.listing ? String(car.listing.pricePerDay) : '');
   const [deposit, setDeposit] = useState(car?.listing?.deposit ? String(car.listing.deposit) : '');
   const [description, setDescription] = useState(car?.listing?.description ?? '');
+  const [checkin, setCheckin] = useState<ListingCheckin | null>(car?.listing?.checkin ?? null);
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -50,7 +53,7 @@ export default function ListingScreen() {
     if (errors.city || errors.price) return;
     setSaving(true);
     try {
-      await api('PUT', `/cars/${car.id}/listing`, { city: city.trim(), pricePerDay: Number(price), deposit: Number(deposit) || 0, description: description.trim() });
+      await api('PUT', `/cars/${car.id}/listing`, { city: city.trim(), pricePerDay: Number(price), deposit: Number(deposit) || 0, description: description.trim(), ...(checkin ? { checkin } : {}) });
       reload();
       router.back();
     } catch (e) {
@@ -99,6 +102,7 @@ export default function ListingScreen() {
         placeholder="Стан авто, умови, ліміт пробігу…"
         style={{ minHeight: 110, paddingTop: 12, textAlignVertical: 'top' }}
       />
+      <ListingCheckinField value={checkin} onChange={setCheckin} />
       {limitReached ? (
         <Card>
           <ThemedText type="default" style={{ fontWeight: 600 }}>

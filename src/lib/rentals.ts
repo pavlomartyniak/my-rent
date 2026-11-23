@@ -20,6 +20,8 @@ export type MarketCar = {
   /** Застава, ₴: вноситься разом із першою оплатою; 0 — без застави */
   deposit: number;
   description: string;
+  /** Вимога регулярного фотозвіту про авто; null — не вимагається */
+  checkin?: { every: 'weekly' | 'biweekly' | 'monthly'; weekday: number; body: boolean; interior: boolean; requirement: string } | null;
   /** Ім'я власника з ініціалом прізвища */
   owner: string;
   ownerId: string;

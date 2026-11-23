@@ -118,6 +118,7 @@ export class CarsService {
       pricePerDay: dto.pricePerDay,
       deposit: Math.round(dto.deposit ?? 0),
       description: dto.description ?? '',
+      ...(dto.checkin ? { checkin: { every: dto.checkin.every as 'weekly' | 'biweekly' | 'monthly', weekday: dto.checkin.weekday, body: dto.checkin.body, interior: dto.checkin.interior } } : {}),
       publishedAt: car.listing?.published ? car.listing.publishedAt : new Date(),
     };
     try {
