@@ -4,6 +4,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { PublishBanner } from '@/components/publish-banner';
 import { ReportStatus } from '@/components/report-status';
 import { EarningsWidget } from '@/components/earnings-widget';
 import { ThemedText } from '@/components/themed-text';
@@ -115,6 +116,8 @@ export default function CarScreen() {
           {subtitle}
         </ThemedText>
       </View>
+
+      <PublishBanner car={car} />
 
       {report ? (
         <EarningsWidget
