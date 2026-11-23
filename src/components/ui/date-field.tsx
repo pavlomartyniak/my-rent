@@ -10,13 +10,13 @@ import { formatDate, fromISODate, toISODate } from '@/lib/date';
 import { ThemedText } from '../themed-text';
 import { Icon } from './icon';
 
-type Props = { label: string; value: string; onChange: (iso: string) => void; minimumDate?: Date; maximumDate?: Date; /** Порожнє значення: підпис замість дати й дата, з якої відкривається календар */ placeholder?: string; initialDate?: Date; /** Колесо вибору (день, місяць, рік) замість календаря: швидше для дат народження й документів */ wheel?: boolean; /** Помилка поля: червона рамка й текст під ним */ error?: string; /** Календар відкрито чи закрито: екран може на цей час сховати свої нижні кнопки, щоб їх не плутали з «Готово» */ onOpenChange?: (open: boolean) => void };
+type Props = { label: string; value: string; onChange: (iso: string) => void; minimumDate?: Date; maximumDate?: Date; /** Порожнє значення: підпис замість дати й дата, з якої відкривається календар */ placeholder?: string; initialDate?: Date; /** Помилка поля: червона рамка й текст під ним */ error?: string; /** Календар відкрито чи закрито: екран може на цей час сховати свої нижні кнопки, щоб їх не плутали з «Готово» */ onOpenChange?: (open: boolean) => void };
 
 /**
- * Поле дати у тому ж стилі, що й решта полів. На iOS календар розкривається під полем
- * і згортається кнопкою «Готово», на Android відкривається системний діалог.
+ * Поле дати у тому ж стилі, що й решта полів, єдине для всього застосунку. На iOS колесо вибору (день, місяць, рік)
+ * розкривається під полем і згортається кнопкою «Готово», на Android відкривається системний діалог.
  */
-export function DateField({ label, value, onChange, minimumDate, maximumDate, placeholder, initialDate, wheel, error, onOpenChange }: Props) {
+export function DateField({ label, value, onChange, minimumDate, maximumDate, placeholder, initialDate, error, onOpenChange }: Props) {
   const theme = useTheme();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [open, setOpen] = useState(false);
@@ -31,7 +31,7 @@ export function DateField({ label, value, onChange, minimumDate, maximumDate, pl
   function onPress() {
     if (Platform.OS === 'ios') {
       // Порожнє поле з колесом: одразу показуємо стартову дату, щоб «Готово» без прокрутки теж щось зберегло
-      if (!open && !value && wheel) onChange(toISODate(date));
+      if (!open && !value) onChange(toISODate(date));
       setOpen((o) => !o);
       return;
     }
@@ -76,7 +76,7 @@ export function DateField({ label, value, onChange, minimumDate, maximumDate, pl
           <DateTimePicker
             value={date}
             mode="date"
-            display={wheel ? 'spinner' : 'inline'}
+            display="spinner"
             locale="uk-UA"
             themeVariant={scheme}
             accentColor={theme.accent}

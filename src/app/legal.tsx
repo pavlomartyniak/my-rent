@@ -182,7 +182,7 @@ export default function LegalScreen() {
                 </ThemedText>
                 <ThemedText type="headline">{fullName || 'Вкажіть імʼя в «Особисті дані»'}</ThemedText>
               </Card>
-              <DateField wheel onOpenChange={onPicker} label="Дата народження" value={d.birthDate} onChange={(birthDate) => set({ birthDate })} placeholder="Оберіть дату" initialDate={new Date(1990, 0, 1)} maximumDate={new Date()} error={err('birthDate')} />
+              <DateField onOpenChange={onPicker} label="Дата народження" value={d.birthDate} onChange={(birthDate) => set({ birthDate })} placeholder="Оберіть дату" initialDate={new Date(1990, 0, 1)} maximumDate={new Date()} error={err('birthDate')} />
               <NumberField label="РНОКПП (ідентифікаційний код)" value={d.taxId} onChangeValue={(taxId) => set({ taxId })} maxDigits={10} plain dismissWhenFull placeholder="10 цифр" error={err('taxId')} />
               <Note icon="information-circle-outline" text="РНОКПП потрібен за законом України: без нього договір не матиме повної юридичної сили." />
             </>
@@ -208,8 +208,8 @@ export default function LegalScreen() {
                   <NumberField label="Орган, що видав" value={d.docIssuer} onChangeValue={(docIssuer) => set({ docIssuer })} maxDigits={4} plain dismissWhenFull placeholder="4 цифри, наприклад 4601" error={err('docIssuer')} />
                 </>
               )}
-              <DateField wheel onOpenChange={onPicker} label="Дата видачі" value={d.docIssuedAt} onChange={(docIssuedAt) => set({ docIssuedAt })} maximumDate={new Date()} initialDate={new Date(2018, 0, 1)} error={err('docIssuedAt')} />
-              {d.docType === 'id' ? <DateField wheel onOpenChange={onPicker} label="Дійсна до" value={d.docValidUntil} onChange={(docValidUntil) => set({ docValidUntil })} initialDate={new Date()} error={err('docValidUntil')} /> : null}
+              <DateField onOpenChange={onPicker} label="Дата видачі" value={d.docIssuedAt} onChange={(docIssuedAt) => set({ docIssuedAt })} maximumDate={new Date()} initialDate={new Date(2018, 0, 1)} error={err('docIssuedAt')} />
+              {d.docType === 'id' ? <DateField onOpenChange={onPicker} label="Дійсна до" value={d.docValidUntil} onChange={(docValidUntil) => set({ docValidUntil })} initialDate={new Date()} error={err('docValidUntil')} /> : null}
             </>
           ) : current === 'address' ? (
             <>
@@ -241,20 +241,23 @@ export default function LegalScreen() {
                   placeholder="ААА 123456"
                   error={err('licenseNumber')}
                 />
-                <DateField wheel onOpenChange={onPicker} label="Дата видачі" value={d.licenseIssuedAt} onChange={(licenseIssuedAt) => set({ licenseIssuedAt })} maximumDate={new Date()} initialDate={new Date(2020, 0, 1)} error={err('licenseIssuedAt')} />
-                <DateField wheel onOpenChange={onPicker} label="Дійсне до" value={d.licenseValidUntil} onChange={(licenseValidUntil) => set({ licenseValidUntil })} initialDate={new Date()} error={err('licenseValidUntil')} />
+                <DateField onOpenChange={onPicker} label="Дата видачі" value={d.licenseIssuedAt} onChange={(licenseIssuedAt) => set({ licenseIssuedAt })} maximumDate={new Date()} initialDate={new Date(2020, 0, 1)} error={err('licenseIssuedAt')} />
+                <DateField onOpenChange={onPicker} label="Дійсне до" value={d.licenseValidUntil} onChange={(licenseValidUntil) => set({ licenseValidUntil })} initialDate={new Date()} error={err('licenseValidUntil')} />
               </>
             ) : (
               <>
-                <Title text="На якій підставі ви здаєте авто" sub="Договір має містити підставу, за якою ви розпоряджаєтесь авто." />
+                <Title text="На якій підставі ви здаєте авто" sub="У договорі оренди має бути вказано, на якій підставі ви передаєте авто орендарю. Це потрібно, щоб орендар бачив: ви маєте право здавати це авто." />
                 <ChoiceChips label="Підстава" options={OWNERSHIPS} value={d.ownership} onChange={(v) => v && set({ ownership: v as LegalData['ownership'] })} />
                 {d.ownership === 'proxy' ? (
                   <>
+                    <Note icon="information-circle-outline" text="Довіреність потрібна, якщо авто записане на іншу особу (родича, компанію), а ви здаєте його від її імені. Номер, дату й нотаріуса знайдіть у самій довіреності." />
                     <Field label="Номер довіреності" value={d.proxyNumber} onChangeText={(proxyNumber) => set({ proxyNumber })} error={err('proxyNumber')} />
-                    <DateField wheel onOpenChange={onPicker} label="Дата довіреності" value={d.proxyDate} onChange={(proxyDate) => set({ proxyDate })} maximumDate={new Date()} initialDate={new Date()} error={err('proxyDate')} />
+                    <DateField onOpenChange={onPicker} label="Дата довіреності" value={d.proxyDate} onChange={(proxyDate) => set({ proxyDate })} maximumDate={new Date()} initialDate={new Date()} error={err('proxyDate')} />
                     <Field label="Ким посвідчена" value={d.proxyIssuer} onChangeText={(proxyIssuer) => set({ proxyIssuer })} placeholder="Нотаріус, округ" error={err('proxyIssuer')} />
                   </>
-                ) : null}
+                ) : (
+                  <Note icon="information-circle-outline" text="Авто записане на вас: у договір потрапить рядок «власник за свідоцтвом про реєстрацію». Більше нічого вводити не потрібно." />
+                )}
               </>
             )
           ) : (
